@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Resources/MacPadLogo.png" alt="MacPad logo" width="128">
+</p>
+
 # MacPad
 
 A small native macOS plain-text editor modeled after Windows `notepad.exe`.
