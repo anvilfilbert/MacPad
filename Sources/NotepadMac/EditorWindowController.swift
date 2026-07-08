@@ -18,6 +18,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private var wordWrapEnabled = true
     private var statusBarVisible = true
     private var zoomPercent = 100
+    private var lineEnding: LineEnding = .windows
     private var baseFont: NSFont
     private var shouldRestoreInSession = true
 
@@ -49,8 +50,10 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
             let text = String(data: data, encoding: .utf8)
                 ?? String(data: data, encoding: .isoLatin1)
                 ?? ""
-            textView.string = text
-            originalText = text
+            lineEnding = LineEnding.detected(in: text)
+            let normalizedText = TextMetrics.normalizedLineEndingsForEditing(text)
+            textView.string = normalizedText
+            originalText = normalizedText
             fileURL = url
             shouldRestoreInSession = true
             updateTitle()
@@ -71,7 +74,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
             selectedLocation: textView.selectedRange().location,
             wordWrapEnabled: wordWrapEnabled,
             statusBarVisible: statusBarVisible,
-            zoomPercent: zoomPercent
+            zoomPercent: zoomPercent,
+            lineEnding: lineEnding
         )
     }
 
@@ -84,6 +88,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         statusBarVisible = state.statusBarVisible
         statusBar.isHidden = !state.statusBarVisible
         zoomPercent = state.zoomPercent
+        lineEnding = state.lineEnding
         shouldRestoreInSession = true
         applyWordWrap()
         applyZoom()
@@ -308,7 +313,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
 
     private func write(to url: URL) {
         do {
-            let text = TextMetrics.normalizedLineEndingsForSave(textView.string)
+            let text = TextMetrics.textForSave(textView.string, lineEnding: lineEnding)
             try text.write(to: url, atomically: true, encoding: .utf8)
             fileURL = url
             originalText = textView.string
@@ -465,8 +470,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private func updateStatusBar() {
         guard statusBarVisible else { return }
         let position = TextMetrics.cursorPosition(in: textView.string, selectedLocation: textView.selectedRange().location)
-        let wrap = wordWrapEnabled ? "Word Wrap" : "No Wrap"
-        statusBar.stringValue = "Ln \(position.line), Col \(position.column)  |  \(zoomPercent)%  |  \(wrap)  |  UTF-8"
+        statusBar.stringValue = "Ln \(position.line), Col \(position.column)  |  \(zoomPercent)%  |  \(lineEnding.statusLabel)  |  UTF-8"
     }
 
     private func showError(_ message: String, detail: String) {

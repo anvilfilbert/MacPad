@@ -17,6 +17,7 @@ public struct EditorSessionState: Codable, Equatable {
     public let wordWrapEnabled: Bool
     public let statusBarVisible: Bool
     public let zoomPercent: Int
+    public let lineEnding: LineEnding
 
     public init(
         id: String,
@@ -26,7 +27,8 @@ public struct EditorSessionState: Codable, Equatable {
         selectedLocation: Int,
         wordWrapEnabled: Bool,
         statusBarVisible: Bool,
-        zoomPercent: Int
+        zoomPercent: Int,
+        lineEnding: LineEnding = .windows
     ) {
         self.id = id
         self.filePath = filePath
@@ -36,5 +38,6 @@ public struct EditorSessionState: Codable, Equatable {
         self.wordWrapEnabled = wordWrapEnabled
         self.statusBarVisible = statusBarVisible
         self.zoomPercent = zoomPercent
+        self.lineEnding = lineEnding
     }
 }

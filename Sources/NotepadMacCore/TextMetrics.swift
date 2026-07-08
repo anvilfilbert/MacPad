@@ -29,9 +29,51 @@ public enum TextMetrics {
         return CursorPosition(line: line, column: column)
     }
 
-    public static func normalizedLineEndingsForSave(_ text: String) -> String {
+    public static func normalizedLineEndingsForEditing(_ text: String) -> String {
         text
             .replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
+    }
+
+    public static func textForSave(_ text: String, lineEnding: LineEnding) -> String {
+        let normalized = normalizedLineEndingsForEditing(text)
+        switch lineEnding {
+        case .windows:
+            return normalized.replacingOccurrences(of: "\n", with: "\r\n")
+        case .unix:
+            return normalized
+        case .classicMac:
+            return normalized.replacingOccurrences(of: "\n", with: "\r")
+        }
+    }
+}
+
+public enum LineEnding: String, Codable, Equatable {
+    case windows
+    case unix
+    case classicMac
+
+    public var statusLabel: String {
+        switch self {
+        case .windows:
+            return "Windows (CRLF)"
+        case .unix:
+            return "Unix (LF)"
+        case .classicMac:
+            return "Macintosh (CR)"
+        }
+    }
+
+    public static func detected(in text: String) -> LineEnding {
+        if text.contains("\r\n") {
+            return .windows
+        }
+        if text.contains("\n") {
+            return .unix
+        }
+        if text.contains("\r") {
+            return .classicMac
+        }
+        return .windows
     }
 }

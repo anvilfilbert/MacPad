@@ -13,7 +13,8 @@ A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 - Go to line and insert current time/date
 - Word wrap toggle
 - Font chooser and zoom controls
-- Status bar showing line, column, zoom, wrap mode, and UTF-8
+- Status bar showing line, column, zoom, line ending mode, and UTF-8
+- Windows, Unix, and classic Mac line-ending detection and preservation
 - Builds into a launchable `MacPad.app`
 - Uses the included MacPad logo as the app icon
 

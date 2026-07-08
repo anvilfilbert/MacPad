@@ -18,8 +18,32 @@ final class TextMetricsTests: XCTestCase {
         XCTAssertEqual(TextMetrics.cursorPosition(in: "a", selectedLocation: 100), CursorPosition(line: 1, column: 2))
     }
 
-    func testNormalizesLineEndingsForSave() {
-        XCTAssertEqual(TextMetrics.normalizedLineEndingsForSave("a\r\nb\rc"), "a\nb\nc")
+    func testNormalizesLineEndingsForEditing() {
+        XCTAssertEqual(TextMetrics.normalizedLineEndingsForEditing("a\r\nb\rc"), "a\nb\nc")
+    }
+
+    func testDetectsWindowsLineEndings() {
+        XCTAssertEqual(LineEnding.detected(in: "a\r\nb"), .windows)
+    }
+
+    func testDetectsUnixLineEndings() {
+        XCTAssertEqual(LineEnding.detected(in: "a\nb"), .unix)
+    }
+
+    func testDetectsClassicMacLineEndings() {
+        XCTAssertEqual(LineEnding.detected(in: "a\rb"), .classicMac)
+    }
+
+    func testNewDocumentsDefaultToWindowsLineEndings() {
+        XCTAssertEqual(LineEnding.detected(in: "no line break"), .windows)
+    }
+
+    func testFormatsWindowsLineEndingsForSave() {
+        XCTAssertEqual(TextMetrics.textForSave("a\nb\n", lineEnding: .windows), "a\r\nb\r\n")
+    }
+
+    func testFormatsUnixLineEndingsForSave() {
+        XCTAssertEqual(TextMetrics.textForSave("a\r\nb\r", lineEnding: .unix), "a\nb\n")
     }
 
     func testSessionStateRoundTripsThroughJSON() throws {
@@ -32,7 +56,8 @@ final class TextMetricsTests: XCTestCase {
                 selectedLocation: 3,
                 wordWrapEnabled: true,
                 statusBarVisible: false,
-                zoomPercent: 120
+                zoomPercent: 120,
+                lineEnding: .unix
             )
         ])
 
