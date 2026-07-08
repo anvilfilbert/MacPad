@@ -73,3 +73,11 @@ Create a release zip with:
 ```sh
 ./scripts/package-release.sh
 ```
+
+## Verify
+
+Run the public core behavior tests with:
+
+```sh
+swift test
+```
