@@ -3,6 +3,11 @@
   <img src="Resources/MacPadLogo.png" alt="MacPad logo" width="52" align="center">
 </h1>
 
+[![CI](https://github.com/anvilfilbert/MacPad/actions/workflows/ci.yml/badge.svg)](https://github.com/anvilfilbert/MacPad/actions/workflows/ci.yml)
+[![Latest Release](https://img.shields.io/github/v/release/anvilfilbert/MacPad?label=release)](https://github.com/anvilfilbert/MacPad/releases/latest)
+[![License](https://img.shields.io/github/license/anvilfilbert/MacPad)](LICENSE)
+[![macOS](https://img.shields.io/badge/macOS-14%2B-blue)](Package.swift)
+
 A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 
 <p align="center">
@@ -17,7 +22,7 @@ Download the latest ready-to-use app from:
 https://github.com/anvilfilbert/MacPad/releases/latest
 ```
 
-Get `MacPad-1.0.2-macOS-universal.zip`, unzip it, and drag `MacPad.app` into Applications.
+Get `MacPad-1.0.3-macOS-universal.zip`, unzip it, and drag `MacPad.app` into Applications.
 
 If macOS warns that the app is from an unidentified developer, right-click `MacPad.app`, choose **Open**, then confirm **Open**. The app is locally signed but not Apple-notarized.
 
@@ -75,3 +80,5 @@ Run tests:
 ```sh
 swift test
 ```
+
+Before publishing a release, run through [QA.md](QA.md).

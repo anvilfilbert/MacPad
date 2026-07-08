@@ -15,8 +15,9 @@ enum MainMenuFactory {
 
         let fileMenu = NSMenu(title: "File")
         addItem("New Tab", to: fileMenu, action: #selector(AppDelegate.openNewTab(_:)), target: target, key: "n")
-        addItem("New Window", to: fileMenu, action: #selector(AppDelegate.openNewWindow(_:)), target: target, key: "N")
+        addItem("New Window", to: fileMenu, action: #selector(AppDelegate.openNewWindow(_:)), target: target, key: "n", modifiers: [.command, .shift])
         addItem("Open...", to: fileMenu, action: #selector(AppDelegate.openDocument(_:)), target: target, key: "o")
+        addItem("Close", to: fileMenu, action: #selector(NSWindow.performClose(_:)), target: nil, key: "w")
         fileMenu.addItem(.separator())
         addItem("Save", to: fileMenu, action: #selector(AppDelegate.save(_:)), target: target, key: "s")
         addItem("Save As...", to: fileMenu, action: #selector(AppDelegate.saveAs(_:)), target: target, key: "S")
@@ -59,6 +60,9 @@ enum MainMenuFactory {
         let windowMenu = NSMenu(title: "Window")
         addItem("Minimize", to: windowMenu, action: #selector(NSWindow.miniaturize(_:)), target: nil, key: "m")
         addItem("Zoom", to: windowMenu, action: #selector(NSWindow.performZoom(_:)), target: nil)
+        windowMenu.addItem(.separator())
+        addItem("Show Previous Tab", to: windowMenu, action: #selector(NSWindow.selectPreviousTab(_:)), target: nil, key: "[", modifiers: [.command, .shift])
+        addItem("Show Next Tab", to: windowMenu, action: #selector(NSWindow.selectNextTab(_:)), target: nil, key: "]", modifiers: [.command, .shift])
         mainMenu.addItem(rootItem(for: windowMenu))
         NSApp.windowsMenu = windowMenu
 
