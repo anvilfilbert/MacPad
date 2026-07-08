@@ -2,6 +2,10 @@
 
 A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 
+<p align="center">
+  <img src="Assets/MacPad-Review.png" alt="MacPad editor window" width="760">
+</p>
+
 ## Download
 
 Download the latest ready-to-use app from:
