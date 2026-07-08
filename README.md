@@ -1,4 +1,4 @@
-# Notepad for macOS
+# MacPad
 
 A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 
