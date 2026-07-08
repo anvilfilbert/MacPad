@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Resources/MacPadLogo.png" alt="MacPad logo" width="128">
+  <img src="Resources/MacPadLogo.png" alt="MacPad logo" width="88">
 </p>
 
 # MacPad
@@ -7,7 +7,7 @@
 A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 
 <p align="center">
-  <img src="Assets/MacPad-Review.png" alt="MacPad editor window" width="760">
+  <img src="Assets/MacPad-Review.png" alt="MacPad editor windows with tabs" width="760">
 </p>
 
 ## Download
@@ -26,8 +26,9 @@ If macOS warns that the app is from an unidentified developer, right-click `MacP
 
 - Plain-text editing with native undo, cut, copy, paste, delete, and select all
 - New, open, save, save as, and print
+- Multiple windows, each with multiple tabs
 - New tabs and new windows, including separate windows with their own tab groups
-- Session restore for open tab groups, including unsaved tab text
+- Session restore for open windows and tab groups, including unsaved tab text
 - Unsaved-change prompts when closing or quitting
 - Find, find next/previous, replace, and replace all
 - Go to line and insert current time/date
