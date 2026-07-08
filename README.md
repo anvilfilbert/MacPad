@@ -71,13 +71,3 @@ Create a release zip with:
 ```sh
 ./scripts/package-release.sh
 ```
-
-## Development
-
-Run tests:
-
-```sh
-swift test
-```
-
-Before publishing a release, run through [QA.md](QA.md).
