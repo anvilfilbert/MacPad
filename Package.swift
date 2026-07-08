@@ -3,12 +3,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "NotepadMac",
+    name: "MacPad",
     platforms: [
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "NotepadMac", targets: ["NotepadMac"])
+        .executable(name: "MacPad", targets: ["NotepadMac"])
     ],
     targets: [
         .target(

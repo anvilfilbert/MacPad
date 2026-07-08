@@ -14,7 +14,8 @@ A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 - Word wrap toggle
 - Font chooser and zoom controls
 - Status bar showing line, column, zoom, wrap mode, and UTF-8
-- Builds into a launchable `Notepad.app`
+- Builds into a launchable `MacPad.app`
+- Uses the included MacPad logo as the app icon
 
 ## Build
 
@@ -25,13 +26,19 @@ A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 The app bundle is created at:
 
 ```text
-build/Notepad.app
+build/MacPad.app
 ```
 
 Launch it from Finder or with:
 
 ```sh
-open build/Notepad.app
+open build/MacPad.app
+```
+
+Install it into `/Applications` with:
+
+```sh
+./scripts/install-app.sh
 ```
 
 ## Development

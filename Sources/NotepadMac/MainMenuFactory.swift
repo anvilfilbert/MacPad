@@ -5,10 +5,10 @@ enum MainMenuFactory {
     static func makeMenu(target: AnyObject) -> NSMenu {
         let mainMenu = NSMenu(title: "Main Menu")
 
-        let appMenu = NSMenu(title: "Notepad")
-        addItem("About Notepad", to: appMenu, action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), target: NSApp)
+        let appMenu = NSMenu(title: "MacPad")
+        addItem("About MacPad", to: appMenu, action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), target: NSApp)
         appMenu.addItem(.separator())
-        addItem("Quit Notepad", to: appMenu, action: #selector(NSApplication.terminate(_:)), target: NSApp, key: "q")
+        addItem("Quit MacPad", to: appMenu, action: #selector(NSApplication.terminate(_:)), target: NSApp, key: "q")
         let appRoot = NSMenuItem()
         appRoot.submenu = appMenu
         mainMenu.addItem(appRoot)

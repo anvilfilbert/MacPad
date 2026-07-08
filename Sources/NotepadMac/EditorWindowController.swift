@@ -30,7 +30,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
             defer: false
         )
         super.init(window: window)
-        window.title = "Untitled - Notepad"
+        window.title = "Untitled - MacPad"
         window.delegate = self
         window.tabbingMode = .preferred
         window.tabbingIdentifier = "MacPadEditor"
@@ -457,7 +457,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
 
     private func updateTitle() {
         let name = fileURL?.lastPathComponent ?? "Untitled"
-        window?.title = "\(name) - Notepad"
+        window?.title = "\(name) - MacPad"
         window?.representedURL = fileURL
         window?.isDocumentEdited = hasUnsavedChanges
     }
