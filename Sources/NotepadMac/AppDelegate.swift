@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isRestoringSession = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSWindow.allowsAutomaticWindowTabbing = false
         NSApp.mainMenu = MainMenuFactory.makeMenu(target: self)
         if !restorePreviousSession() {
             openNewDocument(nil)
