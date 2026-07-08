@@ -1,12 +1,17 @@
 import AppKit
+import NotepadMacCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private let sessionDefaultsKey = "MacPad.SessionState.v1"
     private var windows: [EditorWindowController] = []
+    private var isRestoringSession = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = MainMenuFactory.makeMenu(target: self)
-        openNewDocument(nil)
+        if !restorePreviousSession() {
+            openNewDocument(nil)
+        }
         NSApp.activate(ignoringOtherApps: true)
     }
 
@@ -15,11 +20,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        var confirmedControllers: [EditorWindowController] = []
         for controller in windows {
             if !controller.confirmDiscardIfNeeded() {
+                for confirmedController in confirmedControllers {
+                    confirmedController.keepInSessionRestore()
+                }
+                saveSession()
                 return .terminateCancel
             }
+            confirmedControllers.append(controller)
         }
+        saveSession()
         return .terminateNow
     }
 
@@ -30,13 +42,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func openNewDocument(_ sender: Any?) {
-        let controller = EditorWindowController()
-        controller.onClose = { [weak self, weak controller] in
-            guard let controller else { return }
-            self?.windows.removeAll { $0 === controller }
-        }
-        windows.append(controller)
-        controller.showWindow(nil)
+        openNewTab(sender)
+    }
+
+    @objc func openNewWindow(_ sender: Any?) {
+        present(makeWindowController(), asTab: false)
+    }
+
+    @objc func openNewTab(_ sender: Any?) {
+        present(makeWindowController(), asTab: keyWindowController != nil)
     }
 
     @objc func openDocument(_ sender: Any?) {
@@ -52,14 +66,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func openDocument(url: URL) {
+        let controller = makeWindowController()
+        present(controller, asTab: keyWindowController != nil)
+        controller.loadFile(url)
+    }
+
+    private func makeWindowController() -> EditorWindowController {
         let controller = EditorWindowController()
         controller.onClose = { [weak self, weak controller] in
             guard let controller else { return }
             self?.windows.removeAll { $0 === controller }
+            self?.saveSession()
         }
+        controller.onStateChange = { [weak self] in
+            self?.saveSession()
+        }
+        return controller
+    }
+
+    private func present(_ controller: EditorWindowController, asTab: Bool) {
+        let parentWindow = asTab ? keyWindowController?.window : nil
         windows.append(controller)
         controller.showWindow(nil)
-        controller.loadFile(url)
+
+        if let parentWindow,
+           let newWindow = controller.window,
+           parentWindow !== newWindow {
+            parentWindow.addTabbedWindow(newWindow, ordered: .above)
+            newWindow.makeKeyAndOrderFront(nil)
+        }
+
+        saveSession()
     }
 
     private var keyWindowController: EditorWindowController? {
@@ -81,4 +118,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func zoomOut(_ sender: Any?) { keyWindowController?.zoomOut(sender) }
     @objc func restoreZoom(_ sender: Any?) { keyWindowController?.restoreZoom(sender) }
     @objc func chooseFont(_ sender: Any?) { keyWindowController?.chooseFont(sender) }
+
+    private func restorePreviousSession() -> Bool {
+        guard let data = UserDefaults.standard.data(forKey: sessionDefaultsKey),
+              let session = try? JSONDecoder().decode(AppSessionState.self, from: data),
+              !session.tabs.isEmpty else {
+            return false
+        }
+
+        isRestoringSession = true
+        defer {
+            isRestoringSession = false
+            saveSession()
+        }
+
+        for (index, tab) in session.tabs.enumerated() {
+            let controller = makeWindowController()
+            controller.restoreSessionState(tab)
+            present(controller, asTab: index > 0)
+        }
+
+        return true
+    }
+
+    private func saveSession() {
+        guard !isRestoringSession else { return }
+
+        let tabs = windows.compactMap(\.sessionState)
+        guard !tabs.isEmpty else {
+            UserDefaults.standard.removeObject(forKey: sessionDefaultsKey)
+            return
+        }
+
+        if let data = try? JSONEncoder().encode(AppSessionState(tabs: tabs)) {
+            UserDefaults.standard.set(data, forKey: sessionDefaultsKey)
+        }
+    }
 }

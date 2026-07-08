@@ -6,6 +6,8 @@ A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 
 - Plain-text editing with native undo, cut, copy, paste, delete, and select all
 - New, open, save, save as, and print
+- New tabs and new windows
+- Session restore for open tabs, including unsaved tab text
 - Unsaved-change prompts when closing or quitting
 - Find, find next/previous, replace, and replace all
 - Go to line and insert current time/date

@@ -14,7 +14,8 @@ enum MainMenuFactory {
         mainMenu.addItem(appRoot)
 
         let fileMenu = NSMenu(title: "File")
-        addItem("New", to: fileMenu, action: #selector(AppDelegate.openNewDocument(_:)), target: target, key: "n")
+        addItem("New Tab", to: fileMenu, action: #selector(AppDelegate.openNewTab(_:)), target: target, key: "n")
+        addItem("New Window", to: fileMenu, action: #selector(AppDelegate.openNewWindow(_:)), target: target, key: "N")
         addItem("Open...", to: fileMenu, action: #selector(AppDelegate.openDocument(_:)), target: target, key: "o")
         fileMenu.addItem(.separator())
         addItem("Save", to: fileMenu, action: #selector(AppDelegate.save(_:)), target: target, key: "s")

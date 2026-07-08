@@ -4,11 +4,13 @@ import UniformTypeIdentifiers
 
 final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTextViewDelegate {
     var onClose: (() -> Void)?
+    var onStateChange: (() -> Void)?
 
     private let scrollView = NSScrollView()
     private let textView = NSTextView()
     private let statusBar = NSTextField(labelWithString: "")
     private let defaultFontSize: CGFloat = 14
+    private var stateID = UUID().uuidString
     private var fileURL: URL?
     private var originalText = ""
     private var lastFindTerm = ""
@@ -17,6 +19,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private var statusBarVisible = true
     private var zoomPercent = 100
     private var baseFont: NSFont
+    private var shouldRestoreInSession = true
 
     init() {
         baseFont = NSFont.monospacedSystemFont(ofSize: defaultFontSize, weight: .regular)
@@ -29,6 +32,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         super.init(window: window)
         window.title = "Untitled - Notepad"
         window.delegate = self
+        window.tabbingMode = .preferred
+        window.tabbingIdentifier = "MacPadEditor"
         window.center()
         setupUI()
         updateStatusBar()
@@ -47,11 +52,47 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
             textView.string = text
             originalText = text
             fileURL = url
+            shouldRestoreInSession = true
             updateTitle()
             updateStatusBar()
+            notifyStateChanged()
         } catch {
             showError("Could not open the file.", detail: error.localizedDescription)
         }
+    }
+
+    var sessionState: EditorSessionState? {
+        guard shouldRestoreInSession else { return nil }
+        return EditorSessionState(
+            id: stateID,
+            filePath: fileURL?.path,
+            text: textView.string,
+            originalText: originalText,
+            selectedLocation: textView.selectedRange().location,
+            wordWrapEnabled: wordWrapEnabled,
+            statusBarVisible: statusBarVisible,
+            zoomPercent: zoomPercent
+        )
+    }
+
+    func restoreSessionState(_ state: EditorSessionState) {
+        stateID = state.id
+        fileURL = state.filePath.map(URL.init(fileURLWithPath:))
+        textView.string = state.text
+        originalText = state.originalText
+        wordWrapEnabled = state.wordWrapEnabled
+        statusBarVisible = state.statusBarVisible
+        statusBar.isHidden = !state.statusBarVisible
+        zoomPercent = state.zoomPercent
+        shouldRestoreInSession = true
+        applyWordWrap()
+        applyZoom()
+
+        let location = min(max(0, state.selectedLocation), (textView.string as NSString).length)
+        textView.setSelectedRange(NSRange(location: location, length: 0))
+        textView.scrollRangeToVisible(NSRange(location: location, length: 0))
+        updateTitle()
+        updateStatusBar()
     }
 
     @objc func save(_ sender: Any?) {
@@ -79,12 +120,14 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         wordWrapEnabled.toggle()
         applyWordWrap()
         updateStatusBar()
+        notifyStateChanged()
     }
 
     @objc func toggleStatusBar(_ sender: Any?) {
         statusBarVisible.toggle()
         statusBar.isHidden = !statusBarVisible
         updateStatusBar()
+        notifyStateChanged()
     }
 
     @objc func showFind(_ sender: Any?) {
@@ -129,16 +172,19 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     @objc func zoomIn(_ sender: Any?) {
         zoomPercent = min(500, zoomPercent + 10)
         applyZoom()
+        notifyStateChanged()
     }
 
     @objc func zoomOut(_ sender: Any?) {
         zoomPercent = max(10, zoomPercent - 10)
         applyZoom()
+        notifyStateChanged()
     }
 
     @objc func restoreZoom(_ sender: Any?) {
         zoomPercent = 100
         applyZoom()
+        notifyStateChanged()
     }
 
     @objc func chooseFont(_ sender: Any?) {
@@ -151,6 +197,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         guard let sender else { return }
         baseFont = sender.convert(baseFont)
         applyZoom()
+        notifyStateChanged()
     }
 
     func confirmDiscardIfNeeded() -> Bool {
@@ -169,10 +216,17 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
             save(nil)
             return !hasUnsavedChanges
         case .alertSecondButtonReturn:
+            shouldRestoreInSession = false
+            notifyStateChanged()
             return true
         default:
             return false
         }
+    }
+
+    func keepInSessionRestore() {
+        shouldRestoreInSession = true
+        notifyStateChanged()
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
@@ -184,12 +238,15 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     func textDidChange(_ notification: Notification) {
+        shouldRestoreInSession = true
         updateTitle()
         updateStatusBar()
+        notifyStateChanged()
     }
 
     func textViewDidChangeSelection(_ notification: Notification) {
         updateStatusBar()
+        notifyStateChanged()
     }
 
     private func setupUI() {
@@ -255,8 +312,10 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
             try text.write(to: url, atomically: true, encoding: .utf8)
             fileURL = url
             originalText = textView.string
+            shouldRestoreInSession = true
             updateTitle()
             updateStatusBar()
+            notifyStateChanged()
         } catch {
             showError("Could not save the file.", detail: error.localizedDescription)
         }
@@ -365,8 +424,10 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
             range: nil
         )
         textView.string = replaced
+        shouldRestoreInSession = true
         updateTitle()
         updateStatusBar()
+        notifyStateChanged()
     }
 
     private func selectLine(_ lineNumber: Int) {
@@ -387,6 +448,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         textView.setSelectedRange(NSRange(location: location, length: 0))
         textView.scrollRangeToVisible(NSRange(location: location, length: 0))
         updateStatusBar()
+        notifyStateChanged()
     }
 
     private var hasUnsavedChanges: Bool {
@@ -396,6 +458,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private func updateTitle() {
         let name = fileURL?.lastPathComponent ?? "Untitled"
         window?.title = "\(name) - Notepad"
+        window?.representedURL = fileURL
         window?.isDocumentEdited = hasUnsavedChanges
     }
 
@@ -412,5 +475,9 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         alert.messageText = message
         alert.informativeText = detail
         alert.runModal()
+    }
+
+    private func notifyStateChanged() {
+        onStateChange?()
     }
 }

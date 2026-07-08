@@ -21,4 +21,24 @@ final class TextMetricsTests: XCTestCase {
     func testNormalizesLineEndingsForSave() {
         XCTAssertEqual(TextMetrics.normalizedLineEndingsForSave("a\r\nb\rc"), "a\nb\nc")
     }
+
+    func testSessionStateRoundTripsThroughJSON() throws {
+        let state = AppSessionState(tabs: [
+            EditorSessionState(
+                id: "tab-1",
+                filePath: "/tmp/example.txt",
+                text: "changed",
+                originalText: "original",
+                selectedLocation: 3,
+                wordWrapEnabled: true,
+                statusBarVisible: false,
+                zoomPercent: 120
+            )
+        ])
+
+        let data = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(AppSessionState.self, from: data)
+
+        XCTAssertEqual(decoded, state)
+    }
 }
