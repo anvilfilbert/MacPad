@@ -14,7 +14,7 @@ Download the latest ready-to-use app from:
 https://github.com/anvilfilbert/MacPad/releases/latest
 ```
 
-Get `MacPad-1.0.0-macOS-universal.zip`, unzip it, and drag `MacPad.app` into Applications.
+Get `MacPad-1.0.1-macOS-universal.zip`, unzip it, and drag `MacPad.app` into Applications.
 
 If macOS warns that the app is from an unidentified developer, right-click `MacPad.app`, choose **Open**, then confirm **Open**. The app is locally signed but not Apple-notarized.
 
@@ -22,8 +22,8 @@ If macOS warns that the app is from an unidentified developer, right-click `MacP
 
 - Plain-text editing with native undo, cut, copy, paste, delete, and select all
 - New, open, save, save as, and print
-- New tabs and new windows
-- Session restore for open tabs, including unsaved tab text
+- New tabs and new windows, including separate windows with their own tab groups
+- Session restore for open tab groups, including unsaved tab text
 - Unsaved-change prompts when closing or quitting
 - Find, find next/previous, replace, and replace all
 - Go to line and insert current time/date

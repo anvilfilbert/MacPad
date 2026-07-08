@@ -122,7 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func restorePreviousSession() -> Bool {
         guard let data = UserDefaults.standard.data(forKey: sessionDefaultsKey),
               let session = try? JSONDecoder().decode(AppSessionState.self, from: data),
-              !session.tabs.isEmpty else {
+              !session.windows.isEmpty else {
             return false
         }
 
@@ -132,10 +132,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             saveSession()
         }
 
-        for (index, tab) in session.tabs.enumerated() {
-            let controller = makeWindowController()
-            controller.restoreSessionState(tab)
-            present(controller, asTab: index > 0)
+        for windowSession in session.windows {
+            for (index, tab) in windowSession.tabs.enumerated() {
+                let controller = makeWindowController()
+                controller.restoreSessionState(tab)
+                present(controller, asTab: index > 0)
+            }
         }
 
         return true
@@ -144,14 +146,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func saveSession() {
         guard !isRestoringSession else { return }
 
-        let tabs = windows.compactMap(\.sessionState)
-        guard !tabs.isEmpty else {
+        let windowSessions = currentWindowSessions()
+        guard !windowSessions.isEmpty else {
             UserDefaults.standard.removeObject(forKey: sessionDefaultsKey)
             return
         }
 
-        if let data = try? JSONEncoder().encode(AppSessionState(tabs: tabs)) {
+        if let data = try? JSONEncoder().encode(AppSessionState(windows: windowSessions)) {
             UserDefaults.standard.set(data, forKey: sessionDefaultsKey)
         }
+    }
+
+    private func currentWindowSessions() -> [EditorWindowSessionState] {
+        let controllerByWindow = Dictionary(
+            uniqueKeysWithValues: windows.compactMap { controller -> (ObjectIdentifier, EditorWindowController)? in
+                guard let window = controller.window else { return nil }
+                return (ObjectIdentifier(window), controller)
+            }
+        )
+        var seenWindows = Set<ObjectIdentifier>()
+        var sessions: [EditorWindowSessionState] = []
+
+        for controller in windows {
+            guard let window = controller.window else { continue }
+            let tabbedWindows = window.tabbedWindows ?? [window]
+            let orderedWindows = tabbedWindows.isEmpty ? [window] : tabbedWindows
+            let identifiers = orderedWindows.map(ObjectIdentifier.init)
+
+            if identifiers.contains(where: seenWindows.contains) {
+                continue
+            }
+
+            for identifier in identifiers {
+                seenWindows.insert(identifier)
+            }
+
+            let tabs = orderedWindows.compactMap { tabWindow in
+                controllerByWindow[ObjectIdentifier(tabWindow)]?.sessionState
+            }
+
+            if !tabs.isEmpty {
+                sessions.append(EditorWindowSessionState(tabs: tabs))
+            }
+        }
+
+        return sessions
     }
 }
