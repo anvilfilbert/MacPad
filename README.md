@@ -4,7 +4,7 @@
 </h1>
 
 [![Latest Release](https://img.shields.io/github/v/release/anvilfilbert/MacPad?label=release)](https://github.com/anvilfilbert/MacPad/releases/latest)
-[![License](https://img.shields.io/github/license/anvilfilbert/MacPad)](LICENSE)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14%2B-blue)](Package.swift)
 
 A small native macOS plain-text editor modeled after Windows `notepad.exe`.
