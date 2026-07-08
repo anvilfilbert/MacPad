@@ -3,7 +3,6 @@
   <img src="Resources/MacPadLogo.png" alt="MacPad logo" width="52" align="center">
 </h1>
 
-[![CI](https://github.com/anvilfilbert/MacPad/actions/workflows/ci.yml/badge.svg)](https://github.com/anvilfilbert/MacPad/actions/workflows/ci.yml)
 [![Latest Release](https://img.shields.io/github/v/release/anvilfilbert/MacPad?label=release)](https://github.com/anvilfilbert/MacPad/releases/latest)
 [![License](https://img.shields.io/github/license/anvilfilbert/MacPad)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14%2B-blue)](Package.swift)
