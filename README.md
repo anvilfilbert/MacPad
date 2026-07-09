@@ -9,7 +9,7 @@
 
 A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 
-Want extensions, themes, and language-aware features? See [MacPad Pro](https://github.com/anvilfilbert/MacPadPro).
+<i>Want extensions, themes, and language-aware features? See [MacPad Pro](https://github.com/anvilfilbert/MacPadPro).</i>
 
 <p align="center">
   <img src="Assets/MacPad-Review.png" alt="MacPad editor windows with tabs" width="760">
