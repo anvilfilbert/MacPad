@@ -9,8 +9,6 @@
 
 A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 
-Created by [anvilfilbert](https://github.com/anvilfilbert). Public repo: [anvilfilbert/MacPad](https://github.com/anvilfilbert/MacPad).
-
 Want extensions, themes, and language-aware features? See [MacPad Pro](https://github.com/anvilfilbert/MacPadPro).
 
 <p align="center">
@@ -25,7 +23,7 @@ Download the latest ready-to-use app from:
 https://github.com/anvilfilbert/MacPad/releases/latest
 ```
 
-Get `MacPad-1.0.4-macOS-universal.zip`, unzip it, and drag `MacPad.app` into Applications.
+Get `MacPad-1.0.5-macOS-universal.zip`, unzip it, and drag `MacPad.app` into Applications.
 
 If macOS warns that the app is from an unidentified developer, right-click `MacPad.app`, choose **Open**, then confirm **Open**. The app is locally signed but not Apple-notarized.
 

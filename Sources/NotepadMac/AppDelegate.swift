@@ -42,6 +42,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc func showAbout(_ sender: Any?) {
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .credits: aboutCredits()
+        ])
+    }
+
     @objc func openNewDocument(_ sender: Any?) {
         openNewTab(sender)
     }
@@ -102,6 +108,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var keyWindowController: EditorWindowController? {
         windows.first { $0.window?.isKeyWindow == true } ?? windows.last
+    }
+
+    private func aboutCredits() -> NSAttributedString {
+        let text = "Created by anvilfilbert\nPublic repo: anvilfilbert/MacPad"
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+
+        let credits = NSMutableAttributedString(
+            string: text,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 11),
+                .foregroundColor: NSColor.secondaryLabelColor,
+                .paragraphStyle: paragraph
+            ]
+        )
+        addLink(
+            to: "anvilfilbert",
+            in: credits,
+            url: "https://github.com/anvilfilbert"
+        )
+        addLink(
+            to: "anvilfilbert/MacPad",
+            in: credits,
+            url: "https://github.com/anvilfilbert/MacPad"
+        )
+        return credits
+    }
+
+    private func addLink(to substring: String, in credits: NSMutableAttributedString, url: String) {
+        let range = (credits.string as NSString).range(of: substring)
+        guard range.location != NSNotFound, let url = URL(string: url) else { return }
+        credits.addAttributes(
+            [
+                .link: url,
+                .foregroundColor: NSColor.linkColor,
+                .underlineStyle: NSUnderlineStyle.single.rawValue
+            ],
+            range: range
+        )
     }
 
     @objc func save(_ sender: Any?) { keyWindowController?.save(sender) }
