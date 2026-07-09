@@ -9,6 +9,8 @@
 
 A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 
+Created by [anvilfilbert](https://github.com/anvilfilbert). Public repo: [anvilfilbert/MacPad](https://github.com/anvilfilbert/MacPad).
+
 Want extensions, themes, and language-aware features? See [MacPad Pro](https://github.com/anvilfilbert/MacPadPro).
 
 <p align="center">
@@ -72,12 +74,4 @@ Create a release zip with:
 
 ```sh
 ./scripts/package-release.sh
-```
-
-## Verify
-
-Run the public core behavior tests with:
-
-```sh
-swift test
 ```
