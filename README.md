@@ -29,6 +29,12 @@ Get `MacPad-1.0.6-macOS-universal.zip`, unzip it, and drag `MacPad.app` into App
 
 If macOS warns that the app is from an unidentified developer, right-click `MacPad.app`, choose **Open**, then confirm **Open**. The app is locally signed but not Apple-notarized.
 
+## Latest Changes
+
+`1.0.6` fixes menu shortcuts: `Save As`, `Redo`, and `Find Previous` now use explicit Shift modifiers, and `Time/Date` uses `F5`.
+
+See [CHANGELOG.md](CHANGELOG.md) for full release history.
+
 ## Features
 
 - Plain-text editing with native undo, cut, copy, paste, delete, and select all
