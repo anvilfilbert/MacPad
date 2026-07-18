@@ -62,13 +62,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func openDocument(_ sender: Any?) {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.plainText, .text, .data]
+        panel.allowedContentTypes = [.plainText, .text]
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
 
         guard panel.runModal() == .OK else { return }
         for url in panel.urls {
             openDocument(url: url)
+        }
+    }
+
+    @objc func clearSessionData(_ sender: Any?) {
+        UserDefaults.standard.removeObject(forKey: sessionDefaultsKey)
+        for controller in windows {
+            controller.discardFromSessionRestore()
         }
     }
 
@@ -179,14 +186,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         for windowSession in session.windows {
+            var restoredTabs = 0
             for (index, tab) in windowSession.tabs.enumerated() {
                 let controller = makeWindowController()
-                controller.restoreSessionState(tab)
-                present(controller, asTab: index > 0)
+                do {
+                    try controller.restoreSessionState(tab)
+                    present(controller, asTab: index > 0 && restoredTabs > 0)
+                    restoredTabs += 1
+                } catch {
+                    showSessionRestoreError(filePath: tab.filePath, error: error)
+                }
             }
         }
 
-        return true
+        return !windows.isEmpty
     }
 
     private func saveSession() {
@@ -237,5 +250,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         return sessions
+    }
+
+    private func showSessionRestoreError(filePath: String?, error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Could not restore a previous MacPad tab."
+        alert.informativeText = "\(filePath ?? "Untitled")\n\n\(error.localizedDescription)"
+        alert.runModal()
     }
 }

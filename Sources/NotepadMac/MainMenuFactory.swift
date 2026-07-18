@@ -22,6 +22,8 @@ enum MainMenuFactory {
         addItem("Save", to: fileMenu, action: #selector(AppDelegate.save(_:)), target: target, key: "s")
         addItem("Save As...", to: fileMenu, action: #selector(AppDelegate.saveAs(_:)), target: target, key: "s", modifiers: [.command, .shift])
         fileMenu.addItem(.separator())
+        addItem("Clear Session Data", to: fileMenu, action: #selector(AppDelegate.clearSessionData(_:)), target: target)
+        fileMenu.addItem(.separator())
         addItem("Print...", to: fileMenu, action: #selector(AppDelegate.printDocument(_:)), target: target, key: "p")
         mainMenu.addItem(rootItem(for: fileMenu))
 

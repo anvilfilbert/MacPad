@@ -61,8 +61,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         )
     }
 
-    func restoreSessionState(_ state: EditorSessionState) {
-        editorDocument.restoreSessionState(state)
+    func restoreSessionState(_ state: EditorSessionState) throws {
+        try editorDocument.restoreSessionStateAndReloadFile(state)
         textView.string = editorDocument.text
         wordWrapEnabled = state.wordWrapEnabled
         statusBarVisible = state.statusBarVisible
@@ -210,6 +210,11 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
 
     func keepInSessionRestore() {
         editorDocument.keepInSessionRestore()
+        notifyStateChanged()
+    }
+
+    func discardFromSessionRestore() {
+        editorDocument.discardFromSessionRestore()
         notifyStateChanged()
     }
 

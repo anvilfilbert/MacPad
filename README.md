@@ -25,13 +25,15 @@ Download the latest ready-to-use app from:
 https://github.com/anvilfilbert/MacPad/releases/latest
 ```
 
-Get `MacPad-1.0.6-macOS-universal.zip`, unzip it, and drag `MacPad.app` into Applications.
+Get `MacPad-1.0.7-macOS-universal.zip`, unzip it, and drag `MacPad.app` into Applications.
+
+Release ZIPs include a matching `.sha256` checksum file.
 
 If macOS warns that the app is from an unidentified developer, right-click `MacPad.app`, choose **Open**, then confirm **Open**. The app is locally signed but not Apple-notarized.
 
 ## Latest Changes
 
-`1.0.6` fixes menu shortcuts: `Save As`, `Redo`, and `Find Previous` now use explicit Shift modifiers, and `Time/Date` uses `F5`.
+`1.0.7` hardens session restore and file opening: session state no longer stores document text, a Clear Session Data command is available, broad data files are no longer shown in Open, large files are rejected before loading, and release packages now include SHA-256 checksums.
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
@@ -41,7 +43,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 - New, open, save, save as, and print
 - Multiple windows, each with multiple tabs
 - New tabs and new windows, including separate windows with their own tab groups
-- Session restore for open windows and tab groups, including unsaved tab text
+- Session restore for open windows, tab groups, saved file tabs, and editor UI state without storing document text in preferences
 - Unsaved-change prompts when closing or quitting
 - Find, find next/previous, replace, and replace all
 - Go to line and insert current time/date

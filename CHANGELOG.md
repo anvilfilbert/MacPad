@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.7
+
+- Stopped storing document text in session restore data; MacPad now restores saved-file tabs by reloading files from disk.
+- Added File > Clear Session Data for manually removing saved session metadata.
+- Restricted Open to text file types and added a 25 MB file-size guard before loading.
+- Added SHA-256 checksum generation for release ZIPs.
+
 ## 1.0.6
 
 - Fixed menu shortcut handling for `Save As`, `Redo`, and `Find Previous` by using explicit Shift modifiers.

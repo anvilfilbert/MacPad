@@ -1,6 +1,22 @@
 import Foundation
 
+public enum EditorDocumentError: LocalizedError {
+    case fileTooLarge(path: String, sizeBytes: Int64, maximumBytes: Int64)
+    case unsupportedTextEncoding(path: String)
+
+    public var errorDescription: String? {
+        switch self {
+        case let .fileTooLarge(path, sizeBytes, maximumBytes):
+            return "File is too large to open safely: \(path) is \(sizeBytes) bytes, maximum is \(maximumBytes) bytes."
+        case let .unsupportedTextEncoding(path):
+            return "File is not readable as supported plain text: \(path)."
+        }
+    }
+}
+
 public final class EditorDocument {
+    public static let maximumReadableFileBytes: Int64 = 25 * 1024 * 1024
+
     public private(set) var id: String
     public private(set) var fileURL: URL?
     public private(set) var text: String
@@ -33,10 +49,16 @@ public final class EditorDocument {
     }
 
     public func loadFile(_ url: URL) throws {
+        try validateReadableFile(url)
         let data = try Data(contentsOf: url)
+        if data.contains(0) {
+            throw EditorDocumentError.unsupportedTextEncoding(path: url.path)
+        }
         let loadedText = String(data: data, encoding: .utf8)
             ?? String(data: data, encoding: .isoLatin1)
-            ?? ""
+        guard let loadedText else {
+            throw EditorDocumentError.unsupportedTextEncoding(path: url.path)
+        }
         let normalizedText = TextMetrics.normalizedLineEndingsForEditing(loadedText)
 
         id = UUID().uuidString
@@ -63,10 +85,20 @@ public final class EditorDocument {
     public func restoreSessionState(_ state: EditorSessionState) {
         id = state.id
         fileURL = state.filePath.map(URL.init(fileURLWithPath:))
-        text = state.text
-        originalText = state.originalText
+        text = ""
+        originalText = ""
         lineEnding = state.lineEnding
         shouldRestoreInSession = true
+    }
+
+    public func restoreSessionStateAndReloadFile(_ state: EditorSessionState) throws {
+        guard let filePath = state.filePath else {
+            restoreSessionState(state)
+            return
+        }
+
+        try loadFile(URL(fileURLWithPath: filePath))
+        id = state.id
     }
 
     public func sessionState(
@@ -79,8 +111,6 @@ public final class EditorDocument {
         return EditorSessionState(
             id: id,
             filePath: fileURL?.path,
-            text: text,
-            originalText: originalText,
             selectedLocation: selectedLocation,
             wordWrapEnabled: wordWrapEnabled,
             statusBarVisible: statusBarVisible,
@@ -95,5 +125,18 @@ public final class EditorDocument {
 
     public func keepInSessionRestore() {
         shouldRestoreInSession = true
+    }
+
+    private func validateReadableFile(_ url: URL) throws {
+        let values = try url.resourceValues(forKeys: [.fileSizeKey])
+        guard let fileSize = values.fileSize else { return }
+        let sizeBytes = Int64(fileSize)
+        if sizeBytes > Self.maximumReadableFileBytes {
+            throw EditorDocumentError.fileTooLarge(
+                path: url.path,
+                sizeBytes: sizeBytes,
+                maximumBytes: Self.maximumReadableFileBytes
+            )
+        }
     }
 }
