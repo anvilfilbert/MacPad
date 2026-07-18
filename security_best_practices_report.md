@@ -8,6 +8,10 @@ The main privacy change is that session restore no longer writes document text t
 
 Scope note: the requested `security-best-practices` skill has reference material for Python, JavaScript/TypeScript, and Go, but no Swift/AppKit-specific reference file. This report therefore uses repo inspection plus general desktop-app security review criteria.
 
+## Resolution Comment
+
+Fixed in [MacPad 1.0.7](https://github.com/anvilfilbert/MacPad/releases/tag/v1.0.7). The security hardening changes were committed to `main`, the local app was rebuilt and installed, and the GitHub release includes the updated app ZIP plus a SHA-256 checksum file.
+
 ## Critical Severity
 
 No critical findings.
@@ -20,7 +24,7 @@ No high-severity findings.
 
 ### S-001: Session restore persisted unsaved document text in plain local preferences
 
-Status: Remediated in 1.0.7.
+Status: Fixed in 1.0.7.
 
 Evidence:
 
@@ -43,7 +47,7 @@ Saved file paths are still stored so MacPad can restore saved-file tabs. That is
 
 ### S-002: File open path accepts broad data files and reads them fully into memory
 
-Status: Remediated in 1.0.7.
+Status: Fixed in 1.0.7.
 
 Evidence:
 
@@ -58,7 +62,7 @@ Because file selection is user-driven, this is not a remote code execution issue
 
 ### S-003: Public release builds are ad-hoc signed and not notarized
 
-Status: Partially remediated in 1.0.7.
+Status: Fixed for the current non-notarized GitHub release model in 1.0.7.
 
 Evidence:
 
@@ -73,7 +77,7 @@ This is a distribution trust issue, not an app runtime vulnerability. Users down
 
 Remaining risk:
 
-Checksums improve artifact integrity verification, but they do not replace Apple notarization. Full remediation still requires Developer ID signing and notarization if an Apple Developer account becomes acceptable later.
+Checksums improve artifact integrity verification for the current GitHub release model. Apple Developer ID signing and notarization remain an optional future distribution trust upgrade, not an open finding for the current project constraints.
 
 ## Informational Findings
 
