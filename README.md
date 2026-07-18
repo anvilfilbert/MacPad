@@ -25,7 +25,7 @@ Download the latest ready-to-use app from:
 https://github.com/anvilfilbert/MacPad/releases/latest
 ```
 
-Get `MacPad-1.0.5-macOS-universal.zip`, unzip it, and drag `MacPad.app` into Applications.
+Get `MacPad-1.0.6-macOS-universal.zip`, unzip it, and drag `MacPad.app` into Applications.
 
 If macOS warns that the app is from an unidentified developer, right-click `MacPad.app`, choose **Open**, then confirm **Open**. The app is locally signed but not Apple-notarized.
 

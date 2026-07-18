@@ -20,14 +20,14 @@ enum MainMenuFactory {
         addItem("Close", to: fileMenu, action: #selector(NSWindow.performClose(_:)), target: nil, key: "w")
         fileMenu.addItem(.separator())
         addItem("Save", to: fileMenu, action: #selector(AppDelegate.save(_:)), target: target, key: "s")
-        addItem("Save As...", to: fileMenu, action: #selector(AppDelegate.saveAs(_:)), target: target, key: "S")
+        addItem("Save As...", to: fileMenu, action: #selector(AppDelegate.saveAs(_:)), target: target, key: "s", modifiers: [.command, .shift])
         fileMenu.addItem(.separator())
         addItem("Print...", to: fileMenu, action: #selector(AppDelegate.printDocument(_:)), target: target, key: "p")
         mainMenu.addItem(rootItem(for: fileMenu))
 
         let editMenu = NSMenu(title: "Edit")
         addItem("Undo", to: editMenu, action: Selector(("undo:")), target: nil, key: "z")
-        addItem("Redo", to: editMenu, action: Selector(("redo:")), target: nil, key: "Z")
+        addItem("Redo", to: editMenu, action: Selector(("redo:")), target: nil, key: "z", modifiers: [.command, .shift])
         editMenu.addItem(.separator())
         addItem("Cut", to: editMenu, action: #selector(NSText.cut(_:)), target: nil, key: "x")
         addItem("Copy", to: editMenu, action: #selector(NSText.copy(_:)), target: nil, key: "c")
@@ -36,12 +36,12 @@ enum MainMenuFactory {
         editMenu.addItem(.separator())
         addItem("Find...", to: editMenu, action: #selector(AppDelegate.showFind(_:)), target: target, key: "f")
         addItem("Find Next", to: editMenu, action: #selector(AppDelegate.findNext(_:)), target: target, key: "g")
-        addItem("Find Previous", to: editMenu, action: #selector(AppDelegate.findPrevious(_:)), target: target, key: "G")
+        addItem("Find Previous", to: editMenu, action: #selector(AppDelegate.findPrevious(_:)), target: target, key: "g", modifiers: [.command, .shift])
         addItem("Replace...", to: editMenu, action: #selector(AppDelegate.showReplace(_:)), target: target, key: "h")
         addItem("Go To...", to: editMenu, action: #selector(AppDelegate.goToLine(_:)), target: target, key: "l")
         editMenu.addItem(.separator())
         addItem("Select All", to: editMenu, action: #selector(NSText.selectAll(_:)), target: nil, key: "a")
-        addItem("Time/Date", to: editMenu, action: #selector(AppDelegate.insertTimeDate(_:)), target: target, key: "t", modifiers: [])
+        addItem("Time/Date", to: editMenu, action: #selector(AppDelegate.insertTimeDate(_:)), target: target, key: f5KeyEquivalent, modifiers: [])
         mainMenu.addItem(rootItem(for: editMenu))
 
         let formatMenu = NSMenu(title: "Format")
@@ -73,6 +73,10 @@ enum MainMenuFactory {
         let item = NSMenuItem()
         item.submenu = submenu
         return item
+    }
+
+    private static var f5KeyEquivalent: String {
+        String(UnicodeScalar(NSF5FunctionKey)!)
     }
 
     @discardableResult
