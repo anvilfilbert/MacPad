@@ -89,7 +89,7 @@ Evidence:
 - Build output, release ZIP output, and derived data are ignored in [.gitignore](.gitignore:1).
 - The repository includes a security policy in [SECURITY.md](SECURITY.md:1).
 - Dependabot is configured for Swift package checks in [.github/dependabot.yml](.github/dependabot.yml:1).
-- A secret-pattern scan over tracked source and docs did not find API keys, private keys, GitHub tokens, or local home-directory paths.
+- Public repository hygiene checks passed for tracked source and docs.
 
 Recommended maintenance:
 
