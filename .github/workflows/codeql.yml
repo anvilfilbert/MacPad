@@ -29,7 +29,7 @@ jobs:
           build-mode: manual
 
       - name: Build for analysis
-        run: swift build --configuration release --arch arm64
+        run: swift build --configuration release
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v4
