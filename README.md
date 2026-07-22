@@ -9,7 +9,7 @@
 
 A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 
-[DeepWiki project overview](https://deepwiki.com/anvilfilbert/MacPad)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/anvilfilbert/MacPad)
 
 <i>Want extensions, themes, and language-aware features? See [MacPad Pro](https://github.com/anvilfilbert/MacPadPro).</i>
 
