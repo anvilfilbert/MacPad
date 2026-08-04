@@ -6,11 +6,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let sessionDefaultsKey = "MacPad.SessionState.v1"
     private var windows: [EditorWindowController] = []
     private var isRestoringSession = false
+    private var pendingOpenURLs: [URL] = []
+    private var hasFinishedLaunching = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSWindow.allowsAutomaticWindowTabbing = false
         NSApp.mainMenu = MainMenuFactory.makeMenu(target: self)
-        if !restorePreviousSession() {
+
+        let launchURLs = pendingOpenURLs
+        pendingOpenURLs.removeAll()
+        hasFinishedLaunching = true
+
+        if !launchURLs.isEmpty {
+            for url in launchURLs {
+                openDocument(url: url)
+            }
+        } else if !restorePreviousSession() {
             openNewDocument(nil)
         }
         NSApp.activate(ignoringOtherApps: true)
@@ -37,6 +48,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ sender: NSApplication, open urls: [URL]) {
+        guard hasFinishedLaunching else {
+            pendingOpenURLs.append(contentsOf: urls)
+            return
+        }
+
         for url in urls {
             openDocument(url: url)
         }
