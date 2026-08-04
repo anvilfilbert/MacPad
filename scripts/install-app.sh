@@ -7,5 +7,6 @@ INSTALL_DIR="/Applications"
 
 "$ROOT_DIR/scripts/build-app.sh"
 ditto "$APP_DIR" "$INSTALL_DIR/MacPad.app"
+/usr/bin/codesign --verify --deep --strict "$INSTALL_DIR/MacPad.app"
 
 echo "Installed $INSTALL_DIR/MacPad.app"
