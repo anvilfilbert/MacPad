@@ -8,6 +8,7 @@
 - Added standard Services, Hide, Show All, and Bring All to Front menu commands.
 - Made Return activate Find Next in the Find and Replace dialogs.
 - Made Replace All participate correctly in Undo.
+- Added strict signature verification for packaged releases and locally installed app bundles.
 
 ## 1.0.7
 
