@@ -409,11 +409,15 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
             options: [.caseInsensitive, .literal],
             range: nil
         )
-        textView.string = replaced
-        editorDocument.updateText(replaced)
-        updateTitle()
-        updateStatusBar()
-        notifyStateChanged()
+        let fullRange = NSRange(location: 0, length: (textView.string as NSString).length)
+        guard replaced != textView.string,
+              let textStorage = textView.textStorage,
+              textView.shouldChangeText(in: fullRange, replacementString: replaced) else {
+            return
+        }
+
+        textStorage.replaceCharacters(in: fullRange, with: replaced)
+        textView.didChangeText()
     }
 
     private func selectLine(_ lineNumber: Int) {

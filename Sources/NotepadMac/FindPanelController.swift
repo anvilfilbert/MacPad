@@ -4,6 +4,7 @@ final class FindPanelController: NSWindowController {
     private let findField = NSTextField()
     private let replaceField = NSTextField()
     private let replaceLabel = NSTextField(labelWithString: "Replace with:")
+    private let findNextButton = NSButton(title: "Find Next", target: nil, action: nil)
     private let replaceButton = NSButton(title: "Replace", target: nil, action: nil)
     private let replaceAllButton = NSButton(title: "Replace All", target: nil, action: nil)
     private let onFindNext: (String) -> Void
@@ -51,15 +52,16 @@ final class FindPanelController: NSWindowController {
         guard let contentView = window?.contentView else { return }
 
         let findLabel = NSTextField(labelWithString: "Find what:")
-        let nextButton = NSButton(title: "Find Next", target: self, action: #selector(findNext))
         let previousButton = NSButton(title: "Find Previous", target: self, action: #selector(findPrevious))
+        findNextButton.target = self
+        findNextButton.action = #selector(findNext)
         replaceButton.target = self
         replaceButton.action = #selector(replace)
         replaceAllButton.target = self
         replaceAllButton.action = #selector(replaceAll)
 
         let grid = NSGridView(views: [
-            [findLabel, findField, nextButton],
+            [findLabel, findField, findNextButton],
             [NSGridCell.emptyContentView, NSGridCell.emptyContentView, previousButton],
             [replaceLabel, replaceField, replaceButton],
             [NSGridCell.emptyContentView, NSGridCell.emptyContentView, replaceAllButton]
@@ -76,6 +78,7 @@ final class FindPanelController: NSWindowController {
             grid.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16)
         ])
 
+        window?.defaultButtonCell = findNextButton.cell as? NSButtonCell
         setReplaceVisible(false)
     }
 

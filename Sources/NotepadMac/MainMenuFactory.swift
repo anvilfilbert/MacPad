@@ -8,14 +8,31 @@ enum MainMenuFactory {
         let appMenu = NSMenu(title: "MacPad")
         addItem("About MacPad", to: appMenu, action: #selector(AppDelegate.showAbout(_:)), target: target)
         appMenu.addItem(.separator())
+        let servicesMenu = NSMenu(title: "Services")
+        let servicesItem = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
+        servicesItem.submenu = servicesMenu
+        appMenu.addItem(servicesItem)
+        NSApp.servicesMenu = servicesMenu
+        appMenu.addItem(.separator())
+        addItem("Hide MacPad", to: appMenu, action: #selector(NSApplication.hide(_:)), target: NSApp, key: "h")
+        addItem(
+            "Hide Others",
+            to: appMenu,
+            action: #selector(NSApplication.hideOtherApplications(_:)),
+            target: NSApp,
+            key: "h",
+            modifiers: [.command, .option]
+        )
+        addItem("Show All", to: appMenu, action: #selector(NSApplication.unhideAllApplications(_:)), target: NSApp)
+        appMenu.addItem(.separator())
         addItem("Quit MacPad", to: appMenu, action: #selector(NSApplication.terminate(_:)), target: NSApp, key: "q")
         let appRoot = NSMenuItem()
         appRoot.submenu = appMenu
         mainMenu.addItem(appRoot)
 
         let fileMenu = NSMenu(title: "File")
-        addItem("New Tab", to: fileMenu, action: #selector(AppDelegate.openNewTab(_:)), target: target, key: "n")
-        addItem("New Window", to: fileMenu, action: #selector(AppDelegate.openNewWindow(_:)), target: target, key: "n", modifiers: [.command, .shift])
+        addItem("New Tab", to: fileMenu, action: #selector(AppDelegate.openNewTab(_:)), target: target, key: "t")
+        addItem("New Window", to: fileMenu, action: #selector(AppDelegate.openNewWindow(_:)), target: target, key: "n")
         addItem("Open...", to: fileMenu, action: #selector(AppDelegate.openDocument(_:)), target: target, key: "o")
         addItem("Close", to: fileMenu, action: #selector(NSWindow.performClose(_:)), target: nil, key: "w")
         fileMenu.addItem(.separator())
@@ -39,7 +56,7 @@ enum MainMenuFactory {
         addItem("Find...", to: editMenu, action: #selector(AppDelegate.showFind(_:)), target: target, key: "f")
         addItem("Find Next", to: editMenu, action: #selector(AppDelegate.findNext(_:)), target: target, key: "g")
         addItem("Find Previous", to: editMenu, action: #selector(AppDelegate.findPrevious(_:)), target: target, key: "g", modifiers: [.command, .shift])
-        addItem("Replace...", to: editMenu, action: #selector(AppDelegate.showReplace(_:)), target: target, key: "h")
+        addItem("Replace...", to: editMenu, action: #selector(AppDelegate.showReplace(_:)), target: target, key: "f", modifiers: [.command, .option])
         addItem("Go To...", to: editMenu, action: #selector(AppDelegate.goToLine(_:)), target: target, key: "l")
         editMenu.addItem(.separator())
         addItem("Select All", to: editMenu, action: #selector(NSText.selectAll(_:)), target: nil, key: "a")
@@ -48,7 +65,7 @@ enum MainMenuFactory {
 
         let formatMenu = NSMenu(title: "Format")
         addItem("Word Wrap", to: formatMenu, action: #selector(AppDelegate.toggleWordWrap(_:)), target: target, key: "w", modifiers: [.command, .option])
-        addItem("Font...", to: formatMenu, action: #selector(AppDelegate.chooseFont(_:)), target: target, key: "f", modifiers: [.command, .option])
+        addItem("Font...", to: formatMenu, action: #selector(AppDelegate.chooseFont(_:)), target: target)
         mainMenu.addItem(rootItem(for: formatMenu))
 
         let viewMenu = NSMenu(title: "View")
@@ -65,6 +82,8 @@ enum MainMenuFactory {
         windowMenu.addItem(.separator())
         addItem("Show Previous Tab", to: windowMenu, action: #selector(NSWindow.selectPreviousTab(_:)), target: nil, key: "[", modifiers: [.command, .shift])
         addItem("Show Next Tab", to: windowMenu, action: #selector(NSWindow.selectNextTab(_:)), target: nil, key: "]", modifiers: [.command, .shift])
+        windowMenu.addItem(.separator())
+        addItem("Bring All to Front", to: windowMenu, action: #selector(NSApplication.arrangeInFront(_:)), target: NSApp)
         mainMenu.addItem(rootItem(for: windowMenu))
         NSApp.windowsMenu = windowMenu
 
