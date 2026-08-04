@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.8
+
+- Fixed files opening twice when MacPad was launched from Finder or Open With.
+- Changed New Tab to `Command-T` and New Window to `Command-N`.
+- Changed Replace to `Option-Command-F`, restoring the standard `Command-H` Hide MacPad shortcut.
+- Added standard Services, Hide, Show All, and Bring All to Front menu commands.
+- Made Return activate Find Next in the Find and Replace dialogs.
+- Made Replace All participate correctly in Undo.
+
 ## 1.0.7
 
 - Stopped storing document text in session restore data; MacPad now restores saved-file tabs by reloading files from disk.
