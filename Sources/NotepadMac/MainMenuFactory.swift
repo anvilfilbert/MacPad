@@ -2,7 +2,7 @@ import AppKit
 
 @MainActor
 enum MainMenuFactory {
-    static func makeMenu(target: AnyObject) -> NSMenu {
+    static func makeMenu(target: AnyObject, application: NSApplication) -> NSMenu {
         let mainMenu = NSMenu(title: "Main Menu")
 
         let appMenu = NSMenu(title: "MacPad")
@@ -12,20 +12,20 @@ enum MainMenuFactory {
         let servicesItem = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
         servicesItem.submenu = servicesMenu
         appMenu.addItem(servicesItem)
-        NSApp.servicesMenu = servicesMenu
+        application.servicesMenu = servicesMenu
         appMenu.addItem(.separator())
-        addItem("Hide MacPad", to: appMenu, action: #selector(NSApplication.hide(_:)), target: NSApp, key: "h")
+        addItem("Hide MacPad", to: appMenu, action: #selector(NSApplication.hide(_:)), target: application, key: "h")
         addItem(
             "Hide Others",
             to: appMenu,
             action: #selector(NSApplication.hideOtherApplications(_:)),
-            target: NSApp,
+            target: application,
             key: "h",
             modifiers: [.command, .option]
         )
-        addItem("Show All", to: appMenu, action: #selector(NSApplication.unhideAllApplications(_:)), target: NSApp)
+        addItem("Show All", to: appMenu, action: #selector(NSApplication.unhideAllApplications(_:)), target: application)
         appMenu.addItem(.separator())
-        addItem("Quit MacPad", to: appMenu, action: #selector(NSApplication.terminate(_:)), target: NSApp, key: "q")
+        addItem("Quit MacPad", to: appMenu, action: #selector(NSApplication.terminate(_:)), target: application, key: "q")
         let appRoot = NSMenuItem()
         appRoot.submenu = appMenu
         mainMenu.addItem(appRoot)
@@ -83,9 +83,9 @@ enum MainMenuFactory {
         addItem("Show Previous Tab", to: windowMenu, action: #selector(NSWindow.selectPreviousTab(_:)), target: nil, key: "[", modifiers: [.command, .shift])
         addItem("Show Next Tab", to: windowMenu, action: #selector(NSWindow.selectNextTab(_:)), target: nil, key: "]", modifiers: [.command, .shift])
         windowMenu.addItem(.separator())
-        addItem("Bring All to Front", to: windowMenu, action: #selector(NSApplication.arrangeInFront(_:)), target: NSApp)
+        addItem("Bring All to Front", to: windowMenu, action: #selector(NSApplication.arrangeInFront(_:)), target: application)
         mainMenu.addItem(rootItem(for: windowMenu))
-        NSApp.windowsMenu = windowMenu
+        application.windowsMenu = windowMenu
 
         return mainMenu
     }

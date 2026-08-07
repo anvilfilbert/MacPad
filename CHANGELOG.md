@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.9
+
+- Prevented saves from silently overwriting files changed by another app.
+- Preserved symbolic-link targets, UTF-8 BOM, ISO-8859-1, and detected line endings without lossy conversion.
+- Rejected oversized, special, and binary-like files before editor decoding.
+- Reused an existing editor when Finder sends the same file more than once.
+- Kept editor commands routed to the active document while Find, Replace, or Font panels are open.
+- Prevented an empty Replace term from inserting replacement text.
+- Debounced session metadata writes and removed silent session decoding failures.
+- Fixed Go To Line bounds for documents ending with a newline.
+- Added 23 automated core and AppKit regression tests.
+- Added pinned GitHub Actions, universal package verification, stable latest-download assets, SHA-256 checksums, and build-provenance attestations.
+
 ## 1.0.8
 
 - Fixed files opening twice when MacPad was launched from Finder or Open With.

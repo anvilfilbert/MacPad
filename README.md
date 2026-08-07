@@ -4,6 +4,7 @@
 </h1>
 
 [![Latest Release](https://img.shields.io/github/v/release/anvilfilbert/MacPad?label=release)](https://github.com/anvilfilbert/MacPad/releases/latest)
+[![Build](https://github.com/anvilfilbert/MacPad/actions/workflows/swift-ci.yml/badge.svg)](https://github.com/anvilfilbert/MacPad/actions/workflows/swift-ci.yml)
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14%2B-blue)](Package.swift)
 
@@ -19,21 +20,21 @@ A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 
 ## Download
 
-Download the latest ready-to-use app from:
+Download the latest ready-to-use universal app:
 
 ```text
-https://github.com/anvilfilbert/MacPad/releases/latest
+https://github.com/anvilfilbert/MacPad/releases/latest/download/MacPad-macOS-universal.zip
 ```
 
-Get `MacPad-1.0.8-macOS-universal.zip`, unzip it, and drag `MacPad.app` into Applications.
+Unzip it and drag `MacPad.app` into Applications. The [latest release page](https://github.com/anvilfilbert/MacPad/releases/latest) also provides release notes.
 
-Release ZIPs include a matching `.sha256` checksum file.
+Each release includes a matching `.sha256` checksum and GitHub build-provenance attestation.
 
 If macOS warns that the app is from an unidentified developer, right-click `MacPad.app`, choose **Open**, then confirm **Open**. The app is locally signed but not Apple-notarized.
 
 ## Latest Changes
 
-`1.0.8` fixes duplicate file opening from Finder, restores standard macOS shortcuts for new tabs, new windows, Replace, and Hide, makes Return run Find Next, and makes Replace All work correctly with Undo.
+`1.0.9` prevents accidental overwrites when a file changes outside MacPad, preserves supported file encodings and symbolic links, fixes command routing while Find or Font panels are active, prevents duplicate file windows, and adds automated tests plus release provenance.
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
@@ -50,7 +51,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 - Go to line and insert current time/date
 - Word wrap toggle
 - Font chooser and zoom controls
-- Status bar showing line, column, zoom, line ending mode, and UTF-8
+- Status bar showing line, column, zoom, line ending mode, and detected file encoding
 - Windows, Unix, and classic Mac line-ending detection and preservation
 - Builds into a launchable universal `MacPad.app`
 - Uses the included MacPad logo as the app icon
@@ -84,3 +85,13 @@ Create a release zip with:
 ```sh
 ./scripts/package-release.sh
 ```
+
+Run the automated suite with:
+
+```sh
+swift test
+```
+
+## Security
+
+Report vulnerabilities through [GitHub private vulnerability reporting](https://github.com/anvilfilbert/MacPad/security/advisories/new). See [SECURITY.md](SECURITY.md) for policy details.

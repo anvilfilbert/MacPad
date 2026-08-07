@@ -1,17 +1,53 @@
 import AppKit
 import NotepadMacCore
+import OSLog
+
+@MainActor
+enum EditorWindowResolver {
+    static func resolve(
+        controllers: [EditorWindowController],
+        mainWindow: NSWindow?,
+        keyWindow: NSWindow?,
+        lastActive: EditorWindowController?
+    ) -> EditorWindowController? {
+        if let controller = controllers.first(where: { $0.window === mainWindow }) {
+            return controller
+        }
+        if let controller = controllers.first(where: { $0.window === keyWindow }) {
+            return controller
+        }
+        if let lastActive,
+           controllers.contains(where: { $0 === lastActive }) {
+            return lastActive
+        }
+        return controllers.last
+    }
+
+    static func controller(
+        opening url: URL,
+        controllers: [EditorWindowController]
+    ) -> EditorWindowController? {
+        let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
+        return controllers.first { controller in
+            controller.fileURL?.standardizedFileURL == resolvedURL
+        }
+    }
+}
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let sessionDefaultsKey = "MacPad.SessionState.v1"
+    private let sessionLogger = Logger(subsystem: "local.macpad.app", category: "session")
     private var windows: [EditorWindowController] = []
     private var isRestoringSession = false
     private var pendingOpenURLs: [URL] = []
     private var hasFinishedLaunching = false
+    private weak var lastActiveWindowController: EditorWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSWindow.allowsAutomaticWindowTabbing = false
-        NSApp.mainMenu = MainMenuFactory.makeMenu(target: self)
+        let application = NSApplication.shared
+        application.mainMenu = MainMenuFactory.makeMenu(target: self, application: application)
 
         let launchURLs = pendingOpenURLs
         pendingOpenURLs.removeAll()
@@ -38,12 +74,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 for confirmedController in confirmedControllers {
                     confirmedController.keepInSessionRestore()
                 }
-                saveSession()
+                saveSessionNow()
                 return .terminateCancel
             }
             confirmedControllers.append(controller)
         }
-        saveSession()
+        saveSessionNow()
         return .terminateNow
     }
 
@@ -65,7 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func openNewDocument(_ sender: Any?) {
-        openNewTab(sender)
+        openNewWindow(sender)
     }
 
     @objc func openNewWindow(_ sender: Any?) {
@@ -89,6 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func clearSessionData(_ sender: Any?) {
+        cancelScheduledSessionSave()
         UserDefaults.standard.removeObject(forKey: sessionDefaultsKey)
         for controller in windows {
             controller.discardFromSessionRestore()
@@ -96,6 +133,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func openDocument(url: URL) {
+        if let existingController = EditorWindowResolver.controller(
+            opening: url,
+            controllers: windows
+        ) {
+            lastActiveWindowController = existingController
+            existingController.showWindow(nil)
+            existingController.window?.makeKeyAndOrderFront(nil)
+            return
+        }
+
         let controller = makeWindowController()
         present(controller, asTab: keyWindowController != nil)
         controller.loadFile(url)
@@ -106,10 +153,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         controller.onClose = { [weak self, weak controller] in
             guard let controller else { return }
             self?.windows.removeAll { $0 === controller }
-            self?.saveSession()
+            self?.saveSessionNow()
         }
         controller.onStateChange = { [weak self] in
-            self?.saveSession()
+            self?.scheduleSessionSave()
+        }
+        controller.onActivate = { [weak self, weak controller] in
+            self?.lastActiveWindowController = controller
         }
         return controller
     }
@@ -117,6 +167,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func present(_ controller: EditorWindowController, asTab: Bool) {
         let parentWindow = asTab ? keyWindowController?.window : nil
         windows.append(controller)
+        lastActiveWindowController = controller
         controller.showWindow(nil)
 
         if let parentWindow,
@@ -126,11 +177,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             newWindow.makeKeyAndOrderFront(nil)
         }
 
-        saveSession()
+        saveSessionNow()
     }
 
     private var keyWindowController: EditorWindowController? {
-        windows.first { $0.window?.isKeyWindow == true } ?? windows.last
+        EditorWindowResolver.resolve(
+            controllers: windows,
+            mainWindow: NSApp.mainWindow,
+            keyWindow: NSApp.keyWindow,
+            lastActive: lastActiveWindowController
+        )
     }
 
     private func aboutCredits() -> NSAttributedString {
@@ -189,16 +245,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func chooseFont(_ sender: Any?) { keyWindowController?.chooseFont(sender) }
 
     private func restorePreviousSession() -> Bool {
-        guard let data = UserDefaults.standard.data(forKey: sessionDefaultsKey),
-              let session = try? JSONDecoder().decode(AppSessionState.self, from: data),
-              !session.windows.isEmpty else {
+        guard let data = UserDefaults.standard.data(forKey: sessionDefaultsKey) else {
             return false
         }
+
+        let session: AppSessionState
+        do {
+            session = try JSONDecoder().decode(AppSessionState.self, from: data)
+        } catch {
+            UserDefaults.standard.removeObject(forKey: sessionDefaultsKey)
+            sessionLogger.error(
+                "Discarded invalid session state: \(error.localizedDescription, privacy: .public)"
+            )
+            showSessionRestoreError(filePath: nil, error: error)
+            return false
+        }
+        guard !session.windows.isEmpty else { return false }
 
         isRestoringSession = true
         defer {
             isRestoringSession = false
-            saveSession()
+            saveSessionNow()
         }
 
         for windowSession in session.windows {
@@ -218,7 +285,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return !windows.isEmpty
     }
 
-    private func saveSession() {
+    private func scheduleSessionSave() {
+        guard !isRestoringSession else { return }
+        NSObject.cancelPreviousPerformRequests(
+            withTarget: self,
+            selector: #selector(persistScheduledSession),
+            object: nil
+        )
+        perform(#selector(persistScheduledSession), with: nil, afterDelay: 0.25)
+    }
+
+    private func saveSessionNow() {
+        cancelScheduledSessionSave()
+        writeSession()
+    }
+
+    private func cancelScheduledSessionSave() {
+        NSObject.cancelPreviousPerformRequests(
+            withTarget: self,
+            selector: #selector(persistScheduledSession),
+            object: nil
+        )
+    }
+
+    @objc private func persistScheduledSession() {
+        writeSession()
+    }
+
+    private func writeSession() {
         guard !isRestoringSession else { return }
 
         let windowSessions = currentWindowSessions()
@@ -227,8 +321,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        if let data = try? JSONEncoder().encode(AppSessionState(windows: windowSessions)) {
+        do {
+            let data = try JSONEncoder().encode(AppSessionState(windows: windowSessions))
             UserDefaults.standard.set(data, forKey: sessionDefaultsKey)
+        } catch {
+            sessionLogger.error(
+                "Could not encode session state: \(error.localizedDescription, privacy: .public)"
+            )
         }
     }
 

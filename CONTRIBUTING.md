@@ -10,9 +10,11 @@ MacPad is intended to stay close to Windows `notepad.exe`: fast, native, plain t
 
 1. Keep changes focused and small.
 2. Avoid private notes, local paths, generated build output, or credentials.
-3. Build the app locally:
+3. Run the repository checks:
 
 ```sh
+./scripts/verify-public-repo.sh
+swift test
 ./scripts/build-app.sh
 ```
 

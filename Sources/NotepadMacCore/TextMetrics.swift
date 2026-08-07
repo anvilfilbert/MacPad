@@ -35,6 +35,33 @@ public enum TextMetrics {
             .replacingOccurrences(of: "\r", with: "\n")
     }
 
+    public static func location(ofLine lineNumber: Int, in text: String) -> Int? {
+        guard lineNumber > 0 else { return nil }
+        guard lineNumber > 1 else { return 0 }
+
+        let nsText = text as NSString
+        var currentLine = 1
+        var location = 0
+
+        while currentLine < lineNumber {
+            guard location < nsText.length else { return nil }
+            let remainingRange = NSRange(
+                location: location,
+                length: nsText.length - location
+            )
+            let lineBreakRange = nsText.range(
+                of: "\n",
+                options: [],
+                range: remainingRange
+            )
+            guard lineBreakRange.location != NSNotFound else { return nil }
+            location = lineBreakRange.location + lineBreakRange.length
+            currentLine += 1
+        }
+
+        return location
+    }
+
     public static func textForSave(_ text: String, lineEnding: LineEnding) -> String {
         let normalized = normalizedLineEndingsForEditing(text)
         switch lineEnding {

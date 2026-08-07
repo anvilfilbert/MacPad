@@ -13,13 +13,22 @@ jobs:
   build:
     name: Build
     runs-on: macos-15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
 
       - name: Show Swift version
         run: swift --version
 
-      - name: Build release package
-        run: swift build --configuration release
+      - name: Check public repository contents
+        run: ./scripts/verify-public-repo.sh
+
+      - name: Run tests
+        run: swift test
+
+      - name: Build and verify universal release package
+        run: ./scripts/package-release.sh

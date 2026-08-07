@@ -1,100 +1,118 @@
 # MacPad Security Best Practices Report
 
+Review date: 2026-08-07
+Release target: 1.0.9
+
 ## Executive Summary
 
-MacPad has a small security surface: it is a native macOS plain-text editor with no network stack, no authentication, no server component, no database, and no third-party package dependencies. No critical or high-severity vulnerabilities were found in this review, and the original review findings were addressed in version 1.0.7.
+MacPad is a native, offline macOS plain-text editor. It has no network client, authentication, server, database, analytics, or third-party Swift package dependencies. This review found no critical or high-severity vulnerabilities.
 
-The main privacy change is that session restore no longer writes document text to `UserDefaults`. MacPad now stores tab/window metadata and saved file paths, then reloads saved-file tabs from disk. File opening is also narrower and guarded by a 25 MB size limit, and release packages include SHA-256 checksums.
+The 1.0.9 hardening closes the identified document-integrity, unsafe file-decoding, session-validation, command-routing, and release-provenance gaps. Twenty-three automated core and AppKit tests cover the relevant regressions.
 
-Scope note: the requested `security-best-practices` skill has reference material for Python, JavaScript/TypeScript, and Go, but no Swift/AppKit-specific reference file. This report therefore uses repo inspection plus general desktop-app security review criteria.
+## Resolved Findings
 
-## Resolution Comment
+### S-001: A save could overwrite changes made by another application
 
-Fixed in [MacPad 1.0.7](https://github.com/anvilfilbert/MacPad/releases/tag/v1.0.7). The security hardening changes were committed to `main`, the local app was rebuilt and installed, and the GitHub release includes the updated app ZIP plus a SHA-256 checksum file.
+Severity: Medium
+Status: Fixed in 1.0.9
 
-## Critical Severity
-
-No critical findings.
-
-## High Severity
-
-No high-severity findings.
-
-## Medium Severity
-
-### S-001: Session restore persisted unsaved document text in plain local preferences
-
-Status: Fixed in 1.0.7.
+MacPad now records a SHA-256 digest when a file is loaded and verifies the current file immediately before saving. A mismatch stops the save and offers Save As, Reload from Disk, or Cancel. This avoids silently destroying another editor's changes.
 
 Evidence:
 
-- `EditorSessionState` now stores file path and UI metadata, but no document text fields, in [Sources/NotepadMacCore/SessionState.swift](Sources/NotepadMacCore/SessionState.swift:47).
-- Encoding writes only metadata fields in [Sources/NotepadMacCore/SessionState.swift](Sources/NotepadMacCore/SessionState.swift:95).
-- `EditorDocument.sessionState(...)` now creates session metadata without editor text in [Sources/NotepadMacCore/EditorDocument.swift](Sources/NotepadMacCore/EditorDocument.swift:104).
-- Saved-file tabs are restored by loading the file from disk in [Sources/NotepadMacCore/EditorDocument.swift](Sources/NotepadMacCore/EditorDocument.swift:94).
-- `File > Clear Session Data` removes the `MacPad.SessionState.v1` key in [Sources/NotepadMac/AppDelegate.swift](Sources/NotepadMac/AppDelegate.swift:75) and is exposed in [Sources/NotepadMac/MainMenuFactory.swift](Sources/NotepadMac/MainMenuFactory.swift:25).
-- The README now states that session restore does not store document text in preferences in [README.md](README.md:46).
+- `Sources/NotepadMacCore/EditorDocument.swift`
+- `Sources/NotepadMac/EditorWindowController.swift`
+- `Tests/NotepadMacCoreTests/EditorDocumentTests.swift`
 
-Why this matters:
+### S-002: Symbolic links and special files were not handled defensively
 
-`UserDefaults` is suitable for lightweight preferences, but it is not a secure store for private document content. The remediated design keeps restore metadata while avoiding persistence of unsaved note contents.
+Severity: Medium
+Status: Fixed in 1.0.9
 
-Remaining risk:
-
-Saved file paths are still stored so MacPad can restore saved-file tabs. That is a reasonable feature tradeoff for this app, and users can clear it with `File > Clear Session Data`.
-
-## Low Severity
-
-### S-002: File open path accepts broad data files and reads them fully into memory
-
-Status: Fixed in 1.0.7.
+File URLs are resolved before loading or saving, so editing a symbolic link updates its target rather than replacing the link. Reads use an open file descriptor plus `fstat`, require a regular file, enforce the 25 MB limit before and during reading, and reject directories and other special files.
 
 Evidence:
 
-- The open panel now allows only `.plainText` and `.text` in [Sources/NotepadMac/AppDelegate.swift](Sources/NotepadMac/AppDelegate.swift:63).
-- `EditorDocument.loadFile(_:)` validates file size before reading in [Sources/NotepadMacCore/EditorDocument.swift](Sources/NotepadMacCore/EditorDocument.swift:51).
-- Files over 25 MB throw a clear error in [Sources/NotepadMacCore/EditorDocument.swift](Sources/NotepadMacCore/EditorDocument.swift:130).
-- Files containing NUL bytes are rejected as unsupported plain text in [Sources/NotepadMacCore/EditorDocument.swift](Sources/NotepadMacCore/EditorDocument.swift:53).
+- `Sources/NotepadMacCore/EditorDocument.swift`
+- `Tests/NotepadMacCoreTests/EditorDocumentTests.swift`
 
-Why this matters:
+### S-003: Arbitrary bytes could be treated as text and later converted silently
 
-Because file selection is user-driven, this is not a remote code execution issue. The remediated behavior reduces accidental large/binary file opens and avoids avoidable memory pressure.
+Severity: Medium
+Status: Fixed in 1.0.9
 
-### S-003: Public release builds are ad-hoc signed and not notarized
-
-Status: Fixed for the current non-notarized GitHub release model in 1.0.7.
+MacPad accepts valid UTF-8, UTF-8 with a byte-order mark, or plausible ISO-8859-1 text. Binary-like control data is rejected. Saves preserve the detected encoding and line-ending mode, and fail explicitly rather than performing a lossy conversion.
 
 Evidence:
 
-- The build script signs with an ad-hoc identity via `codesign --sign -` in [scripts/build-app.sh](scripts/build-app.sh:34).
-- The README tells users the app is locally signed but not Apple-notarized in [README.md](README.md:30).
-- Release packaging now writes a `.sha256` checksum file beside the ZIP in [scripts/package-release.sh](scripts/package-release.sh:20).
-- The README documents release checksum files in [README.md](README.md:30).
+- `Sources/NotepadMacCore/EditorDocument.swift`
+- `Sources/NotepadMacCore/TextMetrics.swift`
+- `Tests/NotepadMacCoreTests/EditorDocumentTests.swift`
 
-Why this matters:
+### S-004: Session data validation and persistence were too permissive
 
-This is a distribution trust issue, not an app runtime vulnerability. Users downloading a ZIP from GitHub cannot rely on Apple notarization checks, and macOS will show unidentified-developer warnings.
+Severity: Low
+Status: Fixed in 1.0.9
 
-Remaining risk:
-
-Checksums improve artifact integrity verification for the current GitHub release model. Apple Developer ID signing and notarization remain an optional future distribution trust upgrade, not an open finding for the current project constraints.
-
-## Informational Findings
-
-### S-004: Repo hygiene and dependency surface are currently good
+Session decoding bounds window and tab collections while decoding, clamps cursor and zoom values, deletes malformed state with an explicit error, and stores only file paths and UI metadata. Text edits no longer rewrite session preferences on every keystroke; relevant metadata updates are debounced.
 
 Evidence:
 
-- The Swift package has no external package dependencies in [Package.swift](Package.swift:13).
-- Build output, release ZIP output, and derived data are ignored in [.gitignore](.gitignore:1).
-- The repository includes a security policy in [SECURITY.md](SECURITY.md:1).
-- Dependabot is configured for Swift package checks in [.github/dependabot.yml](.github/dependabot.yml:1).
-- Public repository hygiene checks passed for tracked source and docs.
+- `Sources/NotepadMacCore/SessionState.swift`
+- `Sources/NotepadMac/AppDelegate.swift`
+- `Tests/NotepadMacCoreTests/SessionStateTests.swift`
 
-Recommended maintenance:
+### S-005: Utility panels could redirect document commands
 
-Keep generated app bundles and release archives out of git, continue using GitHub releases for binaries, and keep security reporting private through GitHub advisories or the owner contact path.
+Severity: Low
+Status: Fixed in 1.0.9
 
-## Current Follow-Up
+Find and Replace now use a non-main utility panel. Document commands resolve the main editor first, then the key or last active editor. Duplicate external open requests reuse the existing editor instead of opening the same file twice.
 
-No critical, high, or medium security work remains from this review. The only remaining item is optional release notarization through Apple Developer ID signing.
+Evidence:
+
+- `Sources/NotepadMac/AppDelegate.swift`
+- `Sources/NotepadMac/FindPanelController.swift`
+- `Tests/NotepadMacTests/WindowRoutingTests.swift`
+
+### S-006: Release provenance and CI coverage were insufficient
+
+Severity: Medium
+Status: Fixed in 1.0.9
+
+CI now runs the automated suite, scans tracked public content for common private-data and credential patterns, builds the universal release package, and verifies its signature, architectures, checksum, archive contents, and absence of local user paths. GitHub Actions use full commit SHA pins. Tagged releases repeat these checks and publish a GitHub build-provenance attestation.
+
+Evidence:
+
+- `.github/workflows/swift-ci.yml`
+- `.github/workflows/release.yml`
+- `.github/dependabot.yml`
+- `scripts/verify-public-repo.sh`
+- `scripts/package-release.sh`
+
+## Accepted Distribution Constraint
+
+### S-007: GitHub builds are ad-hoc signed and not Apple-notarized
+
+Severity: Informational
+Status: Accepted
+
+The release is ad-hoc signed, checksum-verified, and attested by GitHub Actions, but it is not signed with an Apple Developer ID or notarized by Apple. Developer ID distribution requires paid Apple Developer Program membership and private signing credentials. README installation instructions disclose the resulting Gatekeeper warning.
+
+## Repository Controls
+
+- GitHub secret scanning, push protection, Dependabot security updates, branch protection, and required CI are enabled.
+- Private vulnerability reporting is the supported security contact path.
+- Workflows have read-only default permissions; the release workflow grants only the permissions needed for release assets and attestations.
+- Generated app bundles, archives, and derived build output remain excluded from git.
+- Session restore retains saved file paths but not document text; `File > Clear Session Data` removes that metadata.
+
+## Maintenance
+
+Run these checks before each release:
+
+```sh
+./scripts/verify-public-repo.sh
+swift test
+./scripts/package-release.sh
+```

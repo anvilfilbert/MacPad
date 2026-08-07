@@ -8,6 +8,7 @@ APP_DIR="$ROOT_DIR/build/MacPad.app"
 BINARY_PATH=".build/$CONFIGURATION/MacPad"
 STAGE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/macpad-build.XXXXXX")"
 STAGED_APP="$STAGE_DIR/MacPad.app"
+VERIFY_APP="$STAGE_DIR/verify/MacPad.app"
 CONTENTS_DIR="$STAGED_APP/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
@@ -31,10 +32,18 @@ chmod +x "$MACOS_DIR/MacPad"
 cp "Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
 "$ROOT_DIR/scripts/create-app-icon.sh" "$ROOT_DIR/Resources/MacPadLogo.png" "$RESOURCES_DIR/AppIcon.icns"
 /usr/bin/xattr -cr "$STAGED_APP"
-/usr/bin/codesign --force --deep --sign - "$STAGED_APP" >/dev/null
+/usr/bin/codesign --force --sign - "$STAGED_APP" >/dev/null
+/usr/bin/codesign --verify --deep --strict "$STAGED_APP"
 
 rm -rf "$APP_DIR"
 mkdir -p "$(dirname "$APP_DIR")"
-/usr/bin/ditto "$STAGED_APP" "$APP_DIR"
+COPYFILE_DISABLE=1 /usr/bin/ditto --norsrc "$STAGED_APP" "$APP_DIR"
+/usr/bin/xattr -cr "$APP_DIR"
+
+# File Provider can immediately reapply FinderInfo to workspace copies.
+# Verify a metadata-free copy of the final output instead.
+COPYFILE_DISABLE=1 /usr/bin/ditto --norsrc "$APP_DIR" "$VERIFY_APP"
+/usr/bin/xattr -cr "$VERIFY_APP"
+/usr/bin/codesign --verify --deep --strict "$VERIFY_APP"
 
 echo "Built $APP_DIR"
