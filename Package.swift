@@ -19,6 +19,16 @@ let package = Package(
             name: "NotepadMac",
             dependencies: ["NotepadMacCore"],
             path: "Sources/NotepadMac"
+        ),
+        .testTarget(
+            name: "NotepadMacCoreTests",
+            dependencies: ["NotepadMacCore"],
+            path: "Tests/NotepadMacCoreTests"
+        ),
+        .testTarget(
+            name: "NotepadMacTests",
+            dependencies: ["NotepadMac"],
+            path: "Tests/NotepadMacTests"
         )
     ]
 )

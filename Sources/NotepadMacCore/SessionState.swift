@@ -1,6 +1,8 @@
 import Foundation
 
 public struct AppSessionState: Codable, Equatable {
+    public static let maximumWindowCount = 50
+    public static let maximumTabsPerWindow = 100
     public let windows: [EditorWindowSessionState]
 
     public init(windows: [EditorWindowSessionState]) {
@@ -22,11 +24,28 @@ public struct AppSessionState: Codable, Equatable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        if let windows = try container.decodeIfPresent([EditorWindowSessionState].self, forKey: .windows) {
-            self.windows = windows
+        if container.contains(.windows) {
+            var windowsContainer = try container.nestedUnkeyedContainer(forKey: .windows)
+            var decodedWindows: [EditorWindowSessionState] = []
+            while !windowsContainer.isAtEnd {
+                guard decodedWindows.count < Self.maximumWindowCount else {
+                    throw Self.limitError(codingPath: decoder.codingPath)
+                }
+                decodedWindows.append(try windowsContainer.decode(EditorWindowSessionState.self))
+            }
+            windows = decodedWindows
+        } else if container.contains(.tabs) {
+            var tabsContainer = try container.nestedUnkeyedContainer(forKey: .tabs)
+            var decodedTabs: [EditorSessionState] = []
+            while !tabsContainer.isAtEnd {
+                guard decodedTabs.count < Self.maximumTabsPerWindow else {
+                    throw Self.limitError(codingPath: decoder.codingPath)
+                }
+                decodedTabs.append(try tabsContainer.decode(EditorSessionState.self))
+            }
+            windows = decodedTabs.isEmpty ? [] : [EditorWindowSessionState(tabs: decodedTabs)]
         } else {
-            let tabs = try container.decodeIfPresent([EditorSessionState].self, forKey: .tabs) ?? []
-            self.windows = tabs.isEmpty ? [] : [EditorWindowSessionState(tabs: tabs)]
+            windows = []
         }
     }
 
@@ -34,13 +53,49 @@ public struct AppSessionState: Codable, Equatable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(windows, forKey: .windows)
     }
+
+    private static func limitError(codingPath: [any CodingKey]) -> DecodingError {
+        DecodingError.dataCorrupted(
+            .init(
+                codingPath: codingPath,
+                debugDescription: "Session contains more windows or tabs than MacPad supports."
+            )
+        )
+    }
 }
 
 public struct EditorWindowSessionState: Codable, Equatable {
     public let tabs: [EditorSessionState]
 
+    private enum CodingKeys: String, CodingKey {
+        case tabs
+    }
+
     public init(tabs: [EditorSessionState]) {
         self.tabs = tabs
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        var tabsContainer = try container.nestedUnkeyedContainer(forKey: .tabs)
+        var decodedTabs: [EditorSessionState] = []
+        while !tabsContainer.isAtEnd {
+            guard decodedTabs.count < AppSessionState.maximumTabsPerWindow else {
+                throw DecodingError.dataCorrupted(
+                    .init(
+                        codingPath: decoder.codingPath,
+                        debugDescription: "Session contains more tabs than MacPad supports."
+                    )
+                )
+            }
+            decodedTabs.append(try tabsContainer.decode(EditorSessionState.self))
+        }
+        tabs = decodedTabs
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(tabs, forKey: .tabs)
     }
 }
 
@@ -85,10 +140,10 @@ public struct EditorSessionState: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         filePath = try container.decodeIfPresent(String.self, forKey: .filePath)
-        selectedLocation = try container.decodeIfPresent(Int.self, forKey: .selectedLocation) ?? 0
+        selectedLocation = max(0, try container.decodeIfPresent(Int.self, forKey: .selectedLocation) ?? 0)
         wordWrapEnabled = try container.decodeIfPresent(Bool.self, forKey: .wordWrapEnabled) ?? true
         statusBarVisible = try container.decodeIfPresent(Bool.self, forKey: .statusBarVisible) ?? true
-        zoomPercent = try container.decodeIfPresent(Int.self, forKey: .zoomPercent) ?? 100
+        zoomPercent = min(500, max(10, try container.decodeIfPresent(Int.self, forKey: .zoomPercent) ?? 100))
         lineEnding = try container.decodeIfPresent(LineEnding.self, forKey: .lineEnding) ?? .windows
     }
 

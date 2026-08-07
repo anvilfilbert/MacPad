@@ -23,12 +23,13 @@ final class FindPanelController: NSWindowController {
         self.onReplace = onReplace
         self.onReplaceAll = onReplaceAll
 
-        let window = NSWindow(
+        let window = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 430, height: 164),
-            styleMask: [.titled, .closable],
+            styleMask: [.titled, .closable, .utilityWindow],
             backing: .buffered,
             defer: false
         )
+        window.hidesOnDeactivate = false
         window.title = "Find"
         super.init(window: window)
         setupUI()

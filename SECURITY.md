@@ -8,7 +8,7 @@ Only the latest public release is supported.
 
 Please do not open a public issue for a security vulnerability.
 
-Use GitHub's private vulnerability reporting for this repository when available, or contact the project owner through GitHub. Include:
+Use [GitHub private vulnerability reporting](https://github.com/anvilfilbert/MacPad/security/advisories/new). Include:
 
 - A clear description of the issue
 - Steps to reproduce

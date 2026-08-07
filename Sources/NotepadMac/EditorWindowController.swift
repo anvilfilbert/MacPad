@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTextViewDelegate {
     var onClose: (() -> Void)?
     var onStateChange: (() -> Void)?
+    var onActivate: (() -> Void)?
 
     private let scrollView = NSScrollView()
     private let textView = NSTextView()
@@ -38,6 +39,10 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    var fileURL: URL? {
+        editorDocument.fileURL
     }
 
     func loadFile(_ url: URL) {
@@ -226,11 +231,14 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         onClose?()
     }
 
+    func windowDidBecomeMain(_ notification: Notification) {
+        onActivate?()
+    }
+
     func textDidChange(_ notification: Notification) {
         editorDocument.updateText(textView.string)
         updateTitle()
         updateStatusBar()
-        notifyStateChanged()
     }
 
     func textViewDidChangeSelection(_ notification: Notification) {
@@ -302,6 +310,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
             updateTitle()
             updateStatusBar()
             notifyStateChanged()
+        } catch EditorDocumentError.fileChangedOnDisk {
+            resolveExternalFileChange(at: url)
         } catch {
             showError("Could not save the file.", detail: error.localizedDescription)
         }
@@ -395,7 +405,14 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private func replace(term: String, replacement: String) {
         let selectedRange = textView.selectedRange()
         let selectedText = selectedRange.length > 0 ? (textView.string as NSString).substring(with: selectedRange) : ""
-        if selectedText.caseInsensitiveCompare(term) == .orderedSame {
+        guard !term.isEmpty else {
+            NSSound.beep()
+            return
+        }
+        if TextEditingOperations.selectionMatches(
+            selectedText: selectedText,
+            searchTerm: term
+        ) {
             textView.insertText(replacement, replacementRange: selectedRange)
         }
         _ = find(term: term, backwards: false)
@@ -421,18 +438,12 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     private func selectLine(_ lineNumber: Int) {
-        let nsText = textView.string as NSString
-        var currentLine = 1
-        var location = 0
-
-        while currentLine < lineNumber && location < nsText.length {
-            let range = nsText.range(of: "\n", options: [], range: NSRange(location: location, length: nsText.length - location))
-            if range.location == NSNotFound {
-                NSSound.beep()
-                return
-            }
-            location = range.location + range.length
-            currentLine += 1
+        guard let location = TextMetrics.location(
+            ofLine: lineNumber,
+            in: textView.string
+        ) else {
+            NSSound.beep()
+            return
         }
 
         textView.setSelectedRange(NSRange(location: location, length: 0))
@@ -451,7 +462,26 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private func updateStatusBar() {
         guard statusBarVisible else { return }
         let position = TextMetrics.cursorPosition(in: textView.string, selectedLocation: textView.selectedRange().location)
-        statusBar.stringValue = "Ln \(position.line), Col \(position.column)  |  \(zoomPercent)%  |  \(editorDocument.lineEnding.statusLabel)  |  UTF-8"
+        statusBar.stringValue = "Ln \(position.line), Col \(position.column)  |  \(zoomPercent)%  |  \(editorDocument.lineEnding.statusLabel)  |  \(editorDocument.textEncoding.statusLabel)"
+    }
+
+    private func resolveExternalFileChange(at url: URL) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "This file changed outside MacPad."
+        alert.informativeText = "Save your MacPad edits to another file, reload the version on disk, or cancel to keep editing."
+        alert.addButton(withTitle: "Save As...")
+        alert.addButton(withTitle: "Reload from Disk")
+        alert.addButton(withTitle: "Cancel")
+
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            saveAs(nil)
+        case .alertSecondButtonReturn:
+            loadFile(url)
+        default:
+            break
+        }
     }
 
     private func showError(_ message: String, detail: String) {
