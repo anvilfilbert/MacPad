@@ -38,10 +38,20 @@ enum EditorWindowResolver {
         try controller.loadFile(url)
         return controller
     }
+
+    static func makeController(opening url: URL, baseFont: NSFont) throws -> EditorWindowController {
+        let controller = EditorWindowController(baseFont: baseFont)
+        try controller.loadFile(url)
+        return controller
+    }
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSMenuDelegate {
+    private static let preferencesLogger = Logger(
+        subsystem: "local.macpad.app",
+        category: "preferences"
+    )
     private let sessionDefaultsKey = "MacPad.SessionState.v1"
     private let sessionLogger = Logger(subsystem: "local.macpad.app", category: "session")
     private var windows: [EditorWindowController] = []
@@ -49,6 +59,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var pendingOpenURLs: [URL] = []
     private var hasFinishedLaunching = false
     private weak var lastActiveWindowController: EditorWindowController?
+    private var preferredFont = EditorWindowController.defaultEditorFont
+
+    override init() {
+        super.init()
+        preferredFont = Self.loadPreferredFont()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSWindow.allowsAutomaticWindowTabbing = false
@@ -130,6 +146,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
     }
 
+    @objc func openRecentDocument(_ sender: Any?) {
+        guard let item = sender as? NSMenuItem,
+              let url = item.representedObject as? URL else {
+            assertionFailure("Open Recent requires a menu item containing a file URL.")
+            return
+        }
+        openDocument(url: url)
+    }
+
+    @objc func clearRecentDocuments(_ sender: Any?) {
+        NSDocumentController.shared.clearRecentDocuments(sender)
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard menu.title == "Open Recent" else { return }
+        RecentDocumentsMenuBuilder.populate(
+            menu,
+            urls: NSDocumentController.shared.recentDocumentURLs,
+            target: self
+        )
+    }
+
     @objc func clearSessionData(_ sender: Any?) {
         cancelScheduledSessionSave()
         UserDefaults.standard.removeObject(forKey: sessionDefaultsKey)
@@ -146,20 +184,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             lastActiveWindowController = existingController
             existingController.showWindow(nil)
             existingController.window?.makeKeyAndOrderFront(nil)
+            noteRecentDocument(existingController.fileURL ?? url)
             return
         }
 
         do {
-            let controller = try EditorWindowResolver.makeController(opening: url)
+            let controller = try EditorWindowResolver.makeController(
+                opening: url,
+                baseFont: preferredFont
+            )
             configure(controller)
             present(controller, asTab: keyWindowController != nil)
+            noteRecentDocument(controller.fileURL ?? url)
         } catch {
             showOpenError(url: url, error: error)
         }
     }
 
     private func makeWindowController() -> EditorWindowController {
-        let controller = EditorWindowController()
+        let controller = EditorWindowController(baseFont: preferredFont)
         configure(controller)
         return controller
     }
@@ -175,6 +218,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         controller.onActivate = { [weak self, weak controller] in
             self?.lastActiveWindowController = controller
+        }
+        controller.onFontChange = { [weak self] font in
+            self?.storePreferredFont(font)
+        }
+        controller.onSuccessfulSave = { [weak self] url in
+            self?.noteRecentDocument(url)
         }
     }
 
@@ -464,6 +513,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             alert.runModal()
             return
         }
+    }
+
+    private static func loadPreferredFont() -> NSFont {
+        do {
+            return try EditorFontPreferences.load(from: .standard)
+                ?? EditorWindowController.defaultEditorFont
+        } catch {
+            UserDefaults.standard.removeObject(forKey: EditorFontPreferences.defaultsKey)
+            preferencesLogger.error(
+                "Discarded invalid editor font preference: \(error.localizedDescription, privacy: .public)"
+            )
+            return EditorWindowController.defaultEditorFont
+        }
+    }
+
+    private func storePreferredFont(_ font: NSFont) {
+        do {
+            try EditorFontPreferences.save(font, to: .standard)
+            preferredFont = font
+            for controller in windows {
+                controller.applyPreferredFont(font)
+            }
+        } catch {
+            Self.preferencesLogger.error(
+                "Could not save editor font preference: \(error.localizedDescription, privacy: .public)"
+            )
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = "Could not save the editor font."
+            alert.informativeText = error.localizedDescription
+            alert.runModal()
+        }
+    }
+
+    private func noteRecentDocument(_ url: URL) {
+        NSDocumentController.shared.noteNewRecentDocumentURL(
+            url.resolvingSymlinksInPath().standardizedFileURL
+        )
     }
 
     private func windowFrameState(_ frame: NSRect) -> WindowFrameState {

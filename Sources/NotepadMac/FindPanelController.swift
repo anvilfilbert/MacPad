@@ -6,6 +6,7 @@ final class FindPanelController: NSWindowController {
     private let replaceField = NSTextField()
     private let replaceLabel = NSTextField(labelWithString: "Replace with:")
     private let findNextButton = NSButton(title: "Find Next", target: nil, action: nil)
+    private let findPreviousButton = NSButton(title: "Find Previous", target: nil, action: nil)
     private let replaceButton = NSButton(title: "Replace", target: nil, action: nil)
     private let replaceAllButton = NSButton(title: "Replace All", target: nil, action: nil)
     private let matchCaseButton = NSButton(checkboxWithTitle: "Match case", target: nil, action: nil)
@@ -34,6 +35,7 @@ final class FindPanelController: NSWindowController {
         )
         window.hidesOnDeactivate = false
         window.title = "Find"
+        window.autorecalculatesKeyViewLoop = false
         super.init(window: window)
         setupUI()
     }
@@ -56,7 +58,8 @@ final class FindPanelController: NSWindowController {
         guard let contentView = window?.contentView else { return }
 
         let findLabel = NSTextField(labelWithString: "Find what:")
-        let previousButton = NSButton(title: "Find Previous", target: self, action: #selector(findPrevious))
+        findPreviousButton.target = self
+        findPreviousButton.action = #selector(findPrevious)
         findNextButton.target = self
         findNextButton.action = #selector(findNext)
         replaceButton.target = self
@@ -65,8 +68,20 @@ final class FindPanelController: NSWindowController {
         replaceAllButton.action = #selector(replaceAll)
         findField.identifier = NSUserInterfaceItemIdentifier("find.term")
         replaceField.identifier = NSUserInterfaceItemIdentifier("find.replacement")
+        findNextButton.identifier = NSUserInterfaceItemIdentifier("find.next")
+        findPreviousButton.identifier = NSUserInterfaceItemIdentifier("find.previous")
+        replaceButton.identifier = NSUserInterfaceItemIdentifier("find.replace")
+        replaceAllButton.identifier = NSUserInterfaceItemIdentifier("find.replaceAll")
         matchCaseButton.identifier = NSUserInterfaceItemIdentifier("find.matchCase")
         wrapAroundButton.identifier = NSUserInterfaceItemIdentifier("find.wrapAround")
+        findField.setAccessibilityLabel("Find what")
+        replaceField.setAccessibilityLabel("Replace with")
+        findNextButton.setAccessibilityLabel("Find next")
+        findPreviousButton.setAccessibilityLabel("Find previous")
+        replaceButton.setAccessibilityLabel("Replace")
+        replaceAllButton.setAccessibilityLabel("Replace all")
+        matchCaseButton.setAccessibilityLabel("Match case")
+        wrapAroundButton.setAccessibilityLabel("Wrap around")
         wrapAroundButton.state = .on
 
         let options = NSStackView(views: [matchCaseButton, wrapAroundButton])
@@ -75,7 +90,7 @@ final class FindPanelController: NSWindowController {
 
         let grid = NSGridView(views: [
             [findLabel, findField, findNextButton],
-            [NSGridCell.emptyContentView, NSGridCell.emptyContentView, previousButton],
+            [NSGridCell.emptyContentView, NSGridCell.emptyContentView, findPreviousButton],
             [NSGridCell.emptyContentView, options, NSGridCell.emptyContentView],
             [replaceLabel, replaceField, replaceButton],
             [NSGridCell.emptyContentView, NSGridCell.emptyContentView, replaceAllButton]
@@ -93,6 +108,7 @@ final class FindPanelController: NSWindowController {
         ])
 
         window?.defaultButtonCell = findNextButton.cell as? NSButtonCell
+        window?.initialFirstResponder = findField
         setReplaceVisible(false)
     }
 
@@ -101,6 +117,32 @@ final class FindPanelController: NSWindowController {
         replaceField.isHidden = !visible
         replaceButton.isHidden = !visible
         replaceAllButton.isHidden = !visible
+        configureKeyViewLoop(showReplace: visible)
+    }
+
+    private func configureKeyViewLoop(showReplace: Bool) {
+        let views: [NSView] = showReplace
+            ? [
+                findField,
+                replaceField,
+                matchCaseButton,
+                wrapAroundButton,
+                findNextButton,
+                findPreviousButton,
+                replaceButton,
+                replaceAllButton
+            ]
+            : [
+                findField,
+                matchCaseButton,
+                wrapAroundButton,
+                findNextButton,
+                findPreviousButton
+            ]
+
+        for (view, nextView) in zip(views, views.dropFirst() + [views[0]]) {
+            view.nextKeyView = nextView
+        }
     }
 
     @objc private func findNext() {

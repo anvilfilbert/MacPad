@@ -1,6 +1,45 @@
 import AppKit
 
 @MainActor
+enum RecentDocumentsMenuBuilder {
+    static func populate(_ menu: NSMenu, urls: [URL], target: AnyObject) {
+        menu.removeAllItems()
+
+        if urls.isEmpty {
+            let placeholder = NSMenuItem(
+                title: "No Recent Documents",
+                action: nil,
+                keyEquivalent: ""
+            )
+            placeholder.isEnabled = false
+            menu.addItem(placeholder)
+        } else {
+            for url in urls {
+                let item = NSMenuItem(
+                    title: url.lastPathComponent,
+                    action: #selector(AppDelegate.openRecentDocument(_:)),
+                    keyEquivalent: ""
+                )
+                item.target = target
+                item.representedObject = url
+                item.toolTip = url.path
+                menu.addItem(item)
+            }
+        }
+
+        menu.addItem(.separator())
+        let clearItem = NSMenuItem(
+            title: "Clear Menu",
+            action: #selector(AppDelegate.clearRecentDocuments(_:)),
+            keyEquivalent: ""
+        )
+        clearItem.target = target
+        clearItem.isEnabled = !urls.isEmpty
+        menu.addItem(clearItem)
+    }
+}
+
+@MainActor
 enum MainMenuFactory {
     static func makeMenu(target: AnyObject, application: NSApplication) -> NSMenu {
         let mainMenu = NSMenu(title: "Main Menu")
@@ -34,6 +73,12 @@ enum MainMenuFactory {
         addItem("New Tab", to: fileMenu, action: #selector(AppDelegate.openNewTab(_:)), target: target, key: "t")
         addItem("New Window", to: fileMenu, action: #selector(AppDelegate.openNewWindow(_:)), target: target, key: "n")
         addItem("Open...", to: fileMenu, action: #selector(AppDelegate.openDocument(_:)), target: target, key: "o")
+        let recentMenu = NSMenu(title: "Open Recent")
+        recentMenu.delegate = target as? NSMenuDelegate
+        RecentDocumentsMenuBuilder.populate(recentMenu, urls: [], target: target)
+        let recentItem = NSMenuItem(title: "Open Recent", action: nil, keyEquivalent: "")
+        recentItem.submenu = recentMenu
+        fileMenu.addItem(recentItem)
         addItem("Close", to: fileMenu, action: #selector(NSWindow.performClose(_:)), target: nil, key: "w")
         fileMenu.addItem(.separator())
         addItem("Save", to: fileMenu, action: #selector(AppDelegate.save(_:)), target: target, key: "s")
