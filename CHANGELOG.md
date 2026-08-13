@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0
+
+- Added a native File > Open Recent menu with the standard Clear Menu command.
+- Recorded only successfully opened or saved files, while preserving duplicate-open prevention and transactional file opening.
+- Remembered the preferred editor font and size across launches, new windows, new tabs, and restored sessions.
+- Validated persisted font settings and returned safely to the default monospaced font when saved settings are invalid or unavailable.
+- Applied display-font changes without modifying document contents or dirty state.
+- Added stable accessibility identifiers and explicit VoiceOver labels to the editor, status bar, Find and Replace, Save As encoding, and Go To Line controls.
+- Added deterministic keyboard focus loops for the editor and Find and Replace panels.
+- Expanded automated coverage to 55 core and AppKit tests.
+
 ## 1.1.0
 
 - Added UTF-16 little-endian, UTF-16 big-endian, and Windows-1252 file support alongside UTF-8, UTF-8 BOM, and ISO-8859-1.

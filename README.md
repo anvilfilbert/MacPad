@@ -32,14 +32,14 @@ If macOS warns that the app is from an unidentified developer, right-click `MacP
 
 ## Latest Changes
 
-`1.1.0` adds UTF-16 and Windows-1252 support, selectable Save As encoding, faster large-file cursor updates, configurable Find and Replace, fuller window and tab restoration, menu-state indicators, and built-in Help links. Failed opens no longer leave empty editors.
+`1.2.0` adds a native Open Recent menu, remembers the preferred editor font across every tab and launch, and improves VoiceOver descriptions and keyboard navigation in the editor, Find and Replace, Save As, and Go To controls.
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
 ## Features
 
 - Plain-text editing with native undo, cut, copy, paste, delete, and select all
-- New, open, save, save as, and print
+- New, open, Open Recent, save, save as, and print
 - Multiple windows, each with multiple tabs
 - New tabs and new windows, including separate windows with their own tab groups
 - Session restore for window positions, selected tabs, tab groups, saved file tabs, and editor UI state without storing document text in preferences
@@ -48,7 +48,8 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 - Standard shortcuts including `Command-T` for a new tab, `Command-N` for a new window, and `Option-Command-F` for Replace
 - Go to line and insert current time/date
 - Word wrap toggle
-- Font chooser and zoom controls
+- App-wide persistent font chooser and per-tab zoom controls
+- VoiceOver labels, stable accessibility identifiers, and predictable keyboard focus order
 - Status bar showing line, column, zoom, line ending mode, and detected file encoding
 - UTF-8, UTF-8 BOM, UTF-16 LE/BE, Windows-1252, and ISO-8859-1 detection, preservation, and Save As conversion
 - Windows, Unix, and classic Mac line-ending detection and preservation

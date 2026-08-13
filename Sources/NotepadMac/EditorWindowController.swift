@@ -3,15 +3,20 @@ import NotepadMacCore
 import UniformTypeIdentifiers
 
 final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTextViewDelegate {
+    static var defaultEditorFont: NSFont {
+        NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
+    }
+
     var onClose: (() -> Void)?
     var onStateChange: (() -> Void)?
     var onActivate: (() -> Void)?
+    var onFontChange: ((NSFont) -> Void)?
+    var onSuccessfulSave: ((URL) -> Void)?
 
     private let scrollView = NSScrollView()
     private let textView = NSTextView()
     private let statusBar = NSTextField(labelWithString: "")
     private let editorDocument = EditorDocument()
-    private let defaultFontSize: CGFloat = 14
     private var lastFindTerm = ""
     private var lastFindOptions = FindOptions(matchCase: false, wrapAround: true)
     private var findPanelController: FindPanelController?
@@ -21,8 +26,12 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private var baseFont: NSFont
     private var lineIndex = TextLineIndex(text: "")
 
-    init() {
-        baseFont = NSFont.monospacedSystemFont(ofSize: defaultFontSize, weight: .regular)
+    convenience init() {
+        self.init(baseFont: Self.defaultEditorFont)
+    }
+
+    init(baseFont: NSFont) {
+        self.baseFont = baseFont
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 820, height: 580),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -95,26 +104,15 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.plainText]
         panel.nameFieldStringValue = editorDocument.fileURL?.lastPathComponent ?? "Untitled.txt"
-        let encodingOptions = TextFileEncoding.allCases
-        let encodingPicker = NSPopUpButton(frame: .zero, pullsDown: false)
-        encodingPicker.addItems(withTitles: encodingOptions.map(\.statusLabel))
-        encodingPicker.selectItem(at: encodingOptions.firstIndex(of: editorDocument.textEncoding) ?? 0)
-        encodingPicker.identifier = NSUserInterfaceItemIdentifier("save.encoding")
-
-        let encodingLabel = NSTextField(labelWithString: "Encoding:")
-        let accessory = NSStackView(views: [encodingLabel, encodingPicker])
-        accessory.orientation = .horizontal
-        accessory.spacing = 8
-        accessory.edgeInsets = NSEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
-        panel.accessoryView = accessory
+        let encodingAccessory = SaveEncodingAccessory(selectedEncoding: editorDocument.textEncoding)
+        panel.accessoryView = encodingAccessory.view
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        let selectedIndex = encodingPicker.indexOfSelectedItem
-        guard encodingOptions.indices.contains(selectedIndex) else {
+        guard let selectedEncoding = encodingAccessory.selectedEncoding else {
             showError("Could not save the file.", detail: "No valid text encoding was selected.")
             return
         }
-        write(to: url, encoding: encodingOptions[selectedIndex])
+        write(to: url, encoding: selectedEncoding)
     }
 
     @objc func printDocument(_ sender: Any?) {
@@ -157,6 +155,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         alert.informativeText = "Line number:"
         let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
         input.stringValue = "\(lineIndex.cursorPosition(selectedLocation: textView.selectedRange().location).line)"
+        input.identifier = NSUserInterfaceItemIdentifier("goTo.lineNumber")
+        input.setAccessibilityLabel("Line number")
         alert.accessoryView = input
         alert.addButton(withTitle: "Go To")
         alert.addButton(withTitle: "Cancel")
@@ -200,9 +200,22 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
 
     @objc func changeFont(_ sender: NSFontManager?) {
         guard let sender else { return }
-        baseFont = sender.convert(baseFont)
+        let convertedFont = sender.convert(baseFont)
+        do {
+            _ = try EditorFontPreference(
+                postScriptName: convertedFont.fontName,
+                pointSize: Double(convertedFont.pointSize)
+            )
+            applyPreferredFont(convertedFont)
+            onFontChange?(convertedFont)
+        } catch {
+            showError("Could not use the selected font.", detail: error.localizedDescription)
+        }
+    }
+
+    func applyPreferredFont(_ font: NSFont) {
+        baseFont = font
         applyZoom()
-        notifyStateChanged()
     }
 
     func confirmDiscardIfNeeded() -> Bool {
@@ -302,6 +315,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         textView.textContainerInset = NSSize(width: 6, height: 6)
         textView.autoresizingMask = [.width]
         textView.enabledTextCheckingTypes = NSTextCheckingResult.CheckingType.spelling.rawValue
+        textView.identifier = NSUserInterfaceItemIdentifier("editor.text")
+        textView.setAccessibilityLabel("Document text")
 
         scrollView.documentView = textView
         stack.addArrangedSubview(scrollView)
@@ -315,9 +330,13 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         statusBar.lineBreakMode = .byTruncatingHead
         statusBar.setContentHuggingPriority(.required, for: .vertical)
         statusBar.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        statusBar.identifier = NSUserInterfaceItemIdentifier("editor.status")
+        statusBar.setAccessibilityLabel("Document status")
         stack.addArrangedSubview(statusBar)
 
         applyWordWrap()
+        window?.initialFirstResponder = textView
+        textView.nextKeyView = textView
         window?.makeFirstResponder(textView)
     }
 
@@ -510,15 +529,20 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
 
     private func write(to url: URL, encoding: TextFileEncoding) {
         do {
-            editorDocument.updateText(textView.string)
-            try editorDocument.save(to: url, encoding: encoding)
-            updateTitle()
-            updateStatusBar()
-            notifyStateChanged()
+            try saveDocument(to: url, encoding: encoding)
         } catch EditorDocumentError.fileChangedOnDisk {
             resolveExternalFileChange(at: url)
         } catch {
             showError("Could not save the file.", detail: error.localizedDescription)
         }
+    }
+
+    func saveDocument(to url: URL, encoding: TextFileEncoding) throws {
+        editorDocument.updateText(textView.string)
+        try editorDocument.save(to: url, encoding: encoding)
+        updateTitle()
+        updateStatusBar()
+        notifyStateChanged()
+        onSuccessfulSave?(editorDocument.fileURL ?? url.standardizedFileURL)
     }
 }
