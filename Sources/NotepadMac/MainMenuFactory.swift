@@ -64,7 +64,8 @@ enum MainMenuFactory {
         mainMenu.addItem(rootItem(for: editMenu))
 
         let formatMenu = NSMenu(title: "Format")
-        addItem("Word Wrap", to: formatMenu, action: #selector(AppDelegate.toggleWordWrap(_:)), target: target, key: "w", modifiers: [.command, .option])
+        let wordWrapItem = addItem("Word Wrap", to: formatMenu, action: #selector(AppDelegate.toggleWordWrap(_:)), target: target, key: "w", modifiers: [.command, .option])
+        wordWrapItem.state = .on
         addItem("Font...", to: formatMenu, action: #selector(AppDelegate.chooseFont(_:)), target: target)
         mainMenu.addItem(rootItem(for: formatMenu))
 
@@ -73,7 +74,8 @@ enum MainMenuFactory {
         addItem("Zoom Out", to: viewMenu, action: #selector(AppDelegate.zoomOut(_:)), target: target, key: "-")
         addItem("Restore Default Zoom", to: viewMenu, action: #selector(AppDelegate.restoreZoom(_:)), target: target, key: "0")
         viewMenu.addItem(.separator())
-        addItem("Status Bar", to: viewMenu, action: #selector(AppDelegate.toggleStatusBar(_:)), target: target, key: "/", modifiers: [.command])
+        let statusBarItem = addItem("Status Bar", to: viewMenu, action: #selector(AppDelegate.toggleStatusBar(_:)), target: target, key: "/", modifiers: [.command])
+        statusBarItem.state = .on
         mainMenu.addItem(rootItem(for: viewMenu))
 
         let windowMenu = NSMenu(title: "Window")
@@ -86,6 +88,14 @@ enum MainMenuFactory {
         addItem("Bring All to Front", to: windowMenu, action: #selector(NSApplication.arrangeInFront(_:)), target: application)
         mainMenu.addItem(rootItem(for: windowMenu))
         application.windowsMenu = windowMenu
+
+        let helpMenu = NSMenu(title: "Help")
+        addItem("MacPad Help", to: helpMenu, action: #selector(AppDelegate.openHelp(_:)), target: target)
+        addItem("Report an Issue", to: helpMenu, action: #selector(AppDelegate.reportIssue(_:)), target: target)
+        helpMenu.addItem(.separator())
+        addItem("Check for Updates...", to: helpMenu, action: #selector(AppDelegate.checkForUpdates(_:)), target: target)
+        mainMenu.addItem(rootItem(for: helpMenu))
+        application.helpMenu = helpMenu
 
         return mainMenu
     }

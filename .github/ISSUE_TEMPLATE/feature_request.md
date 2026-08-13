@@ -11,6 +11,6 @@ assignees: ""
 
 ## Why It Belongs in MacPad
 
-MacPad stays lightweight and Notepad-like. If this is about extensions, themes, language-aware editing, or Markdown workflows, it may belong in MacPad Pro instead.
+MacPad stays lightweight and Notepad-like. Explain how the request supports focused plain-text editing without adding a project model or extension platform.
 
 ## Notes

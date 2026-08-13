@@ -9,6 +9,7 @@ permissions:
   contents: write
   id-token: write
   attestations: write
+  artifact-metadata: write
 
 jobs:
   release:
@@ -18,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -31,6 +32,21 @@ jobs:
             exit 1
           fi
 
+      - name: Verify tagged commit belongs to main
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          TAGGED_COMMIT="$(git rev-parse "$GITHUB_REF_NAME^{commit}")"
+          if ! git merge-base --is-ancestor "$TAGGED_COMMIT" origin/main; then
+            echo "Tagged commit $TAGGED_COMMIT is not contained in origin/main." >&2
+            exit 1
+          fi
+
+      - name: Extract release notes from changelog
+        run: |
+          VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)"
+          ./scripts/extract-release-notes.sh "$VERSION" CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          test -s "$RUNNER_TEMP/release-notes.md"
+
       - name: Check public repository contents
         run: ./scripts/verify-public-repo.sh
 
@@ -41,7 +57,7 @@ jobs:
         run: ./scripts/package-release.sh
 
       - name: Attest release package
-        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: dist/MacPad-macOS-universal.zip
 
@@ -53,7 +69,7 @@ jobs:
             dist/MacPad-macOS-universal.zip \
             dist/MacPad-macOS-universal.zip.sha256 \
             --draft \
-            --generate-notes \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
             --title "MacPad ${GITHUB_REF_NAME#v}" \
             --verify-tag
           gh release edit "$GITHUB_REF_NAME" --draft=false --latest

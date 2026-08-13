@@ -1,4 +1,5 @@
 import AppKit
+import NotepadMacCore
 
 final class FindPanelController: NSWindowController {
     private let findField = NSTextField()
@@ -7,16 +8,18 @@ final class FindPanelController: NSWindowController {
     private let findNextButton = NSButton(title: "Find Next", target: nil, action: nil)
     private let replaceButton = NSButton(title: "Replace", target: nil, action: nil)
     private let replaceAllButton = NSButton(title: "Replace All", target: nil, action: nil)
-    private let onFindNext: (String) -> Void
-    private let onFindPrevious: (String) -> Void
-    private let onReplace: (String, String) -> Void
-    private let onReplaceAll: (String, String) -> Void
+    private let matchCaseButton = NSButton(checkboxWithTitle: "Match case", target: nil, action: nil)
+    private let wrapAroundButton = NSButton(checkboxWithTitle: "Wrap around", target: nil, action: nil)
+    private let onFindNext: (String, FindOptions) -> Void
+    private let onFindPrevious: (String, FindOptions) -> Void
+    private let onReplace: (String, String, FindOptions) -> Void
+    private let onReplaceAll: (String, String, FindOptions) -> Void
 
     init(
-        onFindNext: @escaping (String) -> Void,
-        onFindPrevious: @escaping (String) -> Void,
-        onReplace: @escaping (String, String) -> Void,
-        onReplaceAll: @escaping (String, String) -> Void
+        onFindNext: @escaping (String, FindOptions) -> Void,
+        onFindPrevious: @escaping (String, FindOptions) -> Void,
+        onReplace: @escaping (String, String, FindOptions) -> Void,
+        onReplaceAll: @escaping (String, String, FindOptions) -> Void
     ) {
         self.onFindNext = onFindNext
         self.onFindPrevious = onFindPrevious
@@ -24,7 +27,7 @@ final class FindPanelController: NSWindowController {
         self.onReplaceAll = onReplaceAll
 
         let window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 430, height: 164),
+            contentRect: NSRect(x: 0, y: 0, width: 430, height: 204),
             styleMask: [.titled, .closable, .utilityWindow],
             backing: .buffered,
             defer: false
@@ -60,10 +63,20 @@ final class FindPanelController: NSWindowController {
         replaceButton.action = #selector(replace)
         replaceAllButton.target = self
         replaceAllButton.action = #selector(replaceAll)
+        findField.identifier = NSUserInterfaceItemIdentifier("find.term")
+        replaceField.identifier = NSUserInterfaceItemIdentifier("find.replacement")
+        matchCaseButton.identifier = NSUserInterfaceItemIdentifier("find.matchCase")
+        wrapAroundButton.identifier = NSUserInterfaceItemIdentifier("find.wrapAround")
+        wrapAroundButton.state = .on
+
+        let options = NSStackView(views: [matchCaseButton, wrapAroundButton])
+        options.orientation = .horizontal
+        options.spacing = 16
 
         let grid = NSGridView(views: [
             [findLabel, findField, findNextButton],
             [NSGridCell.emptyContentView, NSGridCell.emptyContentView, previousButton],
+            [NSGridCell.emptyContentView, options, NSGridCell.emptyContentView],
             [replaceLabel, replaceField, replaceButton],
             [NSGridCell.emptyContentView, NSGridCell.emptyContentView, replaceAllButton]
         ])
@@ -91,18 +104,25 @@ final class FindPanelController: NSWindowController {
     }
 
     @objc private func findNext() {
-        onFindNext(findField.stringValue)
+        onFindNext(findField.stringValue, findOptions)
     }
 
     @objc private func findPrevious() {
-        onFindPrevious(findField.stringValue)
+        onFindPrevious(findField.stringValue, findOptions)
     }
 
     @objc private func replace() {
-        onReplace(findField.stringValue, replaceField.stringValue)
+        onReplace(findField.stringValue, replaceField.stringValue, findOptions)
     }
 
     @objc private func replaceAll() {
-        onReplaceAll(findField.stringValue, replaceField.stringValue)
+        onReplaceAll(findField.stringValue, replaceField.stringValue, findOptions)
+    }
+
+    private var findOptions: FindOptions {
+        FindOptions(
+            matchCase: matchCaseButton.state == .on,
+            wrapAround: wrapAroundButton.state == .on
+        )
     }
 }

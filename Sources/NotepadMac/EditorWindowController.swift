@@ -13,11 +13,13 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private let editorDocument = EditorDocument()
     private let defaultFontSize: CGFloat = 14
     private var lastFindTerm = ""
+    private var lastFindOptions = FindOptions(matchCase: false, wrapAround: true)
     private var findPanelController: FindPanelController?
     private var wordWrapEnabled = true
     private var statusBarVisible = true
     private var zoomPercent = 100
     private var baseFont: NSFont
+    private var lineIndex = TextLineIndex(text: "")
 
     init() {
         baseFont = NSFont.monospacedSystemFont(ofSize: defaultFontSize, weight: .regular)
@@ -45,16 +47,13 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         editorDocument.fileURL
     }
 
-    func loadFile(_ url: URL) {
-        do {
-            try editorDocument.loadFile(url)
-            textView.string = editorDocument.text
-            updateTitle()
-            updateStatusBar()
-            notifyStateChanged()
-        } catch {
-            showError("Could not open the file.", detail: error.localizedDescription)
-        }
+    func loadFile(_ url: URL) throws {
+        try editorDocument.loadFile(url)
+        textView.string = editorDocument.text
+        lineIndex = TextLineIndex(text: editorDocument.text)
+        updateTitle()
+        updateStatusBar()
+        notifyStateChanged()
     }
 
     var sessionState: EditorSessionState? {
@@ -69,6 +68,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     func restoreSessionState(_ state: EditorSessionState) throws {
         try editorDocument.restoreSessionStateAndReloadFile(state)
         textView.string = editorDocument.text
+        lineIndex = TextLineIndex(text: editorDocument.text)
         wordWrapEnabled = state.wordWrapEnabled
         statusBarVisible = state.statusBarVisible
         statusBar.isHidden = !state.statusBarVisible
@@ -95,9 +95,26 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.plainText]
         panel.nameFieldStringValue = editorDocument.fileURL?.lastPathComponent ?? "Untitled.txt"
+        let encodingOptions = TextFileEncoding.allCases
+        let encodingPicker = NSPopUpButton(frame: .zero, pullsDown: false)
+        encodingPicker.addItems(withTitles: encodingOptions.map(\.statusLabel))
+        encodingPicker.selectItem(at: encodingOptions.firstIndex(of: editorDocument.textEncoding) ?? 0)
+        encodingPicker.identifier = NSUserInterfaceItemIdentifier("save.encoding")
+
+        let encodingLabel = NSTextField(labelWithString: "Encoding:")
+        let accessory = NSStackView(views: [encodingLabel, encodingPicker])
+        accessory.orientation = .horizontal
+        accessory.spacing = 8
+        accessory.edgeInsets = NSEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
+        panel.accessoryView = accessory
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        write(to: url)
+        let selectedIndex = encodingPicker.indexOfSelectedItem
+        guard encodingOptions.indices.contains(selectedIndex) else {
+            showError("Could not save the file.", detail: "No valid text encoding was selected.")
+            return
+        }
+        write(to: url, encoding: encodingOptions[selectedIndex])
     }
 
     @objc func printDocument(_ sender: Any?) {
@@ -127,11 +144,11 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     @objc func findNext(_ sender: Any?) {
-        find(term: lastFindTerm, backwards: false)
+        find(term: lastFindTerm, backwards: false, options: lastFindOptions)
     }
 
     @objc func findPrevious(_ sender: Any?) {
-        find(term: lastFindTerm, backwards: true)
+        find(term: lastFindTerm, backwards: true, options: lastFindOptions)
     }
 
     @objc func goToLine(_ sender: Any?) {
@@ -139,7 +156,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         alert.messageText = "Go To Line"
         alert.informativeText = "Line number:"
         let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
-        input.stringValue = "\(TextMetrics.cursorPosition(in: textView.string, selectedLocation: textView.selectedRange().location).line)"
+        input.stringValue = "\(lineIndex.cursorPosition(selectedLocation: textView.selectedRange().location).line)"
         alert.accessoryView = input
         alert.addButton(withTitle: "Go To")
         alert.addButton(withTitle: "Cancel")
@@ -237,6 +254,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
 
     func textDidChange(_ notification: Notification) {
         editorDocument.updateText(textView.string)
+        lineIndex = TextLineIndex(text: textView.string)
         updateTitle()
         updateStatusBar()
     }
@@ -304,17 +322,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     private func write(to url: URL) {
-        do {
-            editorDocument.updateText(textView.string)
-            try editorDocument.save(to: url)
-            updateTitle()
-            updateStatusBar()
-            notifyStateChanged()
-        } catch EditorDocumentError.fileChangedOnDisk {
-            resolveExternalFileChange(at: url)
-        } catch {
-            showError("Could not save the file.", detail: error.localizedDescription)
-        }
+        write(to: url, encoding: editorDocument.textEncoding)
     }
 
     private func applyWordWrap() {
@@ -344,10 +352,18 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private func makeFindPanel(showReplace: Bool) {
         if findPanelController == nil {
             findPanelController = FindPanelController(
-                onFindNext: { [weak self] term in self?.find(term: term, backwards: false) },
-                onFindPrevious: { [weak self] term in self?.find(term: term, backwards: true) },
-                onReplace: { [weak self] term, replacement in self?.replace(term: term, replacement: replacement) },
-                onReplaceAll: { [weak self] term, replacement in self?.replaceAll(term: term, replacement: replacement) }
+                onFindNext: { [weak self] term, options in
+                    self?.find(term: term, backwards: false, options: options)
+                },
+                onFindPrevious: { [weak self] term, options in
+                    self?.find(term: term, backwards: true, options: options)
+                },
+                onReplace: { [weak self] term, replacement, options in
+                    self?.replace(term: term, replacement: replacement, options: options)
+                },
+                onReplaceAll: { [weak self] term, replacement, options in
+                    self?.replaceAll(term: term, replacement: replacement, options: options)
+                }
             )
         }
         findPanelController?.show(initialTerm: selectedOrLastFindTerm, showReplace: showReplace)
@@ -362,7 +378,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     @discardableResult
-    private func find(term: String, backwards: Bool) -> Bool {
+    private func find(term: String, backwards: Bool, options: FindOptions) -> Bool {
         let effectiveTerm = term.isEmpty ? selectedOrLastFindTerm : term
         guard !effectiveTerm.isEmpty else {
             NSSound.beep()
@@ -370,28 +386,15 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         }
 
         lastFindTerm = effectiveTerm
-        let nsText = textView.string as NSString
+        lastFindOptions = options
         let currentRange = textView.selectedRange()
-        let searchRange: NSRange
-        let options: NSString.CompareOptions = backwards ? [.backwards, .caseInsensitive] : [.caseInsensitive]
-
-        if backwards {
-            searchRange = NSRange(location: 0, length: currentRange.location)
-        } else {
-            let start = min(currentRange.location + currentRange.length, nsText.length)
-            searchRange = NSRange(location: start, length: nsText.length - start)
-        }
-
-        var foundRange = nsText.range(of: effectiveTerm, options: options, range: searchRange)
-        if foundRange.location == NSNotFound {
-            foundRange = nsText.range(
-                of: effectiveTerm,
-                options: options,
-                range: NSRange(location: 0, length: nsText.length)
-            )
-        }
-
-        guard foundRange.location != NSNotFound else {
+        guard let foundRange = TextEditingOperations.findRange(
+            in: textView.string,
+            searchTerm: effectiveTerm,
+            selectedRange: currentRange,
+            backwards: backwards,
+            options: options
+        ) else {
             NSSound.beep()
             return false
         }
@@ -402,7 +405,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         return true
     }
 
-    private func replace(term: String, replacement: String) {
+    private func replace(term: String, replacement: String, options: FindOptions) {
         let selectedRange = textView.selectedRange()
         let selectedText = selectedRange.length > 0 ? (textView.string as NSString).substring(with: selectedRange) : ""
         guard !term.isEmpty else {
@@ -411,20 +414,21 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         }
         if TextEditingOperations.selectionMatches(
             selectedText: selectedText,
-            searchTerm: term
+            searchTerm: term,
+            matchCase: options.matchCase
         ) {
             textView.insertText(replacement, replacementRange: selectedRange)
         }
-        _ = find(term: term, backwards: false)
+        _ = find(term: term, backwards: false, options: options)
     }
 
-    private func replaceAll(term: String, replacement: String) {
+    private func replaceAll(term: String, replacement: String, options: FindOptions) {
         guard !term.isEmpty else { return }
-        let replaced = textView.string.replacingOccurrences(
-            of: term,
-            with: replacement,
-            options: [.caseInsensitive, .literal],
-            range: nil
+        let replaced = TextEditingOperations.replacingAll(
+            in: textView.string,
+            searchTerm: term,
+            replacement: replacement,
+            matchCase: options.matchCase
         )
         let fullRange = NSRange(location: 0, length: (textView.string as NSString).length)
         guard replaced != textView.string,
@@ -438,10 +442,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     private func selectLine(_ lineNumber: Int) {
-        guard let location = TextMetrics.location(
-            ofLine: lineNumber,
-            in: textView.string
-        ) else {
+        guard let location = lineIndex.location(ofLine: lineNumber) else {
             NSSound.beep()
             return
         }
@@ -453,7 +454,6 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     private func updateTitle() {
-        editorDocument.updateText(textView.string)
         window?.title = "\(editorDocument.displayName) - MacPad"
         window?.representedURL = editorDocument.fileURL
         window?.isDocumentEdited = editorDocument.hasUnsavedChanges
@@ -461,7 +461,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
 
     private func updateStatusBar() {
         guard statusBarVisible else { return }
-        let position = TextMetrics.cursorPosition(in: textView.string, selectedLocation: textView.selectedRange().location)
+        let position = lineIndex.cursorPosition(selectedLocation: textView.selectedRange().location)
         statusBar.stringValue = "Ln \(position.line), Col \(position.column)  |  \(zoomPercent)%  |  \(editorDocument.lineEnding.statusLabel)  |  \(editorDocument.textEncoding.statusLabel)"
     }
 
@@ -478,7 +478,11 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         case .alertFirstButtonReturn:
             saveAs(nil)
         case .alertSecondButtonReturn:
-            loadFile(url)
+            do {
+                try loadFile(url)
+            } catch {
+                showError("Could not reload the file.", detail: error.localizedDescription)
+            }
         default:
             break
         }
@@ -494,5 +498,27 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
 
     private func notifyStateChanged() {
         onStateChange?()
+    }
+
+    var isWordWrapEnabled: Bool {
+        wordWrapEnabled
+    }
+
+    var isStatusBarVisible: Bool {
+        statusBarVisible
+    }
+
+    private func write(to url: URL, encoding: TextFileEncoding) {
+        do {
+            editorDocument.updateText(textView.string)
+            try editorDocument.save(to: url, encoding: encoding)
+            updateTitle()
+            updateStatusBar()
+            notifyStateChanged()
+        } catch EditorDocumentError.fileChangedOnDisk {
+            resolveExternalFileChange(at: url)
+        } catch {
+            showError("Could not save the file.", detail: error.localizedDescription)
+        }
     }
 }

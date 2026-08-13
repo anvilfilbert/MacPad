@@ -20,11 +20,11 @@ A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 
 Download the latest ready-to-use universal app:
 
-```text
-https://github.com/anvilfilbert/MacPad/releases/latest/download/MacPad-macOS-universal.zip
-```
+[Download the latest MacPad universal app](https://github.com/anvilfilbert/MacPad/releases/latest/download/MacPad-macOS-universal.zip)
 
 Unzip it and drag `MacPad.app` into Applications. The [latest release page](https://github.com/anvilfilbert/MacPad/releases/latest) also provides release notes.
+
+GitHub is the canonical download source. A synchronized mirror is available on [SourceForge](https://sourceforge.net/projects/macpad-editor/files/latest/download).
 
 Each release includes a matching `.sha256` checksum and GitHub build-provenance attestation.
 
@@ -32,7 +32,7 @@ If macOS warns that the app is from an unidentified developer, right-click `MacP
 
 ## Latest Changes
 
-`1.0.9` prevents accidental overwrites when a file changes outside MacPad, preserves supported file encodings and symbolic links, fixes command routing while Find or Font panels are active, prevents duplicate file windows, and adds automated tests plus release provenance.
+`1.1.0` adds UTF-16 and Windows-1252 support, selectable Save As encoding, faster large-file cursor updates, configurable Find and Replace, fuller window and tab restoration, menu-state indicators, and built-in Help links. Failed opens no longer leave empty editors.
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
@@ -42,14 +42,15 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 - New, open, save, save as, and print
 - Multiple windows, each with multiple tabs
 - New tabs and new windows, including separate windows with their own tab groups
-- Session restore for open windows, tab groups, saved file tabs, and editor UI state without storing document text in preferences
+- Session restore for window positions, selected tabs, tab groups, saved file tabs, and editor UI state without storing document text in preferences
 - Unsaved-change prompts when closing or quitting
-- Find, find next/previous, replace, and replace all
+- Find, find next/previous, replace, and replace all with Match Case and Wrap Around options
 - Standard shortcuts including `Command-T` for a new tab, `Command-N` for a new window, and `Option-Command-F` for Replace
 - Go to line and insert current time/date
 - Word wrap toggle
 - Font chooser and zoom controls
 - Status bar showing line, column, zoom, line ending mode, and detected file encoding
+- UTF-8, UTF-8 BOM, UTF-16 LE/BE, Windows-1252, and ISO-8859-1 detection, preservation, and Save As conversion
 - Windows, Unix, and classic Mac line-ending detection and preservation
 - Builds into a launchable universal `MacPad.app`
 - Uses the included MacPad logo as the app icon
@@ -89,6 +90,13 @@ Run the automated suite with:
 ```sh
 swift test
 ```
+
+## Community
+
+- Read the [wiki](https://github.com/anvilfilbert/MacPad/wiki) for usage details.
+- Use [Discussions](https://github.com/anvilfilbert/MacPad/discussions) for questions and ideas.
+- Open an [issue](https://github.com/anvilfilbert/MacPad/issues/new/choose) for a reproducible bug or focused feature request.
+- See [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
 
 ## Security
 

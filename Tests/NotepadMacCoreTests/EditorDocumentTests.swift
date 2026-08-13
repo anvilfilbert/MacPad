@@ -54,6 +54,19 @@ struct EditorDocumentTests {
         }
     }
 
+    @Test("valid UTF-8 containing null bytes is rejected")
+    func rejectsNullBytesInUTF8Data() throws {
+        let directory = try temporaryDirectory()
+        let fileURL = directory.appendingPathComponent("null-bytes.dat")
+        try Data([0x4D, 0x61, 0x63, 0x00, 0x50, 0x61, 0x64]).write(to: fileURL)
+
+        let document = EditorDocument()
+
+        #expect(throws: (any Error).self) {
+            try document.loadFile(fileURL)
+        }
+    }
+
     @Test("Latin-1 input keeps its encoding when saved")
     func preservesLatin1Encoding() throws {
         let directory = try temporaryDirectory()
@@ -82,6 +95,72 @@ struct EditorDocumentTests {
 
         #expect(try Data(contentsOf: fileURL).starts(with: [0xEF, 0xBB, 0xBF]))
         #expect(document.textEncoding == .utf8WithByteOrderMark)
+    }
+
+    @Test("UTF-16 little-endian input keeps its encoding when saved")
+    func preservesUTF16LittleEndianEncoding() throws {
+        let directory = try temporaryDirectory()
+        let fileURL = directory.appendingPathComponent("utf16-le.txt")
+        let body = try #require("MacPad".data(using: .utf16LittleEndian))
+        let originalData = Data([0xFF, 0xFE]) + body
+        try originalData.write(to: fileURL)
+
+        let document = EditorDocument()
+        try document.loadFile(fileURL)
+        try document.save(to: fileURL)
+
+        #expect(document.text == "MacPad")
+        #expect(document.textEncoding == .utf16LittleEndian)
+        #expect(try Data(contentsOf: fileURL) == originalData)
+    }
+
+    @Test("UTF-16 big-endian input keeps its encoding when saved")
+    func preservesUTF16BigEndianEncoding() throws {
+        let directory = try temporaryDirectory()
+        let fileURL = directory.appendingPathComponent("utf16-be.txt")
+        let body = try #require("MacPad".data(using: .utf16BigEndian))
+        let originalData = Data([0xFE, 0xFF]) + body
+        try originalData.write(to: fileURL)
+
+        let document = EditorDocument()
+        try document.loadFile(fileURL)
+        try document.save(to: fileURL)
+
+        #expect(document.text == "MacPad")
+        #expect(document.textEncoding == .utf16BigEndian)
+        #expect(try Data(contentsOf: fileURL) == originalData)
+    }
+
+    @Test("Windows-1252 punctuation is decoded and preserved")
+    func preservesWindows1252Encoding() throws {
+        let directory = try temporaryDirectory()
+        let fileURL = directory.appendingPathComponent("windows-1252.txt")
+        let originalData = Data([0x93, 0x4D, 0x61, 0x63, 0x50, 0x61, 0x64, 0x94, 0x20, 0x80])
+        try originalData.write(to: fileURL)
+
+        let document = EditorDocument()
+        try document.loadFile(fileURL)
+        try document.save(to: fileURL)
+
+        #expect(document.text == "“MacPad” €")
+        #expect(document.textEncoding == .windows1252)
+        #expect(try Data(contentsOf: fileURL) == originalData)
+    }
+
+    @Test("Save As can convert legacy text to UTF-8")
+    func convertsLegacyTextToUTF8() throws {
+        let directory = try temporaryDirectory()
+        let sourceURL = directory.appendingPathComponent("latin1.txt")
+        let destinationURL = directory.appendingPathComponent("utf8.txt")
+        try Data([0x63, 0x61, 0x66, 0xE9]).write(to: sourceURL)
+
+        let document = EditorDocument()
+        try document.loadFile(sourceURL)
+        document.updateText("café 🚀")
+        try document.save(to: destinationURL, encoding: .utf8)
+
+        #expect(document.textEncoding == .utf8)
+        #expect(try String(contentsOf: destinationURL, encoding: .utf8) == "café 🚀")
     }
 
     @Test("an invalid UTF-8 byte order mark is rejected")

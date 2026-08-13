@@ -24,10 +24,10 @@ struct WindowRoutingTests {
     @Test("find window is a non-main utility panel")
     func findUsesUtilityPanel() {
         let controller = FindPanelController(
-            onFindNext: { _ in },
-            onFindPrevious: { _ in },
-            onReplace: { _, _ in },
-            onReplaceAll: { _, _ in }
+            onFindNext: { _, _ in },
+            onFindPrevious: { _, _ in },
+            onReplace: { _, _, _ in },
+            onReplaceAll: { _, _, _ in }
         )
 
         #expect(controller.window is NSPanel)
@@ -46,7 +46,7 @@ struct WindowRoutingTests {
         try Data("MacPad".utf8).write(to: fileURL)
 
         let editor = EditorWindowController()
-        editor.loadFile(fileURL)
+        try editor.loadFile(fileURL)
 
         let resolved = EditorWindowResolver.controller(
             opening: fileURL,
@@ -54,6 +54,20 @@ struct WindowRoutingTests {
         )
 
         #expect(resolved === editor)
+    }
+
+    @Test("controller preparation throws before a failed file is presented")
+    func rejectsInvalidFileBeforePresentation() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+
+        #expect(throws: (any Error).self) {
+            try EditorWindowResolver.makeController(opening: directory)
+        }
     }
 
     @Test("standard document shortcuts keep distinct meanings")
@@ -83,6 +97,33 @@ struct WindowRoutingTests {
         #expect(Set(shortcuts).count == shortcuts.count)
     }
 
+    @Test("Help menu exposes documentation and support commands")
+    func helpMenuCommands() throws {
+        let application = NSApplication.shared
+        let menu = MainMenuFactory.makeMenu(target: AppDelegate(), application: application)
+
+        #expect(try #require(menuItem(titled: "MacPad Help", in: menu)).action == #selector(AppDelegate.openHelp(_:)))
+        #expect(try #require(menuItem(titled: "Report an Issue", in: menu)).action == #selector(AppDelegate.reportIssue(_:)))
+        #expect(try #require(menuItem(titled: "Check for Updates...", in: menu)).action == #selector(AppDelegate.checkForUpdates(_:)))
+    }
+
+    @Test("Find controls expose stable accessibility identifiers")
+    func findAccessibilityIdentifiers() throws {
+        let controller = FindPanelController(
+            onFindNext: { _, _ in },
+            onFindPrevious: { _, _ in },
+            onReplace: { _, _, _ in },
+            onReplaceAll: { _, _, _ in }
+        )
+        let contentView = try #require(controller.window?.contentView)
+        let identifiers = Set(allViews(in: contentView).compactMap(\.identifier?.rawValue))
+
+        #expect(identifiers.contains("find.term"))
+        #expect(identifiers.contains("find.replacement"))
+        #expect(identifiers.contains("find.matchCase"))
+        #expect(identifiers.contains("find.wrapAround"))
+    }
+
     private func menuItem(titled title: String, in menu: NSMenu) -> NSMenuItem? {
         allMenuItems(in: menu).first { $0.title == title }
     }
@@ -92,5 +133,9 @@ struct WindowRoutingTests {
             guard let submenu = item.submenu else { return [item] }
             return [item] + allMenuItems(in: submenu)
         }
+    }
+
+    private func allViews(in view: NSView) -> [NSView] {
+        [view] + view.subviews.flatMap(allViews(in:))
     }
 }
