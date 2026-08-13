@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.0
+
+- Added UTF-16 little-endian, UTF-16 big-endian, and Windows-1252 file support alongside UTF-8, UTF-8 BOM, and ISO-8859-1.
+- Added an encoding selector to Save As, allowing documents to be converted safely to UTF-8 or another supported encoding.
+- Prevented failed file opens from leaving an empty tab or window behind.
+- Made line and column updates responsive in large documents by caching line locations and using binary search.
+- Added Match Case and Wrap Around controls to Find and Replace.
+- Restored window positions and selected tabs while keeping legacy session data compatible.
+- Combined session-restore failures into one concise warning.
+- Added live menu checkmarks for Word Wrap and Status Bar.
+- Added Help, Report an Issue, and explicit Check for Updates commands.
+- Expanded automated coverage to 42 core and AppKit tests.
+- Improved contributor guidance, release-note automation, dependency-update grouping, and public documentation.
+
 ## 1.0.9
 
 - Prevented saves from silently overwriting files changed by another app.

@@ -48,4 +48,60 @@ struct SessionStateTests {
             try JSONDecoder().decode(AppSessionState.self, from: data)
         }
     }
+
+    @Test("window state preserves frame and selected tab")
+    func preservesWindowMetadata() throws {
+        let first = sessionTab(id: "first")
+        let second = sessionTab(id: "second")
+        let frame = WindowFrameState(x: 100, y: 120, width: 820, height: 580)
+        let state = EditorWindowSessionState(
+            tabs: [first, second],
+            selectedTabIndex: 1,
+            frame: frame
+        )
+
+        let encoded = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(EditorWindowSessionState.self, from: encoded)
+
+        #expect(decoded == state)
+    }
+
+    @Test("legacy window state gets safe metadata defaults")
+    func decodesLegacyWindowState() throws {
+        let data = Data(
+            """
+            {"tabs":[{"id":"tab","selectedLocation":0,"wordWrapEnabled":true,"statusBarVisible":true,"zoomPercent":100,"lineEnding":"windows"}]}
+            """.utf8
+        )
+
+        let state = try JSONDecoder().decode(EditorWindowSessionState.self, from: data)
+
+        #expect(state.selectedTabIndex == 0)
+        #expect(state.frame == nil)
+    }
+
+    @Test("selected tab index is bounded by decoded tabs")
+    func boundsSelectedTabIndex() throws {
+        let data = Data(
+            """
+            {"tabs":[{"id":"tab","selectedLocation":0,"wordWrapEnabled":true,"statusBarVisible":true,"zoomPercent":100,"lineEnding":"windows"}],"selectedTabIndex":99}
+            """.utf8
+        )
+
+        let state = try JSONDecoder().decode(EditorWindowSessionState.self, from: data)
+
+        #expect(state.selectedTabIndex == 0)
+    }
+
+    private func sessionTab(id: String) -> EditorSessionState {
+        EditorSessionState(
+            id: id,
+            filePath: nil,
+            selectedLocation: 0,
+            wordWrapEnabled: true,
+            statusBarVisible: true,
+            zoomPercent: 100,
+            lineEnding: .windows
+        )
+    }
 }

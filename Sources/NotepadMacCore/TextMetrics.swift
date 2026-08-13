@@ -10,23 +10,57 @@ public struct CursorPosition: Equatable {
     }
 }
 
-public enum TextMetrics {
-    public static func cursorPosition(in text: String, selectedLocation: Int) -> CursorPosition {
-        let boundedLocation = max(0, min(selectedLocation, (text as NSString).length))
-        let prefix = (text as NSString).substring(to: boundedLocation)
-        var line = 1
-        var column = 1
+public struct TextLineIndex: Equatable, Sendable {
+    private let lineStarts: [Int]
+    private let utf16Length: Int
 
-        for scalar in prefix.unicodeScalars {
-            if scalar == "\n" {
-                line += 1
-                column = 1
+    public init(text: String) {
+        var starts = [0]
+        var location = 0
+        for codeUnit in text.utf16 {
+            location += 1
+            if codeUnit == 0x0A {
+                starts.append(location)
+            }
+        }
+        lineStarts = starts
+        utf16Length = location
+    }
+
+    public func cursorPosition(selectedLocation: Int) -> CursorPosition {
+        let boundedLocation = max(0, min(selectedLocation, utf16Length))
+        let lineIndex = indexOfLine(containing: boundedLocation)
+        return CursorPosition(
+            line: lineIndex + 1,
+            column: boundedLocation - lineStarts[lineIndex] + 1
+        )
+    }
+
+    public func location(ofLine lineNumber: Int) -> Int? {
+        guard lineNumber > 0, lineNumber <= lineStarts.count else { return nil }
+        return lineStarts[lineNumber - 1]
+    }
+
+    private func indexOfLine(containing location: Int) -> Int {
+        var lowerBound = 0
+        var upperBound = lineStarts.count
+
+        while lowerBound < upperBound {
+            let middle = lowerBound + (upperBound - lowerBound) / 2
+            if lineStarts[middle] <= location {
+                lowerBound = middle + 1
             } else {
-                column += 1
+                upperBound = middle
             }
         }
 
-        return CursorPosition(line: line, column: column)
+        return max(0, lowerBound - 1)
+    }
+}
+
+public enum TextMetrics {
+    public static func cursorPosition(in text: String, selectedLocation: Int) -> CursorPosition {
+        TextLineIndex(text: text).cursorPosition(selectedLocation: selectedLocation)
     }
 
     public static func normalizedLineEndingsForEditing(_ text: String) -> String {
@@ -36,30 +70,7 @@ public enum TextMetrics {
     }
 
     public static func location(ofLine lineNumber: Int, in text: String) -> Int? {
-        guard lineNumber > 0 else { return nil }
-        guard lineNumber > 1 else { return 0 }
-
-        let nsText = text as NSString
-        var currentLine = 1
-        var location = 0
-
-        while currentLine < lineNumber {
-            guard location < nsText.length else { return nil }
-            let remainingRange = NSRange(
-                location: location,
-                length: nsText.length - location
-            )
-            let lineBreakRange = nsText.range(
-                of: "\n",
-                options: [],
-                range: remainingRange
-            )
-            guard lineBreakRange.location != NSNotFound else { return nil }
-            location = lineBreakRange.location + lineBreakRange.length
-            currentLine += 1
-        }
-
-        return location
+        TextLineIndex(text: text).location(ofLine: lineNumber)
     }
 
     public static func textForSave(_ text: String, lineEnding: LineEnding) -> String {

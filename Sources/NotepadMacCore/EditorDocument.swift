@@ -25,9 +25,12 @@ public enum EditorDocumentError: LocalizedError {
     }
 }
 
-public enum TextFileEncoding: Equatable {
+public enum TextFileEncoding: CaseIterable, Equatable, Sendable {
     case utf8
     case utf8WithByteOrderMark
+    case utf16LittleEndian
+    case utf16BigEndian
+    case windows1252
     case isoLatin1
 
     public var statusLabel: String {
@@ -36,6 +39,12 @@ public enum TextFileEncoding: Equatable {
             return "UTF-8"
         case .utf8WithByteOrderMark:
             return "UTF-8 BOM"
+        case .utf16LittleEndian:
+            return "UTF-16 LE"
+        case .utf16BigEndian:
+            return "UTF-16 BE"
+        case .windows1252:
+            return "Windows-1252"
         case .isoLatin1:
             return "ISO-8859-1"
         }
@@ -52,6 +61,7 @@ public final class EditorDocument {
     public private(set) var lineEnding: LineEnding
     public private(set) var textEncoding: TextFileEncoding
     public private(set) var shouldRestoreInSession: Bool
+    public private(set) var hasUnsavedChanges: Bool
     private var originalFileDigest: Data?
 
     public init(
@@ -69,15 +79,12 @@ public final class EditorDocument {
         self.lineEnding = lineEnding
         self.textEncoding = .utf8
         self.shouldRestoreInSession = shouldRestoreInSession
+        self.hasUnsavedChanges = text != originalText
         self.originalFileDigest = nil
     }
 
     public var displayName: String {
         fileURL?.lastPathComponent ?? "Untitled"
-    }
-
-    public var hasUnsavedChanges: Bool {
-        text != originalText
     }
 
     public func loadFile(_ url: URL) throws {
@@ -94,18 +101,24 @@ public final class EditorDocument {
         lineEnding = LineEnding.detected(in: loadedText)
         textEncoding = decodedText.encoding
         shouldRestoreInSession = true
+        hasUnsavedChanges = false
         originalFileDigest = Self.digest(data)
     }
 
     public func updateText(_ text: String) {
         self.text = text
         shouldRestoreInSession = true
+        hasUnsavedChanges = text != originalText
     }
 
     public func save(to url: URL) throws {
+        try save(to: url, encoding: textEncoding)
+    }
+
+    public func save(to url: URL, encoding: TextFileEncoding) throws {
         let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
         let isCurrentFile = fileURL?.standardizedFileURL == resolvedURL
-        let outputData = try encodedData(path: resolvedURL.path)
+        let outputData = try encodedData(path: resolvedURL.path, encoding: encoding)
 
         if isCurrentFile {
             try verifyFileHasNotChanged(resolvedURL)
@@ -115,7 +128,9 @@ public final class EditorDocument {
         let savedData = try Self.readBoundedRegularFile(resolvedURL)
         fileURL = resolvedURL
         originalText = text
+        textEncoding = encoding
         shouldRestoreInSession = true
+        hasUnsavedChanges = false
         originalFileDigest = Self.digest(savedData)
     }
 
@@ -127,6 +142,7 @@ public final class EditorDocument {
         lineEnding = state.lineEnding
         textEncoding = .utf8
         shouldRestoreInSession = true
+        hasUnsavedChanges = false
         originalFileDigest = nil
     }
 
@@ -166,18 +182,33 @@ public final class EditorDocument {
         shouldRestoreInSession = true
     }
 
-    private func encodedData(path: String) throws -> Data {
+    private func encodedData(path: String, encoding: TextFileEncoding) throws -> Data {
         let outputText = TextMetrics.textForSave(text, lineEnding: lineEnding)
-        switch textEncoding {
+        switch encoding {
         case .utf8:
             return Data(outputText.utf8)
         case .utf8WithByteOrderMark:
             return Data([0xEF, 0xBB, 0xBF]) + Data(outputText.utf8)
+        case .utf16LittleEndian:
+            guard let data = outputText.data(using: .utf16LittleEndian, allowLossyConversion: false) else {
+                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding.statusLabel)
+            }
+            return Data([0xFF, 0xFE]) + data
+        case .utf16BigEndian:
+            guard let data = outputText.data(using: .utf16BigEndian, allowLossyConversion: false) else {
+                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding.statusLabel)
+            }
+            return Data([0xFE, 0xFF]) + data
+        case .windows1252:
+            guard let data = outputText.data(using: .windowsCP1252, allowLossyConversion: false) else {
+                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding.statusLabel)
+            }
+            return data
         case .isoLatin1:
             guard let data = outputText.data(using: .isoLatin1, allowLossyConversion: false) else {
                 throw EditorDocumentError.textCannotBeSaved(
                     path: path,
-                    encoding: textEncoding.statusLabel
+                    encoding: encoding.statusLabel
                 )
             }
             return data
@@ -240,6 +271,8 @@ public final class EditorDocument {
 
     private static func decodeText(_ data: Data, path: String) throws -> (text: String, encoding: TextFileEncoding) {
         let utf8ByteOrderMark = Data([0xEF, 0xBB, 0xBF])
+        let utf16LittleEndianByteOrderMark = Data([0xFF, 0xFE])
+        let utf16BigEndianByteOrderMark = Data([0xFE, 0xFF])
         if data.starts(with: utf8ByteOrderMark) {
             guard let text = String(
                 data: data.dropFirst(utf8ByteOrderMark.count),
@@ -247,15 +280,44 @@ public final class EditorDocument {
             ) else {
                 throw EditorDocumentError.unsupportedTextEncoding(path: path)
             }
+            try validatePlainText(text, path: path)
             return (text, .utf8WithByteOrderMark)
         }
+        if data.starts(with: utf16LittleEndianByteOrderMark) {
+            guard let text = String(
+                data: data.dropFirst(utf16LittleEndianByteOrderMark.count),
+                encoding: .utf16LittleEndian
+            ) else {
+                throw EditorDocumentError.unsupportedTextEncoding(path: path)
+            }
+            try validatePlainText(text, path: path)
+            return (text, .utf16LittleEndian)
+        }
+        if data.starts(with: utf16BigEndianByteOrderMark) {
+            guard let text = String(
+                data: data.dropFirst(utf16BigEndianByteOrderMark.count),
+                encoding: .utf16BigEndian
+            ) else {
+                throw EditorDocumentError.unsupportedTextEncoding(path: path)
+            }
+            try validatePlainText(text, path: path)
+            return (text, .utf16BigEndian)
+        }
         if let text = String(data: data, encoding: .utf8) {
+            try validatePlainText(text, path: path)
             return (text, .utf8)
+        }
+        if data.contains(where: { (0x80...0x9F).contains($0) }),
+           isPlausibleWindows1252Text(data),
+           let text = String(data: data, encoding: .windowsCP1252) {
+            try validatePlainText(text, path: path)
+            return (text, .windows1252)
         }
         guard isPlausibleLatin1Text(data),
               let text = String(data: data, encoding: .isoLatin1) else {
             throw EditorDocumentError.unsupportedTextEncoding(path: path)
         }
+        try validatePlainText(text, path: path)
         return (text, .isoLatin1)
     }
 
@@ -265,6 +327,28 @@ public final class EditorDocument {
                 return true
             }
             return byte >= 0x20 && !(0x7F...0x9F).contains(byte)
+        }
+    }
+
+    private static func isPlausibleWindows1252Text(_ data: Data) -> Bool {
+        data.allSatisfy { byte in
+            if byte == 0x09 || byte == 0x0A || byte == 0x0D {
+                return true
+            }
+            return byte >= 0x20 && byte != 0x7F
+        }
+    }
+
+    private static func validatePlainText(_ text: String, path: String) throws {
+        let containsBinaryControl = text.unicodeScalars.contains { scalar in
+            let value = scalar.value
+            if value == 0x09 || value == 0x0A || value == 0x0D {
+                return false
+            }
+            return value < 0x20 || (0x7F...0x9F).contains(value)
+        }
+        if containsBinaryControl {
+            throw EditorDocumentError.unsupportedTextEncoding(path: path)
         }
     }
 

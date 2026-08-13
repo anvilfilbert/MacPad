@@ -32,10 +32,16 @@ enum EditorWindowResolver {
             controller.fileURL?.standardizedFileURL == resolvedURL
         }
     }
+
+    static func makeController(opening url: URL) throws -> EditorWindowController {
+        let controller = EditorWindowController()
+        try controller.loadFile(url)
+        return controller
+    }
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private let sessionDefaultsKey = "MacPad.SessionState.v1"
     private let sessionLogger = Logger(subsystem: "local.macpad.app", category: "session")
     private var windows: [EditorWindowController] = []
@@ -143,13 +149,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let controller = makeWindowController()
-        present(controller, asTab: keyWindowController != nil)
-        controller.loadFile(url)
+        do {
+            let controller = try EditorWindowResolver.makeController(opening: url)
+            configure(controller)
+            present(controller, asTab: keyWindowController != nil)
+        } catch {
+            showOpenError(url: url, error: error)
+        }
     }
 
     private func makeWindowController() -> EditorWindowController {
         let controller = EditorWindowController()
+        configure(controller)
+        return controller
+    }
+
+    private func configure(_ controller: EditorWindowController) {
         controller.onClose = { [weak self, weak controller] in
             guard let controller else { return }
             self?.windows.removeAll { $0 === controller }
@@ -161,7 +176,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         controller.onActivate = { [weak self, weak controller] in
             self?.lastActiveWindowController = controller
         }
-        return controller
     }
 
     private func present(_ controller: EditorWindowController, asTab: Bool) {
@@ -244,6 +258,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func restoreZoom(_ sender: Any?) { keyWindowController?.restoreZoom(sender) }
     @objc func chooseFont(_ sender: Any?) { keyWindowController?.chooseFont(sender) }
 
+    @objc func openHelp(_ sender: Any?) {
+        openProjectURL("https://github.com/anvilfilbert/MacPad/wiki")
+    }
+
+    @objc func reportIssue(_ sender: Any?) {
+        openProjectURL("https://github.com/anvilfilbert/MacPad/issues/new/choose")
+    }
+
+    @objc func checkForUpdates(_ sender: Any?) {
+        openProjectURL("https://github.com/anvilfilbert/MacPad/releases/latest")
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(toggleWordWrap(_:)) {
+            menuItem.state = keyWindowController?.isWordWrapEnabled == true ? .on : .off
+            return keyWindowController != nil
+        }
+        if menuItem.action == #selector(toggleStatusBar(_:)) {
+            menuItem.state = keyWindowController?.isStatusBarVisible == true ? .on : .off
+            return keyWindowController != nil
+        }
+        return true
+    }
+
     private func restorePreviousSession() -> Bool {
         guard let data = UserDefaults.standard.data(forKey: sessionDefaultsKey) else {
             return false
@@ -268,18 +306,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             saveSessionNow()
         }
 
+        var restoreFailures: [String] = []
         for windowSession in session.windows {
-            var restoredTabs = 0
+            var restoredControllers: [(originalIndex: Int, controller: EditorWindowController)] = []
             for (index, tab) in windowSession.tabs.enumerated() {
                 let controller = makeWindowController()
                 do {
                     try controller.restoreSessionState(tab)
-                    present(controller, asTab: index > 0 && restoredTabs > 0)
-                    restoredTabs += 1
+                    present(controller, asTab: !restoredControllers.isEmpty)
+                    restoredControllers.append((index, controller))
                 } catch {
-                    showSessionRestoreError(filePath: tab.filePath, error: error)
+                    restoreFailures.append("\(tab.filePath ?? "Untitled"): \(error.localizedDescription)")
                 }
             }
+
+            if let firstWindow = restoredControllers.first?.controller.window {
+                restoreFrame(windowSession.frame, to: firstWindow)
+            }
+            let selectedController = restoredControllers.first {
+                $0.originalIndex == windowSession.selectedTabIndex
+            }?.controller ?? restoredControllers.first?.controller
+            selectedController?.window?.makeKeyAndOrderFront(nil)
+        }
+
+        if !restoreFailures.isEmpty {
+            showSessionRestoreErrors(restoreFailures)
         }
 
         return !windows.isEmpty
@@ -360,7 +411,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             if !tabs.isEmpty {
-                sessions.append(EditorWindowSessionState(tabs: tabs))
+                let selectedWindow = window.tabGroup?.selectedWindow ?? window
+                let selectedIndex = orderedWindows.firstIndex { $0 === selectedWindow } ?? 0
+                let frame = orderedWindows.first.map { windowFrameState($0.frame) }
+                sessions.append(
+                    EditorWindowSessionState(
+                        tabs: tabs,
+                        selectedTabIndex: selectedIndex,
+                        frame: frame
+                    )
+                )
             }
         }
 
@@ -373,5 +433,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.messageText = "Could not restore a previous MacPad tab."
         alert.informativeText = "\(filePath ?? "Untitled")\n\n\(error.localizedDescription)"
         alert.runModal()
+    }
+
+    private func showSessionRestoreErrors(_ failures: [String]) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Some previous MacPad tabs could not be restored."
+        alert.informativeText = failures.joined(separator: "\n")
+        alert.runModal()
+    }
+
+    private func showOpenError(url: URL, error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .critical
+        alert.messageText = "Could not open \(url.lastPathComponent)."
+        alert.informativeText = error.localizedDescription
+        alert.runModal()
+    }
+
+    private func openProjectURL(_ value: String) {
+        guard let url = URL(string: value) else {
+            assertionFailure("Invalid project URL: \(value)")
+            return
+        }
+        guard NSWorkspace.shared.open(url) else {
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = "Could not open the link."
+            alert.informativeText = value
+            alert.runModal()
+            return
+        }
+    }
+
+    private func windowFrameState(_ frame: NSRect) -> WindowFrameState {
+        WindowFrameState(
+            x: frame.origin.x,
+            y: frame.origin.y,
+            width: frame.size.width,
+            height: frame.size.height
+        )
+    }
+
+    private func restoreFrame(_ frameState: WindowFrameState?, to window: NSWindow) {
+        guard let frameState else { return }
+        let frame = NSRect(
+            x: frameState.x,
+            y: frameState.y,
+            width: frameState.width,
+            height: frameState.height
+        )
+        let targetScreen = NSScreen.screens.first { $0.frame.intersects(frame) } ?? NSScreen.main
+        let constrainedFrame = targetScreen.map { window.constrainFrameRect(frame, to: $0) } ?? frame
+        window.setFrame(constrainedFrame, display: false)
     }
 }

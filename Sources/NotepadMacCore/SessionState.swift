@@ -66,13 +66,30 @@ public struct AppSessionState: Codable, Equatable {
 
 public struct EditorWindowSessionState: Codable, Equatable {
     public let tabs: [EditorSessionState]
+    public let selectedTabIndex: Int
+    public let frame: WindowFrameState?
 
     private enum CodingKeys: String, CodingKey {
         case tabs
+        case selectedTabIndex
+        case frame
     }
 
     public init(tabs: [EditorSessionState]) {
+        self.init(tabs: tabs, selectedTabIndex: 0, frame: nil)
+    }
+
+    public init(
+        tabs: [EditorSessionState],
+        selectedTabIndex: Int,
+        frame: WindowFrameState?
+    ) {
         self.tabs = tabs
+        self.selectedTabIndex = Self.boundedSelectedTabIndex(
+            selectedTabIndex,
+            tabCount: tabs.count
+        )
+        self.frame = frame?.isUsable == true ? frame : nil
     }
 
     public init(from decoder: Decoder) throws {
@@ -91,11 +108,50 @@ public struct EditorWindowSessionState: Codable, Equatable {
             decodedTabs.append(try tabsContainer.decode(EditorSessionState.self))
         }
         tabs = decodedTabs
+        let decodedIndex = try container.decodeIfPresent(Int.self, forKey: .selectedTabIndex) ?? 0
+        selectedTabIndex = Self.boundedSelectedTabIndex(
+            decodedIndex,
+            tabCount: decodedTabs.count
+        )
+        let decodedFrame = try container.decodeIfPresent(WindowFrameState.self, forKey: .frame)
+        frame = decodedFrame?.isUsable == true ? decodedFrame : nil
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(tabs, forKey: .tabs)
+        try container.encode(selectedTabIndex, forKey: .selectedTabIndex)
+        try container.encodeIfPresent(frame, forKey: .frame)
+    }
+
+    private static func boundedSelectedTabIndex(_ index: Int, tabCount: Int) -> Int {
+        guard tabCount > 0 else { return 0 }
+        return min(max(0, index), tabCount - 1)
+    }
+}
+
+public struct WindowFrameState: Codable, Equatable, Sendable {
+    public let x: Double
+    public let y: Double
+    public let width: Double
+    public let height: Double
+
+    public init(x: Double, y: Double, width: Double, height: Double) {
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    }
+
+    fileprivate var isUsable: Bool {
+        let values = [x, y, width, height]
+        return values.allSatisfy(\.isFinite)
+            && width >= 320
+            && height >= 240
+            && width <= 20_000
+            && height <= 20_000
+            && abs(x) <= 1_000_000
+            && abs(y) <= 1_000_000
     }
 }
 
