@@ -8,10 +8,11 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14%2B-blue)](Package.swift)
 
-A small native macOS plain-text editor modeled after Windows `notepad.exe`.
+Ultra-fast native plain-text editor for macOS. No bloat.
 
 ## MacPad family
 
+- [MacPad family website](https://anvilfilbert.github.io/) presents both apps.
 - MacPad is the native macOS editor in this repository.
 - [MacPad Mobile](https://github.com/anvilfilbert/MacPad-Mobile) is the native
   iPhone and iPad counterpart.
