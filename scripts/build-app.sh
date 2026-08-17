@@ -30,6 +30,7 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 cp "$BINARY_PATH" "$MACOS_DIR/MacPad"
 chmod +x "$MACOS_DIR/MacPad"
 cp "Resources/Info.plist" "$CONTENTS_DIR/Info.plist"
+cp "$ROOT_DIR/LICENSE" "$RESOURCES_DIR/LICENSE"
 "$ROOT_DIR/scripts/create-app-icon.sh" "$ROOT_DIR/Resources/MacPadLogo.png" "$RESOURCES_DIR/AppIcon.icns"
 /usr/bin/xattr -cr "$STAGED_APP"
 /usr/bin/codesign --force --sign - "$STAGED_APP" >/dev/null

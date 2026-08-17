@@ -42,7 +42,7 @@ If macOS warns that the app is from an unidentified developer, right-click `MacP
 
 ## Latest Changes
 
-`1.2.0` adds a native Open Recent menu, remembers the preferred editor font across every tab and launch, and improves VoiceOver descriptions and keyboard navigation in the editor, Find and Replace, Save As, and Go To controls.
+`1.2.1` changes MacPad's license to Apache 2.0 and includes the license text inside every packaged app. Editor behavior is unchanged from `1.2.0`.
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
