@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14%2B-blue)](Package.swift)
 
-A small native macOS plain-text editor modeled after Windows `notepad.exe`.
+Ultra-fast native plain-text editor for macOS. No bloat.
 
 ## MacPad family
 
