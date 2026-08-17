@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+
+- Changed the project license from GPL-3.0 to Apache-2.0.
+- Included the repository license inside every built and packaged MacPad app.
+
 ## 1.2.0
 
 - Added a native File > Open Recent menu with the standard Clear Menu command.

@@ -25,6 +25,16 @@ mkdir -p "$DIST_DIR"
 /usr/bin/ditto -x -k "$TMP_ZIP" "$VERIFY_DIR"
 /usr/bin/codesign --verify --deep --strict "$VERIFY_DIR/MacPad.app"
 
+BUNDLED_LICENSE="$VERIFY_DIR/MacPad.app/Contents/Resources/LICENSE"
+if [[ ! -f "$BUNDLED_LICENSE" ]]; then
+  echo "Release app does not include LICENSE." >&2
+  exit 1
+fi
+if ! /usr/bin/cmp -s "$ROOT_DIR/LICENSE" "$BUNDLED_LICENSE"; then
+  echo "Release app LICENSE does not match the repository license." >&2
+  exit 1
+fi
+
 ARCHITECTURES="$(/usr/bin/lipo -archs "$VERIFY_DIR/MacPad.app/Contents/MacOS/MacPad")"
 if [[ " $ARCHITECTURES " != *" arm64 "* || " $ARCHITECTURES " != *" x86_64 "* ]]; then
   echo "Release binary is not universal: $ARCHITECTURES" >&2

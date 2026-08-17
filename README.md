@@ -5,7 +5,7 @@
 
 [![Latest Release](https://img.shields.io/github/v/release/anvilfilbert/MacPad?label=release)](https://github.com/anvilfilbert/MacPad/releases/latest)
 [![Build](https://github.com/anvilfilbert/MacPad/actions/workflows/swift-ci.yml/badge.svg)](https://github.com/anvilfilbert/MacPad/actions/workflows/swift-ci.yml)
-[![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-14%2B-blue)](Package.swift)
 
 A small native macOS plain-text editor modeled after Windows `notepad.exe`.
@@ -42,7 +42,7 @@ If macOS warns that the app is from an unidentified developer, right-click `MacP
 
 ## Latest Changes
 
-`1.2.0` adds a native Open Recent menu, remembers the preferred editor font across every tab and launch, and improves VoiceOver descriptions and keyboard navigation in the editor, Find and Replace, Save As, and Go To controls.
+`1.2.1` changes MacPad's license to Apache 2.0 and includes the license text inside every packaged app. Editor behavior is unchanged from `1.2.0`.
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
@@ -108,6 +108,10 @@ swift test
 - Use [Discussions](https://github.com/anvilfilbert/MacPad/discussions) for questions and ideas.
 - Open an [issue](https://github.com/anvilfilbert/MacPad/issues/new/choose) for a reproducible bug or focused feature request.
 - See [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
+
+## License
+
+MacPad is available under the [Apache License 2.0](LICENSE).
 
 ## Security
 
