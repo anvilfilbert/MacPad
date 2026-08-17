@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Changed the project license from GPL-3.0 to Apache-2.0.
+
 ## 1.2.0
 
 - Added a native File > Open Recent menu with the standard Clear Menu command.

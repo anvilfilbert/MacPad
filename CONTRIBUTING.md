@@ -33,4 +33,4 @@ Pull requests require review, passing CI, and resolved conversations before merg
 
 Known product work is normally implemented by the maintainers. Issues explicitly labeled [`help wanted`](https://github.com/anvilfilbert/MacPad/labels/help%20wanted) or [`good first issue`](https://github.com/anvilfilbert/MacPad/labels/good%20first%20issue) are available for community implementation. For anything else, discuss the proposal on the issue before writing code so work is not duplicated.
 
-By contributing, you agree that your contribution is provided under this repository's GPL-3.0 license.
+By contributing, you agree that your contribution is provided under this repository's Apache-2.0 license.
