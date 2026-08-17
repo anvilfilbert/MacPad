@@ -10,6 +10,16 @@
 
 A small native macOS plain-text editor modeled after Windows `notepad.exe`.
 
+## MacPad family
+
+- MacPad is the native macOS editor in this repository.
+- [MacPad Mobile](https://github.com/anvilfilbert/MacPad-Mobile) is the native
+  iPhone and iPad counterpart.
+
+The apps are separate codebases and do not automatically synchronize open
+documents, tabs, settings, or recovery data. Files stored in a shared location
+can be opened explicitly from either app.
+
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/anvilfilbert/MacPad)
 
 <p align="center">
