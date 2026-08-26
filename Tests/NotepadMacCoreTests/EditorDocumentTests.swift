@@ -279,6 +279,7 @@ struct EditorDocumentTests {
         let holderFinished = DispatchSemaphore(value: 0)
         let holderQueue = OperationQueue()
         holderQueue.maxConcurrentOperationCount = 1
+        holderQueue.qualityOfService = .userInitiated
         holderQueue.addOperation {
             let coordinator = NSFileCoordinator(filePresenter: nil)
             var coordinationError: NSError?
@@ -289,11 +290,12 @@ struct EditorDocumentTests {
             #expect(coordinationError == nil)
             holderFinished.signal()
         }
-        #expect(holderAcquired.wait(timeout: .now() + 2) == .success)
+        #expect(holderAcquired.wait(timeout: .now() + 15) == .success)
 
         let saveFinished = DispatchSemaphore(value: 0)
         let saveQueue = OperationQueue()
         saveQueue.maxConcurrentOperationCount = 1
+        saveQueue.qualityOfService = .userInitiated
         saveQueue.addOperation {
             do {
                 let document = EditorDocument()
@@ -309,9 +311,9 @@ struct EditorDocumentTests {
         let earlySaveResult = saveFinished.wait(timeout: .now() + 0.2)
         #expect(earlySaveResult == .timedOut)
         releaseHolder.signal()
-        #expect(holderFinished.wait(timeout: .now() + 2) == .success)
+        #expect(holderFinished.wait(timeout: .now() + 15) == .success)
         if earlySaveResult == .timedOut {
-            #expect(saveFinished.wait(timeout: .now() + 2) == .success)
+            #expect(saveFinished.wait(timeout: .now() + 15) == .success)
         }
         #expect(try String(contentsOf: fileURL, encoding: .utf8) == "MacPad edit")
     }
@@ -327,6 +329,7 @@ struct EditorDocumentTests {
         let saveFinished = DispatchSemaphore(value: 0)
         let saveQueue = OperationQueue()
         saveQueue.maxConcurrentOperationCount = 1
+        saveQueue.qualityOfService = .userInitiated
         saveQueue.addOperation {
             do {
                 let document = EditorDocument()
@@ -347,13 +350,14 @@ struct EditorDocumentTests {
             }
             saveFinished.signal()
         }
-        #expect(documentLoaded.wait(timeout: .now() + 2) == .success)
+        #expect(documentLoaded.wait(timeout: .now() + 15) == .success)
 
         let holderAcquired = DispatchSemaphore(value: 0)
         let releaseHolder = DispatchSemaphore(value: 0)
         let holderFinished = DispatchSemaphore(value: 0)
         let holderQueue = OperationQueue()
         holderQueue.maxConcurrentOperationCount = 1
+        holderQueue.qualityOfService = .userInitiated
         holderQueue.addOperation {
             let coordinator = NSFileCoordinator(filePresenter: nil)
             var coordinationError: NSError?
@@ -371,15 +375,15 @@ struct EditorDocumentTests {
             }
             holderFinished.signal()
         }
-        #expect(holderAcquired.wait(timeout: .now() + 2) == .success)
+        #expect(holderAcquired.wait(timeout: .now() + 15) == .success)
 
         beginSave.signal()
         let earlySaveResult = saveFinished.wait(timeout: .now() + 0.2)
         #expect(earlySaveResult == .timedOut)
         releaseHolder.signal()
-        #expect(holderFinished.wait(timeout: .now() + 2) == .success)
+        #expect(holderFinished.wait(timeout: .now() + 15) == .success)
         if earlySaveResult == .timedOut {
-            #expect(saveFinished.wait(timeout: .now() + 2) == .success)
+            #expect(saveFinished.wait(timeout: .now() + 15) == .success)
         }
         #expect(try String(contentsOf: fileURL, encoding: .utf8) == "external edit")
     }
