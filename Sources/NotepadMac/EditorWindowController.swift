@@ -2,6 +2,23 @@ import AppKit
 import NotepadMacCore
 import UniformTypeIdentifiers
 
+private struct EditorTextAnalysis: Sendable {
+    let lineIndex: TextLineIndex
+    let matchesOriginal: Bool
+}
+
+private actor EditorTextAnalyzer {
+    func analyze(text: String, originalText: String) -> EditorTextAnalysis? {
+        guard !Task.isCancelled else { return nil }
+        let lineIndex = TextLineIndex(text: text)
+        guard !Task.isCancelled else { return nil }
+        return EditorTextAnalysis(
+            lineIndex: lineIndex,
+            matchesOriginal: text == originalText
+        )
+    }
+}
+
 final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTextViewDelegate {
     static var defaultEditorFont: NSFont {
         NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
@@ -25,6 +42,10 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private var zoomPercent = 100
     private var baseFont: NSFont
     private var lineIndex = TextLineIndex(text: "")
+    private var lineIndexGeneration = 0
+    private var appliedLineIndexGeneration = 0
+    private let textAnalyzer = EditorTextAnalyzer()
+    private var pendingTextAnalysisTask: Task<Void, Never>?
 
     convenience init() {
         self.init(baseFont: Self.defaultEditorFont)
@@ -59,7 +80,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     func loadFile(_ url: URL) throws {
         try editorDocument.loadFile(url)
         textView.string = editorDocument.text
-        lineIndex = TextLineIndex(text: editorDocument.text)
+        refreshLineIndexNow()
         updateTitle()
         updateStatusBar()
         notifyStateChanged()
@@ -77,7 +98,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     func restoreSessionState(_ state: EditorSessionState) throws {
         try editorDocument.restoreSessionStateAndReloadFile(state)
         textView.string = editorDocument.text
-        lineIndex = TextLineIndex(text: editorDocument.text)
+        refreshLineIndexNow()
         wordWrapEnabled = state.wordWrapEnabled
         statusBarVisible = state.statusBarVisible
         statusBar.isHidden = !state.statusBarVisible
@@ -150,6 +171,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     @objc func goToLine(_ sender: Any?) {
+        refreshLineIndexNow()
         let alert = NSAlert()
         alert.messageText = "Go To Line"
         alert.informativeText = "Line number:"
@@ -266,8 +288,10 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     func textDidChange(_ notification: Notification) {
-        editorDocument.updateText(textView.string)
-        lineIndex = TextLineIndex(text: textView.string)
+        let text = textView.string
+        let originalText = editorDocument.originalText
+        editorDocument.recordEditedText(text)
+        scheduleTextAnalysis(for: text, originalText: originalText)
         updateTitle()
         updateStatusBar()
     }
@@ -479,9 +503,57 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     private func updateStatusBar() {
-        guard statusBarVisible else { return }
+        guard statusBarVisible,
+              appliedLineIndexGeneration == lineIndexGeneration else { return }
         let position = lineIndex.cursorPosition(selectedLocation: textView.selectedRange().location)
         statusBar.stringValue = "Ln \(position.line), Col \(position.column)  |  \(zoomPercent)%  |  \(editorDocument.lineEnding.statusLabel)  |  \(editorDocument.textEncoding.statusLabel)"
+    }
+
+    private func scheduleTextAnalysis(for text: String, originalText: String) {
+        lineIndexGeneration += 1
+        let generation = lineIndexGeneration
+        pendingTextAnalysisTask?.cancel()
+        let analyzer = textAnalyzer
+
+        pendingTextAnalysisTask = Task { @MainActor [weak self, analyzer] in
+            do {
+                try await Task.sleep(for: .milliseconds(100))
+            } catch is CancellationError {
+                return
+            } catch {
+                preconditionFailure("Text-analysis debounce failed: \(error)")
+            }
+
+            guard let analysis = await analyzer.analyze(
+                text: text,
+                originalText: originalText
+            ),
+            !Task.isCancelled,
+            let self,
+            self.lineIndexGeneration == generation else { return }
+
+            self.lineIndex = analysis.lineIndex
+            self.appliedLineIndexGeneration = generation
+            self.pendingTextAnalysisTask = nil
+            if analysis.matchesOriginal {
+                self.editorDocument.markCurrentTextAsMatchingOriginal()
+                self.updateTitle()
+            }
+            self.updateStatusBar()
+        }
+    }
+
+    private func refreshLineIndexNow() {
+        pendingTextAnalysisTask?.cancel()
+        pendingTextAnalysisTask = nil
+        lineIndexGeneration += 1
+        lineIndex = TextLineIndex(text: textView.string)
+        appliedLineIndexGeneration = lineIndexGeneration
+    }
+
+    func waitForPendingTextAnalysis() async {
+        let task = pendingTextAnalysisTask
+        await task?.value
     }
 
     private func resolveExternalFileChange(at url: URL) {

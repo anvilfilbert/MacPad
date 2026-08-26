@@ -49,6 +49,63 @@ struct SessionStateTests {
         }
     }
 
+    @Test("session creation retains only restorable recent windows")
+    func boundsCreatedWindows() throws {
+        let windows = (0...AppSessionState.maximumWindowCount).map { index in
+            EditorWindowSessionState(tabs: [sessionTab(id: "tab-\(index)")])
+        }
+
+        let state = AppSessionState(windows: windows)
+        let encoded = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(AppSessionState.self, from: encoded)
+
+        #expect(state.windows.count == AppSessionState.maximumWindowCount)
+        #expect(decoded.windows.count == AppSessionState.maximumWindowCount)
+        #expect(decoded.windows.first?.tabs.first?.id == "tab-1")
+        #expect(decoded.windows.last?.tabs.first?.id == "tab-50")
+    }
+
+    @Test("window creation retains the selected tab and recent tabs")
+    func boundsCreatedTabs() throws {
+        let tabs = (0...AppSessionState.maximumTabsPerWindow).map { index in
+            sessionTab(id: "tab-\(index)")
+        }
+
+        let state = EditorWindowSessionState(
+            tabs: tabs,
+            selectedTabIndex: 0,
+            frame: nil
+        )
+        let encoded = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(EditorWindowSessionState.self, from: encoded)
+
+        #expect(state.tabs.count == AppSessionState.maximumTabsPerWindow)
+        #expect(state.tabs.first?.id == "tab-0")
+        #expect(state.tabs.last?.id == "tab-100")
+        #expect(state.selectedTabIndex == 0)
+        #expect(decoded == state)
+    }
+
+    @Test("tab truncation retains recently used tabs regardless of tab-strip position")
+    func retainsRecentlyUsedTabs() {
+        let tabs = (0...AppSessionState.maximumTabsPerWindow).map { index in
+            sessionTab(id: "tab-\(index)")
+        }
+        let recency = Array(1...AppSessionState.maximumTabsPerWindow) + [0]
+
+        let state = EditorWindowSessionState(
+            tabs: tabs,
+            selectedTabIndex: 50,
+            frame: nil,
+            recentlyUsedTabIndices: recency
+        )
+
+        #expect(state.tabs.count == AppSessionState.maximumTabsPerWindow)
+        #expect(state.tabs.contains(where: { $0.id == "tab-0" }))
+        #expect(!state.tabs.contains(where: { $0.id == "tab-1" }))
+        #expect(state.tabs[state.selectedTabIndex].id == "tab-50")
+    }
+
     @Test("window state preserves frame and selected tab")
     func preservesWindowMetadata() throws {
         let first = sessionTab(id: "first")

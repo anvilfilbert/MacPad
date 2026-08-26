@@ -4,8 +4,10 @@ import Foundation
 
 public enum EditorDocumentError: LocalizedError {
     case fileTooLarge(path: String, sizeBytes: Int64, maximumBytes: Int64)
+    case documentTooLargeToSave(path: String, sizeBytes: Int64, maximumBytes: Int64)
     case fileIsNotRegular(path: String)
     case fileChangedOnDisk(path: String)
+    case fileCoordinationFailed(path: String)
     case unsupportedTextEncoding(path: String)
     case textCannotBeSaved(path: String, encoding: String)
 
@@ -13,10 +15,14 @@ public enum EditorDocumentError: LocalizedError {
         switch self {
         case let .fileTooLarge(path, sizeBytes, maximumBytes):
             return "File is too large to open safely: \(path) is \(sizeBytes) bytes, maximum is \(maximumBytes) bytes."
+        case let .documentTooLargeToSave(path, sizeBytes, maximumBytes):
+            return "Document is too large to save safely: \(path) would be \(sizeBytes) bytes, maximum is \(maximumBytes) bytes."
         case let .fileIsNotRegular(path):
             return "Only regular files can be opened safely: \(path)."
         case let .fileChangedOnDisk(path):
             return "The file changed on disk after MacPad opened it: \(path). Reload it or use Save As to avoid overwriting another edit."
+        case let .fileCoordinationFailed(path):
+            return "macOS did not grant coordinated write access to the file: \(path)."
         case let .unsupportedTextEncoding(path):
             return "File is not readable as supported plain text: \(path)."
         case let .textCannotBeSaved(path, encoding):
@@ -92,12 +98,11 @@ public final class EditorDocument {
         let data = try Self.readBoundedRegularFile(resolvedURL)
         let decodedText = try Self.decodeText(data, path: resolvedURL.path)
         let loadedText = decodedText.text
-        let normalizedText = TextMetrics.normalizedLineEndingsForEditing(loadedText)
 
         id = UUID().uuidString
         fileURL = resolvedURL
-        text = normalizedText
-        originalText = normalizedText
+        text = loadedText
+        originalText = loadedText
         lineEnding = LineEnding.detected(in: loadedText)
         textEncoding = decodedText.encoding
         shouldRestoreInSession = true
@@ -111,6 +116,16 @@ public final class EditorDocument {
         hasUnsavedChanges = text != originalText
     }
 
+    public func recordEditedText(_ text: String) {
+        self.text = text
+        shouldRestoreInSession = true
+        hasUnsavedChanges = true
+    }
+
+    public func markCurrentTextAsMatchingOriginal() {
+        hasUnsavedChanges = false
+    }
+
     public func save(to url: URL) throws {
         try save(to: url, encoding: textEncoding)
     }
@@ -119,19 +134,25 @@ public final class EditorDocument {
         let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
         let isCurrentFile = fileURL?.standardizedFileURL == resolvedURL
         let outputData = try encodedData(path: resolvedURL.path, encoding: encoding)
-
-        if isCurrentFile {
-            try verifyFileHasNotChanged(resolvedURL)
+        guard outputData.count <= Self.maximumReadableFileBytes else {
+            throw EditorDocumentError.documentTooLargeToSave(
+                path: resolvedURL.path,
+                sizeBytes: Int64(outputData.count),
+                maximumBytes: Self.maximumReadableFileBytes
+            )
         }
 
-        try outputData.write(to: resolvedURL, options: .atomic)
-        let savedData = try Self.readBoundedRegularFile(resolvedURL)
-        fileURL = resolvedURL
+        let savedURL = if isCurrentFile {
+            try coordinatedOverwriteCurrentFile(outputData, at: resolvedURL)
+        } else {
+            try coordinatedWrite(outputData, to: resolvedURL)
+        }
+        fileURL = savedURL
         originalText = text
         textEncoding = encoding
         shouldRestoreInSession = true
         hasUnsavedChanges = false
-        originalFileDigest = Self.digest(savedData)
+        originalFileDigest = Self.digest(outputData)
     }
 
     public func restoreSessionState(_ state: EditorSessionState) {
@@ -224,6 +245,43 @@ public final class EditorDocument {
         guard Self.digest(currentData) == originalFileDigest else {
             throw EditorDocumentError.fileChangedOnDisk(path: url.path)
         }
+    }
+
+    private func coordinatedOverwriteCurrentFile(_ data: Data, at url: URL) throws -> URL {
+        try coordinatedWrite(data, to: url) { coordinatedURL in
+            try verifyFileHasNotChanged(coordinatedURL)
+        }
+    }
+
+    private func coordinatedWrite(_ data: Data, to url: URL) throws -> URL {
+        try coordinatedWrite(data, to: url) { _ in }
+    }
+
+    private func coordinatedWrite(
+        _ data: Data,
+        to url: URL,
+        validateBeforeWriting: (URL) throws -> Void
+    ) throws -> URL {
+        let coordinator = NSFileCoordinator(filePresenter: nil)
+        var coordinationError: NSError?
+        var writeResult: Result<URL, any Error>?
+        coordinator.coordinate(writingItemAt: url, options: [], error: &coordinationError) { coordinatedURL in
+            do {
+                try validateBeforeWriting(coordinatedURL)
+                try data.write(to: coordinatedURL, options: .atomic)
+                writeResult = .success(coordinatedURL.standardizedFileURL)
+            } catch {
+                writeResult = .failure(error)
+            }
+        }
+
+        if let coordinationError {
+            throw coordinationError
+        }
+        guard let writeResult else {
+            throw EditorDocumentError.fileCoordinationFailed(path: url.path)
+        }
+        return try writeResult.get()
     }
 
     private static func readBoundedRegularFile(_ url: URL) throws -> Data {

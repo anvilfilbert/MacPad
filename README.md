@@ -43,7 +43,7 @@ If macOS warns that the app is from an unidentified developer, right-click `MacP
 
 ## Latest Changes
 
-`1.2.1` changes MacPad's license to Apache 2.0 and includes the license text inside every packaged app. Editor behavior is unchanged from `1.2.0`.
+`1.3.0` adds an optional one-click menu-bar launcher, improves large-file editing responsiveness and coordinated saves, preserves mixed line endings, and makes session limits safely restorable.
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
@@ -53,6 +53,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 - New, open, Open Recent, save, save as, and print
 - Multiple windows, each with multiple tabs
 - New tabs and new windows, including separate windows with their own tab groups
+- Optional OFF-by-default menu-bar launcher for opening a new empty window with one click
 - Session restore for window positions, selected tabs, tab groups, saved file tabs, and editor UI state without storing document text in preferences
 - Unsaved-change prompts when closing or quitting
 - Find, find next/previous, replace, and replace all with Match Case and Wrap Around options
@@ -63,7 +64,7 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 - VoiceOver labels, stable accessibility identifiers, and predictable keyboard focus order
 - Status bar showing line, column, zoom, line ending mode, and detected file encoding
 - UTF-8, UTF-8 BOM, UTF-16 LE/BE, Windows-1252, and ISO-8859-1 detection, preservation, and Save As conversion
-- Windows, Unix, and classic Mac line-ending detection and preservation
+- Windows, Unix, classic Mac, and mixed line-ending detection and preservation
 - Builds into a launchable universal `MacPad.app`
 - Uses the included MacPad logo as the app icon
 

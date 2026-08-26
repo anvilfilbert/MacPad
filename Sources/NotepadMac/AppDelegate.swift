@@ -47,12 +47,44 @@ enum EditorWindowResolver {
 }
 
 @MainActor
+enum EditorWindowRecency {
+    static func movingWindowGroupToEnd(
+        containing activeController: EditorWindowController,
+        in controllers: [EditorWindowController]
+    ) -> [EditorWindowController] {
+        guard let activeWindow = activeController.window else { return controllers }
+        let groupWindows: [NSWindow]
+        if let tabbedWindows = activeWindow.tabbedWindows, !tabbedWindows.isEmpty {
+            groupWindows = tabbedWindows
+        } else {
+            groupWindows = [activeWindow]
+        }
+        let groupIdentifiers = Set(groupWindows.map(ObjectIdentifier.init))
+        let inactiveControllers = controllers.filter { controller in
+            guard let window = controller.window else { return true }
+            return !groupIdentifiers.contains(ObjectIdentifier(window))
+        }
+        var activeGroupControllers = controllers.filter { controller in
+            guard let window = controller.window else { return false }
+            return groupIdentifiers.contains(ObjectIdentifier(window))
+        }
+        if let activeIndex = activeGroupControllers.firstIndex(where: { $0 === activeController }) {
+            let active = activeGroupControllers.remove(at: activeIndex)
+            activeGroupControllers.append(active)
+        }
+        return inactiveControllers + activeGroupControllers
+    }
+}
+
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSMenuDelegate {
     private static let preferencesLogger = Logger(
         subsystem: "local.macpad.app",
         category: "preferences"
     )
     private let sessionDefaultsKey = "MacPad.SessionState.v1"
+    private let menuBarDefaultsKey = "MacPad.ShowInMenuBar"
+    private let defaults: UserDefaults
     private let sessionLogger = Logger(subsystem: "local.macpad.app", category: "session")
     private var windows: [EditorWindowController] = []
     private var isRestoringSession = false
@@ -60,16 +92,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     private var hasFinishedLaunching = false
     private weak var lastActiveWindowController: EditorWindowController?
     private var preferredFont = EditorWindowController.defaultEditorFont
+    private(set) var menuBarStatusItem: NSStatusItem?
 
     override init() {
+        defaults = .standard
         super.init()
         preferredFont = Self.loadPreferredFont()
+    }
+
+    init(defaults: UserDefaults) {
+        self.defaults = defaults
+        super.init()
+        preferredFont = Self.loadPreferredFont()
+    }
+
+    var isMenuBarEnabled: Bool {
+        defaults.bool(forKey: menuBarDefaultsKey)
+    }
+
+    var editorWindowCount: Int {
+        windows.count
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSWindow.allowsAutomaticWindowTabbing = false
         let application = NSApplication.shared
         application.mainMenu = MainMenuFactory.makeMenu(target: self, application: application)
+        updateMenuBarStatusItem()
 
         let launchURLs = pendingOpenURLs
         pendingOpenURLs.removeAll()
@@ -86,7 +135,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        !isMenuBarEnabled
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -170,10 +219,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     @objc func clearSessionData(_ sender: Any?) {
         cancelScheduledSessionSave()
-        UserDefaults.standard.removeObject(forKey: sessionDefaultsKey)
+        defaults.removeObject(forKey: sessionDefaultsKey)
         for controller in windows {
             controller.discardFromSessionRestore()
         }
+    }
+
+    @objc func toggleMenuBarVisibility(_ sender: Any?) {
+        let enabled = !isMenuBarEnabled
+        defaults.set(enabled, forKey: menuBarDefaultsKey)
+        updateMenuBarStatusItem()
+        if !enabled, windows.isEmpty {
+            openNewWindow(sender)
+        }
+    }
+
+    @objc func handleMenuBarStatusItem(_ sender: Any?) {
+        openNewWindow(sender)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func openDocument(url: URL) {
@@ -181,7 +244,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             opening: url,
             controllers: windows
         ) {
-            lastActiveWindowController = existingController
+            recordWindowActivity(existingController)
             existingController.showWindow(nil)
             existingController.window?.makeKeyAndOrderFront(nil)
             noteRecentDocument(existingController.fileURL ?? url)
@@ -217,7 +280,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             self?.scheduleSessionSave()
         }
         controller.onActivate = { [weak self, weak controller] in
-            self?.lastActiveWindowController = controller
+            guard let controller else { return }
+            self?.recordWindowActivity(controller)
         }
         controller.onFontChange = { [weak self] font in
             self?.storePreferredFont(font)
@@ -230,7 +294,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     private func present(_ controller: EditorWindowController, asTab: Bool) {
         let parentWindow = asTab ? keyWindowController?.window : nil
         windows.append(controller)
-        lastActiveWindowController = controller
         controller.showWindow(nil)
 
         if let parentWindow,
@@ -240,7 +303,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             newWindow.makeKeyAndOrderFront(nil)
         }
 
+        recordWindowActivity(controller)
         saveSessionNow()
+    }
+
+    private func recordWindowActivity(_ controller: EditorWindowController) {
+        windows = EditorWindowRecency.movingWindowGroupToEnd(
+            containing: controller,
+            in: windows
+        )
+        lastActiveWindowController = controller
     }
 
     private var keyWindowController: EditorWindowController? {
@@ -328,11 +400,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             menuItem.state = keyWindowController?.isStatusBarVisible == true ? .on : .off
             return keyWindowController != nil
         }
+        if menuItem.action == #selector(toggleMenuBarVisibility(_:)) {
+            menuItem.state = isMenuBarEnabled ? .on : .off
+            return true
+        }
         return true
     }
 
+    private func updateMenuBarStatusItem() {
+        if isMenuBarEnabled {
+            guard menuBarStatusItem == nil else { return }
+            let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+            guard let button = statusItem.button else {
+                NSStatusBar.system.removeStatusItem(statusItem)
+                defaults.set(false, forKey: menuBarDefaultsKey)
+                let alert = NSAlert()
+                alert.alertStyle = .warning
+                alert.messageText = "Could not add MacPad to the menu bar."
+                alert.informativeText = "macOS did not provide a menu-bar button."
+                alert.runModal()
+                return
+            }
+
+            let icon = NSApp.applicationIconImage.copy() as? NSImage
+            icon?.size = NSSize(width: 18, height: 18)
+            button.image = icon
+            button.imageScaling = .scaleProportionallyDown
+            button.target = self
+            button.action = #selector(handleMenuBarStatusItem(_:))
+            button.sendAction(on: [.leftMouseUp])
+            button.toolTip = "Open a new MacPad window"
+            button.setAccessibilityLabel("Open a new MacPad window")
+            menuBarStatusItem = statusItem
+            return
+        }
+
+        if let statusItem = menuBarStatusItem {
+            NSStatusBar.system.removeStatusItem(statusItem)
+            menuBarStatusItem = nil
+        }
+    }
+
     private func restorePreviousSession() -> Bool {
-        guard let data = UserDefaults.standard.data(forKey: sessionDefaultsKey) else {
+        guard let data = defaults.data(forKey: sessionDefaultsKey) else {
             return false
         }
 
@@ -340,7 +450,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         do {
             session = try JSONDecoder().decode(AppSessionState.self, from: data)
         } catch {
-            UserDefaults.standard.removeObject(forKey: sessionDefaultsKey)
+            defaults.removeObject(forKey: sessionDefaultsKey)
             sessionLogger.error(
                 "Discarded invalid session state: \(error.localizedDescription, privacy: .public)"
             )
@@ -417,13 +527,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
         let windowSessions = currentWindowSessions()
         guard !windowSessions.isEmpty else {
-            UserDefaults.standard.removeObject(forKey: sessionDefaultsKey)
+            defaults.removeObject(forKey: sessionDefaultsKey)
             return
+        }
+        if windowSessions.count > AppSessionState.maximumWindowCount {
+            sessionLogger.warning(
+                "Session window limit exceeded; total: \(windowSessions.count, privacy: .public), retained: \(AppSessionState.maximumWindowCount, privacy: .public)"
+            )
         }
 
         do {
             let data = try JSONEncoder().encode(AppSessionState(windows: windowSessions))
-            UserDefaults.standard.set(data, forKey: sessionDefaultsKey)
+            defaults.set(data, forKey: sessionDefaultsKey)
         } catch {
             sessionLogger.error(
                 "Could not encode session state: \(error.localizedDescription, privacy: .public)"
@@ -455,19 +570,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
                 seenWindows.insert(identifier)
             }
 
-            let tabs = orderedWindows.compactMap { tabWindow in
-                controllerByWindow[ObjectIdentifier(tabWindow)]?.sessionState
+            let tabEntries: [(window: NSWindow, state: EditorSessionState)] = orderedWindows.compactMap { tabWindow in
+                guard let state = controllerByWindow[ObjectIdentifier(tabWindow)]?.sessionState else {
+                    return nil
+                }
+                return (tabWindow, state)
+            }
+            let tabs = tabEntries.map(\.state)
+            if tabs.count > AppSessionState.maximumTabsPerWindow {
+                sessionLogger.warning(
+                    "Session tab limit exceeded; total: \(tabs.count, privacy: .public), retained: \(AppSessionState.maximumTabsPerWindow, privacy: .public)"
+                )
             }
 
             if !tabs.isEmpty {
                 let selectedWindow = window.tabGroup?.selectedWindow ?? window
-                let selectedIndex = orderedWindows.firstIndex { $0 === selectedWindow } ?? 0
+                let selectedIndex = tabEntries.firstIndex { $0.window === selectedWindow } ?? 0
                 let frame = orderedWindows.first.map { windowFrameState($0.frame) }
+                let visualIndexByWindow = Dictionary(
+                    uniqueKeysWithValues: tabEntries.enumerated().map { index, entry in
+                        (ObjectIdentifier(entry.window), index)
+                    }
+                )
+                let recentlyUsedTabIndices = windows.compactMap { recentController -> Int? in
+                    guard let recentWindow = recentController.window else { return nil }
+                    return visualIndexByWindow[ObjectIdentifier(recentWindow)]
+                }
                 sessions.append(
                     EditorWindowSessionState(
                         tabs: tabs,
                         selectedTabIndex: selectedIndex,
-                        frame: frame
+                        frame: frame,
+                        recentlyUsedTabIndices: recentlyUsedTabIndices
                     )
                 )
             }

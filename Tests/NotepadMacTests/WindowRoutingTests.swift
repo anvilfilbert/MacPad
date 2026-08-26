@@ -97,6 +97,88 @@ struct WindowRoutingTests {
         #expect(newWindow.action == #selector(AppDelegate.openNewWindow(_:)))
     }
 
+    @Test("View menu exposes the optional menu-bar launcher")
+    func menuBarLauncherCommand() throws {
+        let application = NSApplication.shared
+        let menu = MainMenuFactory.makeMenu(target: AppDelegate(), application: application)
+        let item = try #require(menuItem(withIdentifier: "view.menuBar", in: menu))
+
+        #expect(item.action == #selector(AppDelegate.toggleMenuBarVisibility(_:)))
+        #expect(item.state == .off)
+    }
+
+    @Test("menu-bar launcher is off by default and keeps the app running when enabled")
+    func menuBarLauncherPreference() throws {
+        let suiteName = "MacPadTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let delegate = AppDelegate(defaults: defaults)
+
+        #expect(!delegate.isMenuBarEnabled)
+        #expect(delegate.menuBarStatusItem == nil)
+        #expect(delegate.applicationShouldTerminateAfterLastWindowClosed(.shared))
+
+        delegate.toggleMenuBarVisibility(nil)
+
+        #expect(delegate.isMenuBarEnabled)
+        let statusItem = try #require(delegate.menuBarStatusItem)
+        #expect(statusItem.button?.action == #selector(AppDelegate.handleMenuBarStatusItem(_:)))
+        #expect(!delegate.applicationShouldTerminateAfterLastWindowClosed(.shared))
+        #expect(AppDelegate(defaults: defaults).isMenuBarEnabled)
+
+        delegate.handleMenuBarStatusItem(nil)
+        #expect(delegate.editorWindowCount == 1)
+
+        delegate.toggleMenuBarVisibility(nil)
+
+        #expect(!delegate.isMenuBarEnabled)
+        #expect(delegate.menuBarStatusItem == nil)
+        #expect(delegate.applicationShouldTerminateAfterLastWindowClosed(.shared))
+        #expect(delegate.editorWindowCount == 1)
+    }
+
+    @Test("disabling menu-bar mode without an editor restores a normal window")
+    func disablingMenuBarWithoutWindow() throws {
+        let suiteName = "MacPadTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let delegate = AppDelegate(defaults: defaults)
+
+        delegate.toggleMenuBarVisibility(nil)
+        #expect(delegate.editorWindowCount == 0)
+
+        delegate.toggleMenuBarVisibility(nil)
+        #expect(delegate.editorWindowCount == 1)
+    }
+
+    @Test("activating a tab group moves the complete group to the recent end")
+    func windowGroupRecency() throws {
+        let first = EditorWindowController()
+        let second = EditorWindowController()
+        let third = EditorWindowController()
+        let firstWindow = try #require(first.window)
+        let secondWindow = try #require(second.window)
+        firstWindow.addTabbedWindow(secondWindow, ordered: .above)
+
+        let reordered = EditorWindowRecency.movingWindowGroupToEnd(
+            containing: first,
+            in: [first, second, third]
+        )
+
+        #expect(reordered.count == 3)
+        #expect(reordered[0] === third)
+        #expect(reordered[1] === second)
+        #expect(reordered[2] === first)
+
+        let secondReordered = EditorWindowRecency.movingWindowGroupToEnd(
+            containing: second,
+            in: reordered
+        )
+        #expect(secondReordered[0] === third)
+        #expect(secondReordered[1] === first)
+        #expect(secondReordered[2] === second)
+    }
+
     @Test("File menu exposes native recent documents")
     func recentDocumentsMenu() throws {
         let application = NSApplication.shared
@@ -167,6 +249,60 @@ struct WindowRoutingTests {
         let editor = try #require(view(withIdentifier: "editor.text", in: contentView) as? NSTextView)
         #expect(editor.font?.fontName == replacementFont.fontName)
         #expect(editor.font?.pointSize == replacementFont.pointSize)
+        #expect(controller.window?.isDocumentEdited == false)
+    }
+
+    @Test("text changes defer line-index rebuilding off the editing path")
+    func defersLineIndexRebuild() async throws {
+        let controller = EditorWindowController()
+        let contentView = try #require(controller.window?.contentView)
+        let editor = try #require(view(withIdentifier: "editor.text", in: contentView) as? NSTextView)
+        let status = try #require(view(withIdentifier: "editor.status", in: contentView) as? NSTextField)
+        let lineCount = 100_000
+        let text = String(repeating: "line\n", count: lineCount)
+        editor.string = text
+        editor.setSelectedRange(NSRange(location: (text as NSString).length, length: 0))
+
+        controller.textDidChange(Notification(name: NSText.didChangeNotification, object: editor))
+
+        #expect(status.stringValue.hasPrefix("Ln 1,"))
+        await controller.waitForPendingTextAnalysis()
+        #expect(status.stringValue.hasPrefix("Ln \(lineCount + 1),"))
+    }
+
+    @Test("rapid edits apply only the newest background text analysis")
+    func coalescesLineIndexRebuilds() async throws {
+        let controller = EditorWindowController()
+        let contentView = try #require(controller.window?.contentView)
+        let editor = try #require(view(withIdentifier: "editor.text", in: contentView) as? NSTextView)
+        let status = try #require(view(withIdentifier: "editor.status", in: contentView) as? NSTextField)
+
+        editor.string = String(repeating: "stale\n", count: 100_000)
+        controller.textDidChange(Notification(name: NSText.didChangeNotification, object: editor))
+        editor.string = "one\ntwo"
+        editor.setSelectedRange(NSRange(location: 7, length: 0))
+        controller.textDidChange(Notification(name: NSText.didChangeNotification, object: editor))
+
+        await controller.waitForPendingTextAnalysis()
+
+        #expect(status.stringValue.hasPrefix("Ln 2, Col 4"))
+    }
+
+    @Test("returning to the original text clears dirty state after analysis")
+    func reconcilesDirtyStateOffTheEditingPath() async throws {
+        let controller = EditorWindowController()
+        let contentView = try #require(controller.window?.contentView)
+        let editor = try #require(view(withIdentifier: "editor.text", in: contentView) as? NSTextView)
+
+        editor.string = "changed"
+        controller.textDidChange(Notification(name: NSText.didChangeNotification, object: editor))
+        #expect(controller.window?.isDocumentEdited == true)
+
+        editor.string = ""
+        controller.textDidChange(Notification(name: NSText.didChangeNotification, object: editor))
+        #expect(controller.window?.isDocumentEdited == true)
+        await controller.waitForPendingTextAnalysis()
+
         #expect(controller.window?.isDocumentEdited == false)
     }
 
@@ -263,6 +399,10 @@ struct WindowRoutingTests {
 
     private func menuItem(titled title: String, in menu: NSMenu) -> NSMenuItem? {
         allMenuItems(in: menu).first { $0.title == title }
+    }
+
+    private func menuItem(withIdentifier identifier: String, in menu: NSMenu) -> NSMenuItem? {
+        allMenuItems(in: menu).first { $0.identifier?.rawValue == identifier }
     }
 
     private func allMenuItems(in menu: NSMenu) -> [NSMenuItem] {

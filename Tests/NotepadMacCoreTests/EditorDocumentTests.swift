@@ -190,6 +190,29 @@ struct EditorDocumentTests {
         #expect(try Data(contentsOf: fileURL) == Data("first\r\nchanged\r\n".utf8))
     }
 
+    @Test(
+        "mixed line endings are preserved when saved",
+        arguments: [
+            "first\nsecond\r\nthird\n",
+            "first\nsecond\rthird\n",
+            "first\r\nsecond\rthird\r\n",
+            "first\nsecond\r\nthird\rfourth\n"
+        ]
+    )
+    func preservesMixedLineEndings(contents: String) throws {
+        let directory = try temporaryDirectory()
+        let fileURL = directory.appendingPathComponent("mixed.txt")
+        let originalData = Data(contents.utf8)
+        try originalData.write(to: fileURL)
+
+        let document = EditorDocument()
+        try document.loadFile(fileURL)
+        try document.save(to: fileURL)
+
+        #expect(document.lineEnding.statusLabel == "Mixed")
+        #expect(try Data(contentsOf: fileURL) == originalData)
+    }
+
     @Test("oversized files are rejected before decoding")
     func rejectsOversizedFile() throws {
         let directory = try temporaryDirectory()
@@ -204,6 +227,161 @@ struct EditorDocumentTests {
         #expect(throws: (any Error).self) {
             try document.loadFile(fileURL)
         }
+    }
+
+    @Test("oversized saves are rejected before replacing the destination")
+    func rejectsOversizedSaveBeforeWriting() throws {
+        let directory = try temporaryDirectory()
+        let fileURL = directory.appendingPathComponent("existing.txt")
+        let originalData = Data("existing".utf8)
+        try originalData.write(to: fileURL)
+        let oversizedText = String(
+            repeating: "x",
+            count: Int(EditorDocument.maximumReadableFileBytes) + 1
+        )
+        let document = EditorDocument(text: oversizedText)
+
+        #expect(throws: EditorDocumentError.self) {
+            try document.save(to: fileURL)
+        }
+        #expect(try Data(contentsOf: fileURL) == originalData)
+        #expect(document.fileURL == nil)
+        #expect(document.hasUnsavedChanges)
+    }
+
+    @Test("a document at the save limit is accepted")
+    func acceptsSaveAtLimit() throws {
+        let directory = try temporaryDirectory()
+        let fileURL = directory.appendingPathComponent("limit.txt")
+        let text = String(
+            repeating: "x",
+            count: Int(EditorDocument.maximumReadableFileBytes)
+        )
+        let document = EditorDocument(text: text)
+
+        try document.save(to: fileURL)
+
+        #expect(
+            try Data(contentsOf: fileURL).count == Int(EditorDocument.maximumReadableFileBytes)
+        )
+        #expect(document.fileURL == fileURL.standardizedFileURL)
+        #expect(!document.hasUnsavedChanges)
+    }
+
+    @Test("save waits for another coordinated writer")
+    func waitsForCoordinatedWriter() throws {
+        let directory = try temporaryDirectory()
+        let fileURL = directory.appendingPathComponent("coordinated.txt")
+        try Data("original".utf8).write(to: fileURL)
+
+        let holderAcquired = DispatchSemaphore(value: 0)
+        let releaseHolder = DispatchSemaphore(value: 0)
+        let holderFinished = DispatchSemaphore(value: 0)
+        let holderQueue = OperationQueue()
+        holderQueue.maxConcurrentOperationCount = 1
+        holderQueue.addOperation {
+            let coordinator = NSFileCoordinator(filePresenter: nil)
+            var coordinationError: NSError?
+            coordinator.coordinate(writingItemAt: fileURL, options: [], error: &coordinationError) { _ in
+                holderAcquired.signal()
+                releaseHolder.wait()
+            }
+            #expect(coordinationError == nil)
+            holderFinished.signal()
+        }
+        #expect(holderAcquired.wait(timeout: .now() + 2) == .success)
+
+        let saveFinished = DispatchSemaphore(value: 0)
+        let saveQueue = OperationQueue()
+        saveQueue.maxConcurrentOperationCount = 1
+        saveQueue.addOperation {
+            do {
+                let document = EditorDocument()
+                try document.loadFile(fileURL)
+                document.updateText("MacPad edit")
+                try document.save(to: fileURL)
+            } catch {
+                Issue.record(error)
+            }
+            saveFinished.signal()
+        }
+
+        let earlySaveResult = saveFinished.wait(timeout: .now() + 0.2)
+        #expect(earlySaveResult == .timedOut)
+        releaseHolder.signal()
+        #expect(holderFinished.wait(timeout: .now() + 2) == .success)
+        if earlySaveResult == .timedOut {
+            #expect(saveFinished.wait(timeout: .now() + 2) == .success)
+        }
+        #expect(try String(contentsOf: fileURL, encoding: .utf8) == "MacPad edit")
+    }
+
+    @Test("a coordinated external edit wins the save race")
+    func rejectsSaveAfterCoordinatedExternalEdit() throws {
+        let directory = try temporaryDirectory()
+        let fileURL = directory.appendingPathComponent("coordinated-race.txt")
+        try Data("original".utf8).write(to: fileURL)
+
+        let documentLoaded = DispatchSemaphore(value: 0)
+        let beginSave = DispatchSemaphore(value: 0)
+        let saveFinished = DispatchSemaphore(value: 0)
+        let saveQueue = OperationQueue()
+        saveQueue.maxConcurrentOperationCount = 1
+        saveQueue.addOperation {
+            do {
+                let document = EditorDocument()
+                try document.loadFile(fileURL)
+                document.updateText("MacPad edit")
+                documentLoaded.signal()
+                beginSave.wait()
+                do {
+                    try document.save(to: fileURL)
+                    Issue.record("Expected the coordinated external edit to reject the save.")
+                } catch EditorDocumentError.fileChangedOnDisk {
+                    // Expected stale-file rejection after the external writer releases its claim.
+                } catch {
+                    Issue.record(error)
+                }
+            } catch {
+                Issue.record(error)
+            }
+            saveFinished.signal()
+        }
+        #expect(documentLoaded.wait(timeout: .now() + 2) == .success)
+
+        let holderAcquired = DispatchSemaphore(value: 0)
+        let releaseHolder = DispatchSemaphore(value: 0)
+        let holderFinished = DispatchSemaphore(value: 0)
+        let holderQueue = OperationQueue()
+        holderQueue.maxConcurrentOperationCount = 1
+        holderQueue.addOperation {
+            let coordinator = NSFileCoordinator(filePresenter: nil)
+            var coordinationError: NSError?
+            coordinator.coordinate(writingItemAt: fileURL, options: [], error: &coordinationError) { coordinatedURL in
+                do {
+                    try Data("external edit".utf8).write(to: coordinatedURL, options: .atomic)
+                } catch {
+                    Issue.record(error)
+                }
+                holderAcquired.signal()
+                releaseHolder.wait()
+            }
+            if let coordinationError {
+                Issue.record(coordinationError)
+            }
+            holderFinished.signal()
+        }
+        #expect(holderAcquired.wait(timeout: .now() + 2) == .success)
+
+        beginSave.signal()
+        let earlySaveResult = saveFinished.wait(timeout: .now() + 0.2)
+        #expect(earlySaveResult == .timedOut)
+        releaseHolder.signal()
+        #expect(holderFinished.wait(timeout: .now() + 2) == .success)
+        if earlySaveResult == .timedOut {
+            #expect(saveFinished.wait(timeout: .now() + 2) == .success)
+        }
+        #expect(try String(contentsOf: fileURL, encoding: .utf8) == "external edit")
     }
 
     @Test("directories are rejected as editor documents")

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0
+
+- Added an optional, persistent `View > Show MacPad in Menu Bar` launcher. It is OFF by default, keeps the normal Dock behavior, and opens a new empty window with one click.
+- Rejected encoded documents larger than 25 MiB before modifying a save destination, while accepting the exact size limit and updating successful-save state from the exact bytes written.
+- Moved large-document line indexing and dirty-state comparison off the keystroke path, coalesced rapid edits, and retained synchronous correctness for explicit line navigation.
+- Coordinated the stale-file digest check and atomic write with macOS document writers, preserving an external edit that wins the save race.
+- Preserved mixed LF, CRLF, and CR sequences during editing and saving, added a Mixed status, and indexed all three newline styles correctly.
+- Made session construction respect the decoder's 50-window and 100-tab limits, retaining recently active windows plus the selected and most recent tabs.
+- Expanded automated coverage to 71 core and AppKit tests, including save boundaries, coordinated write races, rapid edits, session recency, and menu-bar lifecycle behavior.
+
 ## 1.2.1
 
 - Changed the project license from GPL-3.0 to Apache-2.0.

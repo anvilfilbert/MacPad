@@ -33,6 +33,17 @@ struct TextMetricsTests {
         #expect(TextMetrics.location(ofLine: 3, in: "first\n") == nil)
     }
 
+    @Test("line index treats CRLF and CR as line endings")
+    func indexesMixedLineEndings() {
+        let index = TextLineIndex(text: "a\r\nb\rc\nd")
+
+        #expect(index.location(ofLine: 1) == 0)
+        #expect(index.location(ofLine: 2) == 3)
+        #expect(index.location(ofLine: 3) == 5)
+        #expect(index.location(ofLine: 4) == 7)
+        #expect(index.cursorPosition(selectedLocation: 7) == CursorPosition(line: 4, column: 1))
+    }
+
     @Test("non-positive line numbers are rejected")
     func rejectsNonPositiveLineNumbers() {
         #expect(TextMetrics.location(ofLine: 0, in: "first") == nil)

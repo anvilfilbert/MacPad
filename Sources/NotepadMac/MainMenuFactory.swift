@@ -121,6 +121,14 @@ enum MainMenuFactory {
         viewMenu.addItem(.separator())
         let statusBarItem = addItem("Status Bar", to: viewMenu, action: #selector(AppDelegate.toggleStatusBar(_:)), target: target, key: "/", modifiers: [.command])
         statusBarItem.state = .on
+        viewMenu.addItem(.separator())
+        let menuBarItem = addItem(
+            "Show MacPad in Menu Bar",
+            to: viewMenu,
+            action: #selector(AppDelegate.toggleMenuBarVisibility(_:)),
+            target: target
+        )
+        menuBarItem.identifier = NSUserInterfaceItemIdentifier("view.menuBar")
         mainMenu.addItem(rootItem(for: viewMenu))
 
         let windowMenu = NSMenu(title: "Window")
