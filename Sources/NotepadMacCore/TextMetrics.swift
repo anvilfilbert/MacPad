@@ -17,11 +17,21 @@ public struct TextLineIndex: Equatable, Sendable {
     public init(text: String) {
         var starts = [0]
         var location = 0
+        var previousCodeUnitWasCarriageReturn = false
         for codeUnit in text.utf16 {
+            if previousCodeUnitWasCarriageReturn, codeUnit != 0x0A {
+                starts.append(location)
+            }
             location += 1
             if codeUnit == 0x0A {
                 starts.append(location)
+                previousCodeUnitWasCarriageReturn = false
+            } else {
+                previousCodeUnitWasCarriageReturn = codeUnit == 0x0D
             }
+        }
+        if previousCodeUnitWasCarriageReturn {
+            starts.append(location)
         }
         lineStarts = starts
         utf16Length = location
@@ -82,6 +92,8 @@ public enum TextMetrics {
             return normalized
         case .classicMac:
             return normalized.replacingOccurrences(of: "\n", with: "\r")
+        case .mixed:
+            return text
         }
     }
 }
@@ -90,6 +102,7 @@ public enum LineEnding: String, Codable, Equatable {
     case windows
     case unix
     case classicMac
+    case mixed
 
     public var statusLabel: String {
         switch self {
@@ -99,17 +112,50 @@ public enum LineEnding: String, Codable, Equatable {
             return "Unix (LF)"
         case .classicMac:
             return "Macintosh (CR)"
+        case .mixed:
+            return "Mixed"
         }
     }
 
     public static func detected(in text: String) -> LineEnding {
-        if text.contains("\r\n") {
-            return .windows
+        var foundWindows = false
+        var foundUnix = false
+        var foundClassicMac = false
+        var previousCodeUnitWasCarriageReturn = false
+
+        for codeUnit in text.utf16 {
+            switch codeUnit {
+            case 0x0D:
+                if previousCodeUnitWasCarriageReturn {
+                    foundClassicMac = true
+                }
+                previousCodeUnitWasCarriageReturn = true
+            case 0x0A:
+                if previousCodeUnitWasCarriageReturn {
+                    foundWindows = true
+                } else {
+                    foundUnix = true
+                }
+                previousCodeUnitWasCarriageReturn = false
+            default:
+                if previousCodeUnitWasCarriageReturn {
+                    foundClassicMac = true
+                    previousCodeUnitWasCarriageReturn = false
+                }
+            }
         }
-        if text.contains("\n") {
+        if previousCodeUnitWasCarriageReturn {
+            foundClassicMac = true
+        }
+
+        let detectedCount = [foundWindows, foundUnix, foundClassicMac].count(where: { $0 })
+        if detectedCount > 1 {
+            return .mixed
+        }
+        if foundUnix {
             return .unix
         }
-        if text.contains("\r") {
+        if foundClassicMac {
             return .classicMac
         }
         return .windows

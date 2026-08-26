@@ -2,6 +2,7 @@ name: Swift CI
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
     branches:
       - main

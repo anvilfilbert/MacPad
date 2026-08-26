@@ -6,7 +6,7 @@ public struct AppSessionState: Codable, Equatable {
     public let windows: [EditorWindowSessionState]
 
     public init(windows: [EditorWindowSessionState]) {
-        self.windows = windows
+        self.windows = Array(windows.suffix(Self.maximumWindowCount))
     }
 
     public init(tabs: [EditorSessionState]) {
@@ -65,6 +65,11 @@ public struct AppSessionState: Codable, Equatable {
 }
 
 public struct EditorWindowSessionState: Codable, Equatable {
+    private struct BoundedTabs {
+        let tabs: [EditorSessionState]
+        let selectedTabIndex: Int
+    }
+
     public let tabs: [EditorSessionState]
     public let selectedTabIndex: Int
     public let frame: WindowFrameState?
@@ -84,11 +89,27 @@ public struct EditorWindowSessionState: Codable, Equatable {
         selectedTabIndex: Int,
         frame: WindowFrameState?
     ) {
-        self.tabs = tabs
-        self.selectedTabIndex = Self.boundedSelectedTabIndex(
-            selectedTabIndex,
-            tabCount: tabs.count
+        self.init(
+            tabs: tabs,
+            selectedTabIndex: selectedTabIndex,
+            frame: frame,
+            recentlyUsedTabIndices: Array(tabs.indices)
         )
+    }
+
+    public init(
+        tabs: [EditorSessionState],
+        selectedTabIndex: Int,
+        frame: WindowFrameState?,
+        recentlyUsedTabIndices: [Int]
+    ) {
+        let boundedTabs = Self.boundedTabs(
+            tabs,
+            selectedTabIndex: selectedTabIndex,
+            recentlyUsedTabIndices: recentlyUsedTabIndices
+        )
+        self.tabs = boundedTabs.tabs
+        self.selectedTabIndex = boundedTabs.selectedTabIndex
         self.frame = frame?.isUsable == true ? frame : nil
     }
 
@@ -127,6 +148,37 @@ public struct EditorWindowSessionState: Codable, Equatable {
     private static func boundedSelectedTabIndex(_ index: Int, tabCount: Int) -> Int {
         guard tabCount > 0 else { return 0 }
         return min(max(0, index), tabCount - 1)
+    }
+
+    private static func boundedTabs(
+        _ tabs: [EditorSessionState],
+        selectedTabIndex: Int,
+        recentlyUsedTabIndices: [Int]
+    ) -> BoundedTabs {
+        let boundedSelection = boundedSelectedTabIndex(selectedTabIndex, tabCount: tabs.count)
+        guard tabs.count > AppSessionState.maximumTabsPerWindow else {
+            return BoundedTabs(tabs: tabs, selectedTabIndex: boundedSelection)
+        }
+
+        var seenRecentIndices = Set<Int>()
+        let validRecentIndices = recentlyUsedTabIndices.filter { index in
+            tabs.indices.contains(index) && seenRecentIndices.insert(index).inserted
+        }
+        let untrackedIndices = tabs.indices.filter { !seenRecentIndices.contains($0) }
+        let completeRecency = untrackedIndices + validRecentIndices
+        var retainedIndices = Array(
+            completeRecency.suffix(AppSessionState.maximumTabsPerWindow)
+        )
+        if !retainedIndices.contains(boundedSelection) {
+            retainedIndices.removeFirst()
+            retainedIndices.append(boundedSelection)
+        }
+        retainedIndices.sort()
+        let retainedTabs = retainedIndices.map { tabs[$0] }
+        guard let retainedSelection = retainedIndices.firstIndex(of: boundedSelection) else {
+            preconditionFailure("Bounded tabs must retain the selected tab.")
+        }
+        return BoundedTabs(tabs: retainedTabs, selectedTabIndex: retainedSelection)
     }
 }
 
