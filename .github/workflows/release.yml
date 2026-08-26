@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing v* tag to verify and publish
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -16,6 +22,8 @@ jobs:
     name: Release
     runs-on: macos-15
     timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
 
     steps:
       - name: Checkout
@@ -23,19 +31,20 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
 
       - name: Verify tag matches app version
         run: |
           VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)"
-          if [[ "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
-            echo "Tag $GITHUB_REF_NAME does not match app version $VERSION." >&2
+          if [[ "$RELEASE_TAG" != "v$VERSION" ]]; then
+            echo "Tag $RELEASE_TAG does not match app version $VERSION." >&2
             exit 1
           fi
 
       - name: Verify tagged commit belongs to main
         run: |
           git fetch --no-tags origin main:refs/remotes/origin/main
-          TAGGED_COMMIT="$(git rev-parse "$GITHUB_REF_NAME^{commit}")"
+          TAGGED_COMMIT="$(git rev-parse "$RELEASE_TAG^{commit}")"
           if ! git merge-base --is-ancestor "$TAGGED_COMMIT" origin/main; then
             echo "Tagged commit $TAGGED_COMMIT is not contained in origin/main." >&2
             exit 1
@@ -65,11 +74,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
+          gh release create "$RELEASE_TAG" \
             dist/MacPad-macOS-universal.zip \
             dist/MacPad-macOS-universal.zip.sha256 \
             --draft \
             --notes-file "$RUNNER_TEMP/release-notes.md" \
-            --title "MacPad ${GITHUB_REF_NAME#v}" \
+            --title "MacPad ${RELEASE_TAG#v}" \
             --verify-tag
-          gh release edit "$GITHUB_REF_NAME" --draft=false --latest
+          gh release edit "$RELEASE_TAG" --draft=false --latest
