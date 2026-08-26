@@ -74,11 +74,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$RELEASE_TAG" \
-            dist/MacPad-macOS-universal.zip \
-            dist/MacPad-macOS-universal.zip.sha256 \
-            --draft \
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" \
+              dist/MacPad-macOS-universal.zip \
+              dist/MacPad-macOS-universal.zip.sha256 \
+              --clobber
+          else
+            gh release create "$RELEASE_TAG" \
+              dist/MacPad-macOS-universal.zip \
+              dist/MacPad-macOS-universal.zip.sha256 \
+              --draft \
+              --verify-tag
+          fi
+          gh release edit "$RELEASE_TAG" \
+            --draft=false \
+            --latest \
             --notes-file "$RUNNER_TEMP/release-notes.md" \
-            --title "MacPad ${RELEASE_TAG#v}" \
-            --verify-tag
-          gh release edit "$RELEASE_TAG" --draft=false --latest
+            --title "MacPad ${RELEASE_TAG#v}"
