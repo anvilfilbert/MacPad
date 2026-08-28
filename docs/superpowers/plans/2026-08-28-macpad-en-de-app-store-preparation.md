@@ -513,14 +513,16 @@ git commit -m "feat: persist bookmark-capable file references"
 - Create: `Tests/NotepadMacTests/DistributionChannelTests.swift`
 - Create: `Tests/NotepadMacTests/SecurityScopedFileAccessTests.swift`
 - Create: `Tests/NotepadMacTests/RecentDocumentStoreTests.swift`
+- Modify: `Sources/NotepadMacCore/Localization.swift`
 - Modify: `Sources/NotepadMac/AppDelegate.swift`
 - Modify: `Sources/NotepadMac/EditorWindowController.swift`
 - Modify: `Sources/NotepadMac/MainMenuFactory.swift`
 - Modify: `Tests/NotepadMacTests/WindowRoutingTests.swift`
+- Modify: `Resources/Localizable.xcstrings`
 
 **Interfaces:**
 - Consumes: `PersistedFileReference`.
-- Produces: `DistributionChannel`, `CustomerRoutes`, `SecurityScopedFileAccess`, `ResolvedFileAccess<Value>`, and `RecentDocumentStore`.
+- Produces: `DistributionChannel`, `CustomerRoutes`, `SecurityScopedFileAccess`, `ResolvedFileAccess<Value>`, `SuccessfulFileTransition`, and `RecentDocumentStore`.
 - Guarantees: every successful `startAccessingSecurityScopedResource()` has one `stopAccessingSecurityScopedResource()` on success and error paths.
 
 - [ ] **Step 1: Write failing distribution-policy tests**
@@ -574,6 +576,11 @@ struct ResolvedFileAccess<Value> {
     let refreshedReference: PersistedFileReference
 }
 
+struct SuccessfulFileTransition: Equatable, Sendable {
+    let previousReference: PersistedFileReference?
+    let currentReference: PersistedFileReference
+}
+
 struct SecurityScopedFileAccess {
     let requiresBookmark: Bool
 
@@ -583,16 +590,23 @@ struct SecurityScopedFileAccess {
         _ reference: PersistedFileReference,
         operation: (URL) throws -> Value
     ) throws -> ResolvedFileAccess<Value>
+
+    func accessGrantedURL<Value>(
+        _ url: URL,
+        operation: (URL) throws -> Value
+    ) throws -> ResolvedFileAccess<Value>
 }
 ```
 
-Resolve bookmarks with `.withSecurityScope`; when stale, recreate bookmark data and return the refreshed reference. If `requiresBookmark` is true and a restored reference has no bookmark, throw a localized `missingPersistentAccess(path:)` error. Call `stopAccessingSecurityScopedResource()` only when `startAccessingSecurityScopedResource()` returned true.
+Own `SuccessfulFileTransition` in `EditorWindowController.swift`. Its callback is `((SuccessfulFileTransition) -> Void)?`. Capture `previousReference` before Save As begins; after the write and bookmark creation both succeed, attach `currentReference`, notify session state, then emit the transition for recent-document replacement. A failed write or bookmark creation emits no transition and no recent replacement.
+
+Resolve bookmarks with `.withSecurityScope` and `.withoutUI`, then require a successful `startAccessingSecurityScopedResource()`. After a successful start, install one `defer` that performs exactly one stop; while that scope is active, recreate stale bookmark data before invoking the operation, invoke the operation, and return its value plus the refreshed reference. A failed start performs no refresh, operation, or stop and throws a localized access-denied error. If `requiresBookmark` is true and a restored reference has no bookmark, throw a localized `missingPersistentAccess(path:)` error. `accessGrantedURL` exists specifically for a live open/save-panel grant: it does not resolve a bookmark or start another scope; it invokes the operation first and creates the persistent reference afterward, before the panel-granted flow returns. This separate boundary is required because Foundation refuses to create a scoped bookmark for a Save As destination until that file exists.
 
 - [ ] **Step 6: Wire customer routes and file operations**
 
 Replace hard-coded URL selectors with access to the injected `CustomerRoutes`. The Store Help menu exposes only configured permanent routes and never exposes direct update UI. The Store About panel has no `Public repo` credit or GitHub profile/repository link. Keep the existing direct preparation behavior only under the direct compile condition. Then wire Open, Save, Save As, reload, and session restore through the security-scoped access boundary.
 
-The open panel and save panel create a reference while the user-selected grant is live. Controller load/save/reload operations execute through `SecurityScopedFileAccess.access`. Save As replaces the controller reference only after the write succeeds; stale refreshed data is persisted through the next session save.
+The open panel creates a reference while the user-selected existing-file grant is live. Controller load, existing-file save, reload, and session restore operations execute through `SecurityScopedFileAccess.access`. A new Save As destination does not exist before the first write, so the save panel uses `accessGrantedURL`: write through the live grant first, then create and attach the bookmark before returning. Save As emits `SuccessfulFileTransition` only after the new reference is attached; the AppDelegate replaces the old recent bookmark with the new one. Stale refreshed data is attached before the state-change notification so the next session save persists it.
 
 - [ ] **Step 7: Wire native Open Recent ordering to stored bookmarks**
 
@@ -600,7 +614,7 @@ Continue using `NSDocumentController.recentDocumentURLs` for native ordering. St
 
 - [ ] **Step 8: Add recoverable lost-access results**
 
-For a legacy or inaccessible restored reference, keep the failure in a structured restore result and show one localized alert with `Locate…`, `Skip`, and `Cancel Restore` actions. `Locate…` opens a panel, creates a new bookmark, reloads that tab, and persists the refreshed reference. Never silently discard the failed tab and never store its document contents.
+For a legacy or inaccessible restored reference, keep the failure in a structured restore result and show one localized alert with `Locate…`, `Skip`, and `Cancel Restore` actions. Preflight all restored controllers before presenting any of them. `Locate…` opens a panel, creates a new bookmark, reloads that tab, and persists the refreshed reference. `Skip` is the only path that intentionally omits a failed tab. `Cancel Restore` discards every unpresented preflight controller, leaves the original encoded session bytes unchanged, and performs no deferred session rewrite. Never silently discard the failed tab and never store its document contents.
 
 - [ ] **Step 9: Verify focused and full tests**
 
@@ -615,7 +629,7 @@ swift test --disable-sandbox
 - [ ] **Step 10: Commit**
 
 ```bash
-git add Sources/NotepadMac/DistributionChannel.swift Sources/NotepadMac/SecurityScopedFileAccess.swift Sources/NotepadMac/RecentDocumentStore.swift Sources/NotepadMac/AppDelegate.swift Sources/NotepadMac/EditorWindowController.swift Sources/NotepadMac/MainMenuFactory.swift Tests/NotepadMacTests/DistributionChannelTests.swift Tests/NotepadMacTests/SecurityScopedFileAccessTests.swift Tests/NotepadMacTests/RecentDocumentStoreTests.swift Tests/NotepadMacTests/WindowRoutingTests.swift Resources/Localizable.xcstrings
+git add Sources/NotepadMac/DistributionChannel.swift Sources/NotepadMac/SecurityScopedFileAccess.swift Sources/NotepadMac/RecentDocumentStore.swift Sources/NotepadMacCore/Localization.swift Sources/NotepadMac/AppDelegate.swift Sources/NotepadMac/EditorWindowController.swift Sources/NotepadMac/MainMenuFactory.swift Tests/NotepadMacTests/DistributionChannelTests.swift Tests/NotepadMacTests/SecurityScopedFileAccessTests.swift Tests/NotepadMacTests/RecentDocumentStoreTests.swift Tests/NotepadMacTests/WindowRoutingTests.swift Resources/Localizable.xcstrings
 git commit -m "feat: restore sandboxed files with bookmarks"
 ```
 
