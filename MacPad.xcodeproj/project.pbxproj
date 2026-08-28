@@ -1,0 +1,309 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* main.swift */; };
+		A10000000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* AppDelegate.swift */; };
+		A10000000000000000000003 /* DistributionChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* DistributionChannel.swift */; };
+		A10000000000000000000004 /* EditorFontPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* EditorFontPreferences.swift */; };
+		A10000000000000000000005 /* EditorWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* EditorWindowController.swift */; };
+		A10000000000000000000006 /* FindPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* FindPanelController.swift */; };
+		A10000000000000000000007 /* MainMenuFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* MainMenuFactory.swift */; };
+		A10000000000000000000008 /* RecentDocumentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* RecentDocumentStore.swift */; };
+		A10000000000000000000009 /* SaveEncodingAccessory.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* SaveEncodingAccessory.swift */; };
+		A1000000000000000000000A /* SecurityScopedFileAccess.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000A /* SecurityScopedFileAccess.swift */; };
+		A1000000000000000000000B /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000B /* Localizable.xcstrings */; };
+		A1000000000000000000000C /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000C /* InfoPlist.xcstrings */; };
+		A1000000000000000000000D /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000F /* LICENSE */; };
+		A1000000000000000000000E /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* AppKit.framework */; };
+		A1000000000000000000000F /* NotepadMacCore in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000002 /* NotepadMacCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000001 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* DistributionChannel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DistributionChannel.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* EditorFontPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorFontPreferences.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* EditorWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorWindowController.swift; sourceTree = "<group>"; };
+		A20000000000000000000006 /* FindPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindPanelController.swift; sourceTree = "<group>"; };
+		A20000000000000000000007 /* MainMenuFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainMenuFactory.swift; sourceTree = "<group>"; };
+		A20000000000000000000008 /* RecentDocumentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentDocumentStore.swift; sourceTree = "<group>"; };
+		A20000000000000000000009 /* SaveEncodingAccessory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaveEncodingAccessory.swift; sourceTree = "<group>"; };
+		A2000000000000000000000A /* SecurityScopedFileAccess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityScopedFileAccess.swift; sourceTree = "<group>"; };
+		A2000000000000000000000B /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		A2000000000000000000000C /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
+		A2000000000000000000000D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A2000000000000000000000E /* AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AppStore.entitlements; sourceTree = "<group>"; };
+		A2000000000000000000000F /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		A20000000000000000000010 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		A20000000000000000000011 /* DirectRelease.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = DirectRelease.xcconfig; sourceTree = "<group>"; };
+		A20000000000000000000012 /* AppStore.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = AppStore.xcconfig; sourceTree = "<group>"; };
+		A20000000000000000000013 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		A20000000000000000000014 /* MacPad.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacPad.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A40000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000000000000000000000E /* AppKit.framework in Frameworks */,
+				A1000000000000000000000F /* NotepadMacCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A30000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A30000000000000000000002 /* Configurations */,
+				A30000000000000000000003 /* NotepadMac */,
+				A30000000000000000000004 /* Resources */,
+				A2000000000000000000000F /* LICENSE */,
+				A30000000000000000000005 /* Frameworks */,
+				A30000000000000000000006 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A30000000000000000000002 /* Configurations */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000010 /* Base.xcconfig */,
+				A20000000000000000000011 /* DirectRelease.xcconfig */,
+				A20000000000000000000012 /* AppStore.xcconfig */,
+			);
+			path = Configurations;
+			sourceTree = "<group>";
+		};
+		A30000000000000000000003 /* NotepadMac */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000001 /* main.swift */,
+				A20000000000000000000002 /* AppDelegate.swift */,
+				A20000000000000000000003 /* DistributionChannel.swift */,
+				A20000000000000000000004 /* EditorFontPreferences.swift */,
+				A20000000000000000000005 /* EditorWindowController.swift */,
+				A20000000000000000000006 /* FindPanelController.swift */,
+				A20000000000000000000007 /* MainMenuFactory.swift */,
+				A20000000000000000000008 /* RecentDocumentStore.swift */,
+				A20000000000000000000009 /* SaveEncodingAccessory.swift */,
+				A2000000000000000000000A /* SecurityScopedFileAccess.swift */,
+			);
+			path = Sources/NotepadMac;
+			sourceTree = "<group>";
+		};
+		A30000000000000000000004 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A2000000000000000000000B /* Localizable.xcstrings */,
+				A2000000000000000000000C /* InfoPlist.xcstrings */,
+				A2000000000000000000000D /* Info.plist */,
+				A2000000000000000000000E /* AppStore.entitlements */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A30000000000000000000005 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000013 /* AppKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A30000000000000000000006 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000014 /* MacPad.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A50000000000000000000001 /* MacPad */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A80000000000000000000002 /* Build configuration list for PBXNativeTarget "MacPad" */;
+			buildPhases = (
+				A40000000000000000000001 /* Sources */,
+				A40000000000000000000002 /* Frameworks */,
+				A40000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MacPad;
+			packageProductDependencies = (
+				A90000000000000000000002 /* NotepadMacCore */,
+			);
+			productName = MacPad;
+			productReference = A20000000000000000000014 /* MacPad.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A60000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					A50000000000000000000001 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+				};
+			};
+			buildConfigurationList = A80000000000000000000001 /* Build configuration list for PBXProject "MacPad" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				de,
+				Base,
+			);
+			mainGroup = A30000000000000000000001;
+			packageReferences = (
+				A90000000000000000000001 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A30000000000000000000006 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A50000000000000000000001 /* MacPad */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A40000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000000000000000000000B /* Localizable.xcstrings in Resources */,
+				A1000000000000000000000C /* InfoPlist.xcstrings in Resources */,
+				A1000000000000000000000D /* LICENSE in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A40000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000001 /* main.swift in Sources */,
+				A10000000000000000000002 /* AppDelegate.swift in Sources */,
+				A10000000000000000000003 /* DistributionChannel.swift in Sources */,
+				A10000000000000000000004 /* EditorFontPreferences.swift in Sources */,
+				A10000000000000000000005 /* EditorWindowController.swift in Sources */,
+				A10000000000000000000006 /* FindPanelController.swift in Sources */,
+				A10000000000000000000007 /* MainMenuFactory.swift in Sources */,
+				A10000000000000000000008 /* RecentDocumentStore.swift in Sources */,
+				A10000000000000000000009 /* SaveEncodingAccessory.swift in Sources */,
+				A1000000000000000000000A /* SecurityScopedFileAccess.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A70000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		A70000000000000000000002 /* DirectRelease */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = DirectRelease;
+		};
+		A70000000000000000000003 /* AppStore */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = AppStore;
+		};
+		A70000000000000000000011 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A20000000000000000000010 /* Base.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG MACPAD_DIRECT $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A70000000000000000000012 /* DirectRelease */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A20000000000000000000011 /* DirectRelease.xcconfig */;
+			buildSettings = {
+			};
+			name = DirectRelease;
+		};
+		A70000000000000000000013 /* AppStore */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A20000000000000000000012 /* AppStore.xcconfig */;
+			buildSettings = {
+			};
+			name = AppStore;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A80000000000000000000001 /* Build configuration list for PBXProject "MacPad" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A70000000000000000000001 /* Debug */,
+				A70000000000000000000002 /* DirectRelease */,
+				A70000000000000000000003 /* AppStore */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = DirectRelease;
+		};
+		A80000000000000000000002 /* Build configuration list for PBXNativeTarget "MacPad" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A70000000000000000000011 /* Debug */,
+				A70000000000000000000012 /* DirectRelease */,
+				A70000000000000000000013 /* AppStore */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = DirectRelease;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A90000000000000000000001 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A90000000000000000000002 /* NotepadMacCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A90000000000000000000001 /* XCLocalSwiftPackageReference "." */;
+			productName = NotepadMacCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A60000000000000000000001 /* Project object */;
+}
