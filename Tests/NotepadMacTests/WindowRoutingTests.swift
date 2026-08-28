@@ -6,6 +6,27 @@ import Testing
 @Suite("Window routing")
 @MainActor
 struct WindowRoutingTests {
+    @Test("source Info.plist advertises the native localization contract")
+    func sourceInfoPlistLocalizationContract() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath, isDirectory: false)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let infoPlistURL = repositoryRoot
+            .appendingPathComponent("Resources", isDirectory: true)
+            .appendingPathComponent("Info.plist", isDirectory: false)
+        let data = try Data(contentsOf: infoPlistURL)
+        let contract = try PropertyListDecoder().decode(
+            SourceInfoPlistContract.self,
+            from: data
+        )
+
+        #expect(contract.developmentRegion == "en")
+        #expect(contract.identifier == "local.macpad.app")
+        #expect(contract.localizations == ["en", "de"])
+        #expect(contract.applicationCategory == "public.app-category.utilities")
+    }
+
     @Test("Open Recent uses a stable identifier")
     func openRecentUsesStableIdentifier() throws {
         let application = NSApplication.shared
@@ -762,5 +783,19 @@ private struct LocalizationBundleInfo: Encodable {
         case identifier = "CFBundleIdentifier"
         case localizations = "CFBundleLocalizations"
         case packageType = "CFBundlePackageType"
+    }
+}
+
+private struct SourceInfoPlistContract: Decodable {
+    let developmentRegion: String
+    let identifier: String
+    let localizations: [String]
+    let applicationCategory: String
+
+    private enum CodingKeys: String, CodingKey {
+        case developmentRegion = "CFBundleDevelopmentRegion"
+        case identifier = "CFBundleIdentifier"
+        case localizations = "CFBundleLocalizations"
+        case applicationCategory = "LSApplicationCategoryType"
     }
 }
