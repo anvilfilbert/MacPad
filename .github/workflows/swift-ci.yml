@@ -14,7 +14,7 @@ jobs:
   build:
     name: Build
     runs-on: macos-15
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -37,5 +37,8 @@ jobs:
       - name: Run tests
         run: swift test
 
-      - name: Build and verify universal release package
-        run: ./scripts/package-release.sh
+      - name: Check localizations
+        run: ./scripts/check-localizations.sh
+
+      - name: Run unsigned native preflight
+        run: ./scripts/app-store-preflight.sh

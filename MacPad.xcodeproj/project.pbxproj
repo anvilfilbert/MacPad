@@ -22,6 +22,7 @@
 		A1000000000000000000000D /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000F /* LICENSE */; };
 		A1000000000000000000000E /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* AppKit.framework */; };
 		A1000000000000000000000F /* NotepadMacCore in Frameworks */ = {isa = PBXBuildFile; productRef = A90000000000000000000002 /* NotepadMacCore */; };
+		A10000000000000000000010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -45,6 +46,7 @@
 		A20000000000000000000012 /* AppStore.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = AppStore.xcconfig; sourceTree = "<group>"; };
 		A20000000000000000000013 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		A20000000000000000000014 /* MacPad.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacPad.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000015 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +104,7 @@
 		A30000000000000000000004 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				A20000000000000000000015 /* Assets.xcassets */,
 				A2000000000000000000000B /* Localizable.xcstrings */,
 				A2000000000000000000000C /* InfoPlist.xcstrings */,
 				A2000000000000000000000D /* Info.plist */,
@@ -191,6 +194,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10000000000000000000010 /* Assets.xcassets in Resources */,
 				A1000000000000000000000B /* Localizable.xcstrings in Resources */,
 				A1000000000000000000000C /* InfoPlist.xcstrings in Resources */,
 				A1000000000000000000000D /* LICENSE in Resources */,
