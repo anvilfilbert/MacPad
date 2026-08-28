@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship a completely localized English/German MacPad, preserve the direct-download release, and produce a credential-free Mac App Store-ready code, archive, metadata, and screenshot foundation up to the explicit Apple-account and owner-decision gates.
+**Goal:** Ship a completely localized English/German MacPad, prepare the App Store as the official launch distribution channel, retain the direct build only as the foundation for one owner-gated legacy-user transition release, and produce credential-free archive, metadata, screenshot, migration, and private-repository readiness evidence up to the explicit Apple-account and owner-decision gates.
 
-**Architecture:** Keep one AppKit implementation and the existing `NotepadMacCore` business logic. Add native String Catalog resources, a small typed bundle-localization boundary, persistent security-scoped file references for the sandboxed channel, and one native Xcode macOS application target with `DirectRelease` and `AppStore` configurations. SwiftPM remains the test and direct-release foundation; the existing manual universal ZIP workflow remains supported.
+**Architecture:** Keep one AppKit implementation and the existing `NotepadMacCore` business logic. Add native String Catalog resources, a small typed bundle-localization boundary, persistent security-scoped file references for the sandboxed channel, a typed customer-route boundary, and one native Xcode macOS application target with `DirectRelease` and `AppStore` configurations. SwiftPM remains the test and transition-build foundation; the App Store configuration contains no legacy customer routes or direct updater.
 
 **Tech Stack:** Swift 6.3, AppKit, Foundation, Swift Testing, Swift Package Manager, Xcode 26.6, Xcode String Catalogs, Xcode build configurations, App Sandbox, shell verification scripts, GitHub Actions.
 
-**Spec:** [GitHub issue #29](https://github.com/anvilfilbert/MacPad/issues/29) and [GitHub issue #28](https://github.com/anvilfilbert/MacPad/issues/28), together with the approved 2026-08-28 owner brief copied into the constraints and acceptance criteria below.
+**Spec:** [GitHub issue #29](https://github.com/anvilfilbert/MacPad/issues/29) and [GitHub issue #28](https://github.com/anvilfilbert/MacPad/issues/28), together with the approved 2026-08-28 owner brief and the binding cross-project design and plan in `docs/superpowers/specs/2026-08-28-private-source-app-store-cutover-design.md` and `docs/superpowers/plans/2026-08-28-private-source-app-store-cutover.md`.
 
 ## Global Constraints
 
@@ -21,7 +21,10 @@
 - Preserve file encodings, mixed line endings, file-conflict protection, recovery, multi-window/tab behavior, accessibility, and keyboard conventions.
 - Store configuration must use App Sandbox, user-selected read/write file access, app-scoped bookmarks, and printing only. Do not add broad home, Documents, Downloads, network, or temporary-exception entitlements.
 - Session state may persist paths and bookmark data but never document text.
-- Preserve the public direct-download build. Store builds must not offer the GitHub direct-update command.
+- The App Store is the official binary channel at launch. Preserve the current direct build only as a local verification and final legacy-transition foundation; it is not a permanent parallel customer channel.
+- Store builds must contain no customer-facing GitHub, GitHub Pages, DeepWiki, or SourceForge route, public-repository credit, or direct-update command. Do not substitute an invented URL or silently fall back to a repository route while the public URL contract is owner-gated.
+- The final public direct-transition release must use the approved permanent bilingual routes, must not present GitHub Releases or SourceForge as an update channel, and must be Developer ID signed and notarized. Preparing or publishing it remains outside this credential-free plan and requires the later owner gates in the cross-project plan.
+- Do not change repository visibility, SourceForge state, DNS/domain state, release publication, or CI billing/plan state in this work. Each source repository becomes private only after its own verified production Store gate; permanent SourceForge deletion remains separately owner-gated.
 - Keep `local.macpad.app` as the repository placeholder until the owner approves a production identifier.
 - Never add a Team ID, certificate, provisioning profile, signing secret, App Store Connect record, upload step, notarization credential, or final Store URL.
 - Draft price only: MacPad USD 2.99; future bundle USD 3.99. Do not set pricing or territories externally.
@@ -43,7 +46,7 @@
 
 ## Architecture Decision
 
-Use a committed native `MacPad.xcodeproj` with one `MacPad` application target and shared source-file references. The target gets `Debug`, `DirectRelease`, and `AppStore` configurations plus two shared archive schemes. `DirectRelease` has no sandbox entitlements and retains GitHub update behavior; `AppStore` compiles with `MACPAD_APP_STORE`, uses only the approved sandbox entitlements, and omits the direct updater command.
+Use a committed native `MacPad.xcodeproj` with one `MacPad` application target and shared source-file references. The target gets `Debug`, `DirectRelease`, and `AppStore` configurations plus two shared archive schemes. `DirectRelease` has no sandbox entitlements and may retain the current repository routes only while it is an internal preparation build; the later final transition release replaces them from the approved public URL contract. `AppStore` compiles with `MACPAD_APP_STORE`, uses only the approved sandbox entitlements, omits the direct updater, and compiles out every legacy customer route.
 
 Rejected alternatives:
 
@@ -59,7 +62,7 @@ Rejected alternatives:
 - `Sources/NotepadMacCore/PersistedFileReference.swift`: backward-compatible path plus optional bookmark data model.
 - `Sources/NotepadMac/SecurityScopedFileAccess.swift`: Foundation connector for bookmark creation, resolution, stale refresh, and balanced access.
 - `Sources/NotepadMac/RecentDocumentStore.swift`: bounded bookmark records aligned with native recent-document order.
-- `Sources/NotepadMac/DistributionChannel.swift`: compile-time direct/Store behavior policy.
+- `Sources/NotepadMac/DistributionChannel.swift`: compile-time direct/Store behavior and explicitly injected customer-route policy.
 - `Configurations/Base.xcconfig`, `Configurations/DirectRelease.xcconfig`, `Configurations/AppStore.xcconfig`: explicit channel settings without credentials.
 - `Resources/AppStore.entitlements`: Store sandbox, user-selected read/write, app-scoped bookmarks, and printing.
 - `Resources/Assets.xcassets/AppIcon.appiconset`: committed native icon renditions derived from `Resources/MacPadLogo.png`.
@@ -517,19 +520,19 @@ git commit -m "feat: persist bookmark-capable file references"
 
 **Interfaces:**
 - Consumes: `PersistedFileReference`.
-- Produces: `DistributionChannel`, `SecurityScopedFileAccess`, `ResolvedFileAccess<Value>`, and `RecentDocumentStore`.
+- Produces: `DistributionChannel`, `CustomerRoutes`, `SecurityScopedFileAccess`, `ResolvedFileAccess<Value>`, and `RecentDocumentStore`.
 - Guarantees: every successful `startAccessingSecurityScopedResource()` has one `stopAccessingSecurityScopedResource()` on success and error paths.
 
 - [ ] **Step 1: Write failing distribution-policy tests**
 
 ```swift
-#expect(DistributionChannel.direct.showsGitHubUpdateCommand)
+#expect(DistributionChannel.direct.showsDirectUpdateCommand)
 #expect(!DistributionChannel.direct.requiresPersistentSecurityScope)
-#expect(!DistributionChannel.appStore.showsGitHubUpdateCommand)
+#expect(!DistributionChannel.appStore.showsDirectUpdateCommand)
 #expect(DistributionChannel.appStore.requiresPersistentSecurityScope)
 ```
 
-The Store Help menu test must fail if `Check for Updates…` exists.
+Add explicitly constructed `CustomerRoutes` fixtures for the current direct preparation channel and for an unconfigured Store channel. The Store tests must fail if Help, Report an Issue, Privacy, Security, or Check for Updates resolves to GitHub, GitHub Pages, DeepWiki, or SourceForge; if `Check for Updates…` exists; or if About contains `Public repo` or a repository link. Missing owner-approved Store routes must omit their commands instead of falling back.
 
 - [ ] **Step 2: Implement the pure channel policy**
 
@@ -546,12 +549,12 @@ enum DistributionChannel: Equatable {
         #endif
     }
 
-    var showsGitHubUpdateCommand: Bool { self == .direct }
+    var showsDirectUpdateCommand: Bool { self == .direct }
     var requiresPersistentSecurityScope: Bool { self == .appStore }
 }
 ```
 
-Pass the channel explicitly into menu construction and file-access construction. Do not inspect receipts or bundle paths at runtime.
+Define `CustomerRoutes` as a strictly typed value with explicit optional `URL` properties for product, Help, support/issue reporting, privacy, security, and update/migration destinations. Pass the channel and route set explicitly into menu, About, URL-action, and file-access construction. Menu items exist only for configured routes. Keep the current direct GitHub routes behind `#if !MACPAD_APP_STORE` so both SwiftPM and `MACPAD_DIRECT` Xcode preparation builds preserve current behavior; the Store compilation condition must exclude their literals from the binary. Do not inspect receipts or bundle paths at runtime, invent URLs, or add a repository fallback. The later cross-project link-migration gate replaces both channels with the exact approved public URL contract and keeps direct update UI absent from the Store channel.
 
 - [ ] **Step 3: Write failing real bookmark tests**
 
@@ -585,7 +588,9 @@ struct SecurityScopedFileAccess {
 
 Resolve bookmarks with `.withSecurityScope`; when stale, recreate bookmark data and return the refreshed reference. If `requiresBookmark` is true and a restored reference has no bookmark, throw a localized `missingPersistentAccess(path:)` error. Call `stopAccessingSecurityScopedResource()` only when `startAccessingSecurityScopedResource()` returned true.
 
-- [ ] **Step 6: Wire Open, Save, Save As, reload, and session restore**
+- [ ] **Step 6: Wire customer routes and file operations**
+
+Replace hard-coded URL selectors with access to the injected `CustomerRoutes`. The Store Help menu exposes only configured permanent routes and never exposes direct update UI. The Store About panel has no `Public repo` credit or GitHub profile/repository link. Keep the existing direct preparation behavior only under the direct compile condition. Then wire Open, Save, Save As, reload, and session restore through the security-scoped access boundary.
 
 The open panel and save panel create a reference while the user-selected grant is live. Controller load/save/reload operations execute through `SecurityScopedFileAccess.access`. Save As replaces the controller reference only after the write succeeds; stale refreshed data is persisted through the next session save.
 
@@ -666,7 +671,7 @@ xcodebuild -project MacPad.xcodeproj -scheme MacPad-Direct -configuration Direct
 xcodebuild -project MacPad.xcodeproj -scheme MacPad-AppStore -configuration AppStore -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO SWIFT_TREAT_WARNINGS_AS_ERRORS=YES build
 ```
 
-Expected: both commands exit 0; Store compilation omits the GitHub update menu and requires persistent bookmarks.
+Expected: both commands exit 0; Store compilation omits direct-update UI, public-repository credits, and every legacy customer route, and requires persistent bookmarks.
 
 - [ ] **Step 6: Commit**
 
@@ -721,11 +726,11 @@ MacPad.app/Contents/Resources/AppIcon.icns
 MacPad.app/Contents/Resources/LICENSE
 ```
 
-It checks `codesign -d --entitlements :-`, `plutil`, `lipo`, bundle version, placeholder identifier, localizations, category, and absence of private paths/secrets.
+It checks `codesign -d --entitlements :-`, `plutil`, `lipo`, bundle version, placeholder identifier, localizations, category, and absence of private paths/secrets. It recursively scans the Store app's executable and resources and fails on customer-route domain tokens including `github.com`, `githubusercontent.com`, `sourceforge.net`, `anvilfilbert.github.io`, and `deepwiki.com`, plus `/releases/latest`. A separate runtime test verifies that Store About does not display a public-repository credit; do not reject an otherwise unused shared localized label merely because both channels compile the same catalog. Engineering provenance in an archive-side manifest is allowed only when it is outside the app bundle and cannot be linked or displayed by the app.
 
 - [ ] **Step 5: Add credential-free CI coverage**
 
-Run localization checks and unsigned Xcode builds in Swift CI. Keep the existing direct build/release jobs. Add no App Store upload, notarization, or signing step.
+Run localization checks and unsigned Xcode builds in Swift CI. Keep the existing direct build as a non-publishing verification job for now; do not treat GitHub Releases or attestations as a permanent customer channel. Add no App Store upload, direct-release publication, notarization, signing, visibility change, or paid-plan-dependent private attestation step. The later cross-project gate must remove tag-triggered publication and re-audit authenticated fetches, Actions allowance, CodeQL eligibility, and attestation behavior before repository privacy.
 
 - [ ] **Step 6: Run preflight and commit**
 
@@ -783,6 +788,8 @@ Document:
 - Content rights: repository artwork and Apache-2.0 code/license evidence; owner must attest.
 - EU DSA trader status: owner decision required; do not infer status.
 - Draft price: USD 2.99; future bundle USD 3.99; territories require owner selection.
+- Launch distribution: the App Store is the official installation and update channel; the direct build is limited to one legacy-user transition release and repository-local verification.
+- Cutover dependency: no repository visibility or SourceForge change occurs until the permanent bilingual public routes, exact signed migration test, verified live Store listing, and separate owner approval required by the cross-project plan.
 
 - [ ] **Step 5: Propose identifiers and state migration consequences**
 
@@ -793,13 +800,19 @@ Present exactly these owner options without changing the project placeholder:
 
 Changing from `local.macpad.app` changes the UserDefaults domain, recent-document identity, sandbox container, and code-signing identity association. Direct and Store builds should normally adopt the same approved production identifier before first App Store upload; the identifier cannot be changed after that upload. Provide a one-time preferences/session migration plan only after the owner selects the final identifier.
 
-- [ ] **Step 6: State exact URL owner input**
+- [ ] **Step 6: State the exact public URL contract owner input**
 
-Do not invent URLs. State: `OWNER INPUT REQUIRED: final HTTPS support URL and privacy-policy URL on an owner-controlled domain.` Include ready-to-publish English and German page content directly below this gate.
+Do not invent URLs or consume domain-availability research as approval. State: `OWNER INPUT REQUIRED: final HTTPS public URL contract on an owner-controlled domain.` The contract must provide anonymous English/German destinations for product/marketing, Help/documentation, support and issue reporting, privacy, security reporting, release notes, direct-user migration/update guidance, and the final App Store listing. Include ready-to-publish English and German support/privacy/help/migration content directly below this gate. Record that App Store Help/Privacy/Support commands remain absent rather than falling back until the exact routes are approved and compiled.
 
-- [ ] **Step 7: Keep README concise and commit**
+- [ ] **Step 7: Document the legacy-user and private-repository readiness gates**
 
-README may link to `docs/app-store-preparation.md` as a preparation document but must not claim Mac App Store availability, notarization, or production signing.
+Add a fail-closed migration matrix for the exact signed sequence: installed v1.3.1-or-earlier direct app → Developer ID-signed/notarized final transition build → production App Store build. The later owner-gated test must cover bundle identifier and preferences/container migration, saved and dirty documents, session restoration, recent files, security-scoped bookmarks, recovery, Help/Support/Privacy/Security routes, and update/migration guidance. Do not publish overwrite/removal instructions before the exact signed-build sequence is proven.
+
+Record the current private-repository audit without changing external state: private Actions consumes the account allowance; current release publication and unauthenticated GitHub Releases cannot remain customer infrastructure; the unauthenticated `origin/main` fetch, CodeQL eligibility, environment protections, reusable workflows, and artifact retention require a real post-adaptation check; private GitHub artifact attestations require GitHub Enterprise Cloud and are internal provenance rather than customer trust. The repository-safe release record may preserve only the final direct release checksum, immutable commit/tag, release notes, and pass/fail status for signing, notarization, and stapling. Keep the Developer ID identity summary, Team/account identifiers, certificate details, notarization log, and other identifying evidence in an owner-approved private location outside every repository. If a valid historical public attestation bundle already exists before the workflow is removed, preserve it as optional private historical evidence; do not require or invent a final-transition attestation after the binding plan removes that workflow.
+
+- [ ] **Step 8: Keep README concise and commit**
+
+README may link to `docs/app-store-preparation.md` as a preparation document but must not claim Mac App Store availability, notarization, production signing, permanent public GitHub/SourceForge distribution, or an owner-approved public domain. Current direct-install instructions remain factual preparation-state documentation until the later cross-project link-migration gate replaces them.
 
 ```bash
 git add docs/app-store-preparation.md README.md
@@ -944,11 +957,13 @@ xcodebuild -project MacPad.xcodeproj -scheme MacPad-Direct -configuration Direct
 xcodebuild -project MacPad.xcodeproj -scheme MacPad-AppStore -configuration AppStore -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO SWIFT_TREAT_WARNINGS_AS_ERRORS=YES build
 ```
 
-Record exact test pass/fail/skip totals, build exit codes, archive path, app version/build, architectures, entitlement keys, localization files, screenshot results, and SHA-256 values.
+Record exact test pass/fail/skip totals, build exit codes, archive path, app version/build, architectures, entitlement keys, localization files, screenshot results, and SHA-256 values. Scan the Store `.app` executable and resources and fail if they contain `github.com`, `githubusercontent.com`, `sourceforge.net`, `anvilfilbert.github.io`, `deepwiki.com`, or `/releases/latest`. Separately test that Store About exposes no repository credit and Store menus expose no legacy route; direct engineering provenance outside the runtime bundle is not a customer route.
 
-- [ ] **Step 3: Inspect public artifacts and repository privacy**
+- [ ] **Step 3: Inspect artifacts and future repository-privacy readiness**
 
-Verify the ZIP/archive contain the Apache-2.0 license, no local user paths, personal names, email addresses, IPs, serial numbers, credentials, profiles, certificates, Team IDs, or private notes. Confirm `.playwright-cli/` and `docs/domain-name-research-2026-08-28.md` are still untracked and absent from the diff.
+Verify the ZIP/archive contain the Apache-2.0 license, no local user paths, personal names, email addresses, IPs, serial numbers, credentials, profiles, certificates, Team IDs, or private notes. Confirm `.playwright-cli/`, `outputs/`, and `docs/domain-name-research-2026-08-28.md` remain outside this task's diff. Verify the two binding cross-project documents are unchanged by this task.
+
+Record, without mutating settings, whether the current release workflow has tag publication, unauthenticated private-incompatible fetches, public-only attestation, or GitHub Release customer dependencies; whether the current account plan supports private Actions, CodeQL, and attestations; and which checks must move to the later cross-project CI-adaptation gate. Do not claim the repository is privacy-ready merely because the current public workflow passes.
 
 - [ ] **Step 4: Review the complete non-interactive diff**
 
@@ -970,9 +985,9 @@ gh pr create --repo anvilfilbert/MacPad --base main --head codex/localization-ap
 
 Before the command, write `/private/tmp/macpad-localization-app-store-pr.md` with the exact Step 2 results under `Summary`, `Verification`, `Store evidence`, and `Owner gates`. The PR body links `Fixes #29` only if localization is complete and `Fixes #28` only if every repository-local readiness item is complete; otherwise use `Refs #28` and leave it open. The file must contain no unfilled template tokens.
 
-- [ ] **Step 6: Wait for protected checks and update issues**
+- [ ] **Step 6: Wait for current protected checks and update issues**
 
-Wait for strict Build and both CodeQL analyses. Comment on #28 and #29 with exact tests, builds, archive, screenshots, localization completeness, and remaining owner gates. Close only genuinely complete work. Do not use admin merge without explicit approval.
+Wait for every check currently required by branch protection and record its exact name and result. Do not assume current CodeQL/default-setup checks remain eligible after privatization; that is a later account-plan verification gate. Comment on #28 and #29 with exact tests, builds, archive, screenshots, localization completeness, route omissions, migration/private-CI readiness findings, and remaining owner gates. Close only genuinely complete work. Do not use admin merge without explicit approval.
 
 - [ ] **Step 7: Deliver the readiness matrix**
 
@@ -985,7 +1000,7 @@ Apple-account blocked
 Unverified
 ```
 
-Explicitly stop before production bundle-ID selection, Developer Program enrollment, Team/certificate/profile configuration, App Store Connect record creation, Paid Apps Agreement, tax/banking, final support/privacy URLs, Developer ID signing/notarization, upload, TestFlight, App Review, or publication.
+Explicitly stop before production bundle-ID selection, domain purchase or DNS/publication, Developer Program enrollment, Team/certificate/profile configuration, App Store Connect record creation, Paid Apps Agreement, tax/banking, final public URL adoption, Developer ID signing/notarization, direct transition publication, upload, TestFlight, App Review, Store publication, SourceForge mutation, CI plan purchase, or repository visibility change.
 
 The delivery must also include issue, branch, commit, and PR links; an exact changed-file inventory; test/build totals; archive and screenshot locations; localization completeness; proposed identifiers; unresolved verification; and the user's next owner-gated actions in dependency order.
 
@@ -993,7 +1008,7 @@ The delivery must also include issue, branch, commit, and PR links; an exact cha
 
 - **Spec coverage:** Tasks 2–4 cover complete native localization and direct packaging; Tasks 5–8 cover sandbox access, Xcode configurations, entitlements, icons, archives, and CI; Tasks 9–10 cover authoritative bilingual Store materials and screenshots; Tasks 11–12 cover native language behavior, real sandbox smoke, final verification, PR, and owner gates.
 - **Placeholder scan:** No implementation step uses `TBD`, `TODO`, silent fallback, fake URL, invented Team ID, or invented production identifier. Explicit owner inputs are named as gates.
-- **Type consistency:** `PersistedFileReference` flows from session state into `SecurityScopedFileAccess`, `RecentDocumentStore`, controller state, and restoration. `DistributionChannel` supplies the single Store/direct policy used by menus and bookmark requirements.
+- **Type consistency:** `PersistedFileReference` flows from session state into `SecurityScopedFileAccess`, `RecentDocumentStore`, controller state, and restoration. `DistributionChannel` and `CustomerRoutes` supply the single Store/direct policy used by menus, About, URL actions, artifact scanning, and bookmark requirements.
 - **Scope check:** The work is large but cohesive: every task produces a reviewable MacPad distribution capability on the same branch without changing product behavior outside localization and sandbox-compatible file access.
 - **Test coverage:** Every behavior change has a RED/GREEN automated test or deterministic artifact validator before implementation. Native System Settings integration, real sandbox panels, VoiceOver, printing, and screenshot content remain explicit manual OS smoke checks with recorded evidence.
-- **Owner gates:** The plan completes safe repository-local work while stopping before all account, value-moving, credential, identifier, URL, signing, upload, and publication decisions.
+- **Owner gates:** The plan completes safe repository-local work while stopping before all account, value-moving, credential, identifier, domain/URL, signing, upload, publication, SourceForge, CI-plan, and repository-visibility decisions. The binding cross-project sequence remains the authority for every later cutover action.
