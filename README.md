@@ -43,7 +43,7 @@ If macOS warns that the app is from an unidentified developer, right-click `MacP
 
 ## Latest Changes
 
-`1.3.0` adds an optional one-click menu-bar launcher, improves large-file editing responsiveness and coordinated saves, preserves mixed line endings, and makes session limits safely restorable.
+`1.3.1` restores Dock reopening when menu-bar mode keeps MacPad running after the last editor window closes.
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 

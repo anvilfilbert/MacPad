@@ -137,6 +137,29 @@ struct WindowRoutingTests {
         #expect(delegate.editorWindowCount == 1)
     }
 
+    @Test("Dock reopen creates an editor after the last window closes")
+    func dockReopenWithoutVisibleWindows() throws {
+        let suiteName = "MacPadTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let delegate = AppDelegate(defaults: defaults)
+        delegate.toggleMenuBarVisibility(nil)
+        defer {
+            if delegate.isMenuBarEnabled {
+                delegate.toggleMenuBarVisibility(nil)
+            }
+        }
+        let applicationDelegate: any NSApplicationDelegate = delegate
+
+        let handled = applicationDelegate.applicationShouldHandleReopen?(
+            .shared,
+            hasVisibleWindows: false
+        )
+
+        #expect(handled == false)
+        #expect(delegate.editorWindowCount == 1)
+    }
+
     @Test("disabling menu-bar mode without an editor restores a normal window")
     func disablingMenuBarWithoutWindow() throws {
         let suiteName = "MacPadTests.\(UUID().uuidString)"
