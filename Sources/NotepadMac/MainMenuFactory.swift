@@ -5,13 +5,13 @@ import NotepadMacCore
 enum RecentDocumentsMenuBuilder {
     static func populate(
         _ menu: NSMenu,
-        urls: [URL],
+        references: [PersistedFileReference],
         target: AnyObject,
         localization: MacPadLocalization
     ) {
         menu.removeAllItems()
 
-        if urls.isEmpty {
+        if references.isEmpty {
             let placeholder = NSMenuItem(
                 title: localization.string(.noRecentDocuments),
                 action: nil,
@@ -23,19 +23,58 @@ enum RecentDocumentsMenuBuilder {
             placeholder.isEnabled = false
             menu.addItem(placeholder)
         } else {
-            for url in urls {
+            for reference in references {
+                let url = URL(fileURLWithPath: reference.path)
                 let item = NSMenuItem(
                     title: url.lastPathComponent,
                     action: #selector(AppDelegate.openRecentDocument(_:)),
                     keyEquivalent: ""
                 )
                 item.target = target
-                item.representedObject = url
+                item.representedObject = reference
                 item.toolTip = url.path
                 menu.addItem(item)
             }
         }
 
+        addClearItem(
+            to: menu,
+            enabled: !references.isEmpty,
+            target: target,
+            localization: localization
+        )
+    }
+
+    static func populateUnavailable(
+        _ menu: NSMenu,
+        target: AnyObject,
+        localization: MacPadLocalization
+    ) {
+        menu.removeAllItems()
+        let placeholder = NSMenuItem(
+            title: localization.string(.recentDocumentsUnavailable),
+            action: nil,
+            keyEquivalent: ""
+        )
+        placeholder.identifier = NSUserInterfaceItemIdentifier(
+            MacPadStringKey.recentDocumentsUnavailable.rawValue
+        )
+        placeholder.isEnabled = false
+        menu.addItem(placeholder)
+        addClearItem(
+            to: menu,
+            enabled: true,
+            target: target,
+            localization: localization
+        )
+    }
+
+    private static func addClearItem(
+        to menu: NSMenu,
+        enabled: Bool,
+        target: AnyObject,
+        localization: MacPadLocalization
+    ) {
         menu.addItem(.separator())
         let clearItem = NSMenuItem(
             title: localization.string(.clearRecentMenu),
@@ -46,7 +85,7 @@ enum RecentDocumentsMenuBuilder {
             MacPadStringKey.clearRecentMenu.rawValue
         )
         clearItem.target = target
-        clearItem.isEnabled = !urls.isEmpty
+        clearItem.isEnabled = enabled
         menu.addItem(clearItem)
     }
 }
@@ -56,7 +95,9 @@ enum MainMenuFactory {
     static func makeMenu(
         target: AnyObject,
         application: NSApplication,
-        localization: MacPadLocalization
+        localization: MacPadLocalization,
+        distributionChannel: DistributionChannel,
+        customerRoutes: CustomerRoutes
     ) -> NSMenu {
         let mainMenu = NSMenu(title: localization.string(.mainMenu))
         mainMenu.identifier = NSUserInterfaceItemIdentifier(MacPadStringKey.mainMenu.rawValue)
@@ -96,7 +137,7 @@ enum MainMenuFactory {
         recentMenu.delegate = target as? NSMenuDelegate
         RecentDocumentsMenuBuilder.populate(
             recentMenu,
-            urls: [],
+            references: [],
             target: target,
             localization: localization
         )
@@ -166,10 +207,24 @@ enum MainMenuFactory {
         application.windowsMenu = windowMenu
 
         let helpMenu = NSMenu(title: localization.string(.helpMenu))
-        addItem(.macPadHelp, MacPadStringKey.macPadHelp.rawValue, helpMenu, #selector(AppDelegate.openHelp(_:)), target, "", [.command], localization)
-        addItem(.reportIssue, MacPadStringKey.reportIssue.rawValue, helpMenu, #selector(AppDelegate.reportIssue(_:)), target, "", [.command], localization)
-        helpMenu.addItem(.separator())
-        addItem(.checkForUpdates, "help.checkUpdates", helpMenu, #selector(AppDelegate.checkForUpdates(_:)), target, "", [.command], localization)
+        if customerRoutes.helpURL != nil {
+            addItem(.macPadHelp, "help.macPadHelp", helpMenu, #selector(AppDelegate.openHelp(_:)), target, "", [.command], localization)
+        }
+        if customerRoutes.supportURL != nil {
+            addItem(.reportIssue, "help.reportIssue", helpMenu, #selector(AppDelegate.reportIssue(_:)), target, "", [.command], localization)
+        }
+        if customerRoutes.privacyURL != nil {
+            addItem(.privacy, "help.privacy", helpMenu, #selector(AppDelegate.openPrivacy(_:)), target, "", [.command], localization)
+        }
+        if customerRoutes.securityURL != nil {
+            addItem(.security, "help.security", helpMenu, #selector(AppDelegate.openSecurity(_:)), target, "", [.command], localization)
+        }
+        if customerRoutes.updateURL != nil, distributionChannel.showsDirectUpdateCommand {
+            if !helpMenu.items.isEmpty {
+                helpMenu.addItem(.separator())
+            }
+            addItem(.checkForUpdates, "help.checkUpdates", helpMenu, #selector(AppDelegate.checkForUpdates(_:)), target, "", [.command], localization)
+        }
         mainMenu.addItem(rootItem(for: helpMenu, identifier: MacPadStringKey.helpMenu.rawValue))
         application.helpMenu = helpMenu
 

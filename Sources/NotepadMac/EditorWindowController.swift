@@ -19,6 +19,11 @@ private actor EditorTextAnalyzer {
     }
 }
 
+struct SuccessfulFileTransition: Equatable, Sendable {
+    let previousReference: PersistedFileReference?
+    let currentReference: PersistedFileReference
+}
+
 final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTextViewDelegate {
     static var defaultEditorFont: NSFont {
         NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
@@ -28,13 +33,14 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     var onStateChange: (() -> Void)?
     var onActivate: (() -> Void)?
     var onFontChange: ((NSFont) -> Void)?
-    var onSuccessfulSave: ((URL) -> Void)?
+    var onSuccessfulSave: ((SuccessfulFileTransition) -> Void)?
 
     private let scrollView = NSScrollView()
     private let textView = NSTextView()
     private let statusBar = NSTextField(labelWithString: "")
     private let editorDocument = EditorDocument()
     private let localization: MacPadLocalization
+    private let fileAccess: SecurityScopedFileAccess
     private var lastFindTerm = ""
     private var lastFindOptions = FindOptions(matchCase: false, wrapAround: true)
     private var findPanelController: FindPanelController?
@@ -48,13 +54,25 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private let textAnalyzer = EditorTextAnalyzer()
     private var pendingTextAnalysisTask: Task<Void, Never>?
 
-    convenience init(localization: MacPadLocalization) {
-        self.init(baseFont: Self.defaultEditorFont, localization: localization)
+    convenience init(
+        localization: MacPadLocalization,
+        fileAccess: SecurityScopedFileAccess
+    ) {
+        self.init(
+            baseFont: Self.defaultEditorFont,
+            localization: localization,
+            fileAccess: fileAccess
+        )
     }
 
-    init(baseFont: NSFont, localization: MacPadLocalization) {
+    init(
+        baseFont: NSFont,
+        localization: MacPadLocalization,
+        fileAccess: SecurityScopedFileAccess
+    ) {
         self.baseFont = baseFont
         self.localization = localization
+        self.fileAccess = fileAccess
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 820, height: 580),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -79,8 +97,20 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         editorDocument.fileURL
     }
 
-    func loadFile(_ url: URL) throws {
-        try editorDocument.loadFile(url)
+    var fileReference: PersistedFileReference? {
+        editorDocument.fileReference
+    }
+
+    func loadGrantedFile(_ url: URL) throws {
+        let reference = try fileAccess.makeReference(for: url)
+        try loadFile(reference)
+    }
+
+    func loadFile(_ reference: PersistedFileReference) throws {
+        let result = try fileAccess.access(reference) { resolvedURL in
+            try editorDocument.loadFile(resolvedURL)
+        }
+        editorDocument.attachFileReference(result.refreshedReference)
         textView.string = editorDocument.text
         refreshLineIndexNow()
         updateTitle()
@@ -98,7 +128,22 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     func restoreSessionState(_ state: EditorSessionState) throws {
-        try editorDocument.restoreSessionStateAndReloadFile(state)
+        if let reference = state.fileReference {
+            let result = try fileAccess.access(reference) { resolvedURL in
+                try editorDocument.restoreSessionStateAndReloadFile(
+                    replacingFileReference(
+                        in: state,
+                        with: PersistedFileReference(
+                            path: resolvedURL.path,
+                            bookmarkData: nil
+                        )
+                    )
+                )
+            }
+            editorDocument.attachFileReference(result.refreshedReference)
+        } else {
+            editorDocument.restoreSessionState(state)
+        }
         textView.string = editorDocument.text
         refreshLineIndexNow()
         wordWrapEnabled = state.wordWrapEnabled
@@ -116,8 +161,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     @objc func save(_ sender: Any?) {
-        if let fileURL = editorDocument.fileURL {
-            write(to: fileURL)
+        if editorDocument.fileReference != nil {
+            writeCurrent()
         } else {
             saveAs(sender)
         }
@@ -583,7 +628,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         await task?.value
     }
 
-    private func resolveExternalFileChange(at url: URL) {
+    private func resolveExternalFileChange() {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = localization.string(.externalChangeTitle)
@@ -600,7 +645,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
             saveAs(nil)
         case .alertSecondButtonReturn:
             do {
-                try loadFile(url)
+                try reloadDocument()
             } catch {
                 showError(
                     localization.string(.reloadFailure),
@@ -636,7 +681,20 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         do {
             try saveDocument(to: url, encoding: encoding)
         } catch EditorDocumentError.fileChangedOnDisk {
-            resolveExternalFileChange(at: url)
+            resolveExternalFileChange()
+        } catch {
+            showError(
+                localization.string(.saveFailure),
+                detail: macPadLocalizedDescription(error, using: localization)
+            )
+        }
+    }
+
+    private func writeCurrent() {
+        do {
+            try saveCurrentDocument(encoding: editorDocument.textEncoding)
+        } catch EditorDocumentError.fileChangedOnDisk {
+            resolveExternalFileChange()
         } catch {
             showError(
                 localization.string(.saveFailure),
@@ -646,11 +704,67 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     func saveDocument(to url: URL, encoding: TextFileEncoding) throws {
+        let previousReference = editorDocument.fileReference
         editorDocument.updateText(textView.string)
-        try editorDocument.save(to: url, encoding: encoding)
+        let result = try fileAccess.accessGrantedURL(url) { grantedURL in
+            try editorDocument.save(to: grantedURL, encoding: encoding)
+        }
+        editorDocument.attachFileReference(result.refreshedReference)
+        finishSuccessfulSave(previousReference: previousReference)
+    }
+
+    func saveCurrentDocument(encoding: TextFileEncoding) throws {
+        guard let previousReference = editorDocument.fileReference else {
+            throw SecurityScopedFileAccessError.missingPersistentAccess(
+                path: editorDocument.fileURL?.path ?? ""
+            )
+        }
+        editorDocument.updateText(textView.string)
+        let result = try fileAccess.access(previousReference) { resolvedURL in
+            try editorDocument.save(to: resolvedURL, encoding: encoding)
+        }
+        editorDocument.attachFileReference(result.refreshedReference)
+        finishSuccessfulSave(previousReference: previousReference)
+    }
+
+    func reloadDocument() throws {
+        guard let reference = editorDocument.fileReference else {
+            throw SecurityScopedFileAccessError.missingPersistentAccess(
+                path: editorDocument.fileURL?.path ?? ""
+            )
+        }
+        try loadFile(reference)
+    }
+
+    private func finishSuccessfulSave(
+        previousReference: PersistedFileReference?
+    ) {
         updateTitle()
         updateStatusBar()
         notifyStateChanged()
-        onSuccessfulSave?(editorDocument.fileURL ?? url.standardizedFileURL)
+        guard let currentReference = editorDocument.fileReference else {
+            preconditionFailure("A successful file save must attach a file reference.")
+        }
+        onSuccessfulSave?(
+            SuccessfulFileTransition(
+                previousReference: previousReference,
+                currentReference: currentReference
+            )
+        )
+    }
+
+    private func replacingFileReference(
+        in state: EditorSessionState,
+        with reference: PersistedFileReference
+    ) -> EditorSessionState {
+        EditorSessionState(
+            id: state.id,
+            fileReference: reference,
+            selectedLocation: state.selectedLocation,
+            wordWrapEnabled: state.wordWrapEnabled,
+            statusBarVisible: state.statusBarVisible,
+            zoomPercent: state.zoomPercent,
+            lineEnding: state.lineEnding
+        )
     }
 }

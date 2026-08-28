@@ -15,6 +15,7 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case openRecent = "file.openRecent"
     case noRecentDocuments = "file.noRecentDocuments"
     case clearRecentMenu = "file.clearRecentMenu"
+    case recentDocumentsUnavailable = "file.recentDocumentsUnavailable"
     case close = "file.close"
     case save = "file.save"
     case saveAs = "file.saveAs"
@@ -52,6 +53,8 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case helpMenu = "menu.help"
     case macPadHelp = "help.macPadHelp"
     case reportIssue = "help.reportIssue"
+    case privacy = "help.privacy"
+    case security = "help.security"
     case checkForUpdates = "help.checkForUpdates"
     case findTitle = "find.title"
     case replaceTitle = "replace.title"
@@ -71,6 +74,9 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case discardChanges = "action.discardChanges"
     case recover = "action.recover"
     case reloadFromDisk = "action.reloadFromDisk"
+    case locate = "action.locate"
+    case skip = "action.skip"
+    case cancelRestore = "action.cancelRestore"
     case untitled = "editor.untitled"
     case untitledFileName = "editor.untitledFileName"
     case windowTitle = "editor.windowTitle"
@@ -111,6 +117,9 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case savedFontUnavailable = "error.savedFontUnavailable"
     case sessionWindowOrTabLimit = "error.sessionWindowOrTabLimit"
     case sessionTabLimit = "error.sessionTabLimit"
+    case missingPersistentAccess = "error.missingPersistentAccess"
+    case securityScopedAccessDenied = "error.securityScopedAccessDenied"
+    case invalidRecentDocumentData = "error.invalidRecentDocumentData"
     case windowsLineEnding = "lineEnding.windows"
     case unixLineEnding = "lineEnding.unix"
     case classicMacLineEnding = "lineEnding.classicMac"
@@ -138,6 +147,7 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .openRecent: "Open Recent"
         case .noRecentDocuments: "No Recent Documents"
         case .clearRecentMenu: "Clear Menu"
+        case .recentDocumentsUnavailable: "Recent documents are unavailable"
         case .close: "Close"
         case .save: "Save"
         case .saveAs: "Save As…"
@@ -175,6 +185,8 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .helpMenu: "Help"
         case .macPadHelp: "MacPad Help"
         case .reportIssue: "Report an Issue"
+        case .privacy: "Privacy"
+        case .security: "Security"
         case .checkForUpdates: "Check for Updates…"
         case .findTitle: "Find"
         case .replaceTitle: "Replace"
@@ -194,6 +206,9 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .discardChanges: "Discard Changes"
         case .recover: "Recover"
         case .reloadFromDisk: "Reload from Disk"
+        case .locate: "Locate…"
+        case .skip: "Skip"
+        case .cancelRestore: "Cancel Restore"
         case .untitled: "Untitled"
         case .untitledFileName: "Untitled.txt"
         case .windowTitle: "%1$@ - MacPad"
@@ -234,6 +249,9 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .savedFontUnavailable: "Saved editor font is not available: %1$@."
         case .sessionWindowOrTabLimit: "Session contains more windows or tabs than MacPad supports."
         case .sessionTabLimit: "Session contains more tabs than MacPad supports."
+        case .missingPersistentAccess: "MacPad no longer has persistent access to this file: %1$@. Choose the file again to restore access."
+        case .securityScopedAccessDenied: "macOS did not grant MacPad access to this file: %1$@. Choose the file again to restore access."
+        case .invalidRecentDocumentData: "Saved recent-document access data is invalid. Clear the Open Recent menu to remove it."
         case .windowsLineEnding: "Windows (CRLF)"
         case .unixLineEnding: "Unix (LF)"
         case .classicMacLineEnding: "Macintosh (CR)"
@@ -352,6 +370,14 @@ public struct MacPadLocalization: Sendable {
 
     public func savedFontUnavailable(fontName: String) -> String {
         formatted(.savedFontUnavailable, arguments: [fontName])
+    }
+
+    public func missingPersistentAccess(path: String) -> String {
+        formatted(.missingPersistentAccess, arguments: [path])
+    }
+
+    public func securityScopedAccessDenied(path: String) -> String {
+        formatted(.securityScopedAccessDenied, arguments: [path])
     }
 
     private func formatted(

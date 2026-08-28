@@ -34,7 +34,9 @@ struct WindowRoutingTests {
         let menu = MainMenuFactory.makeMenu(
             target: delegate,
             application: application,
-            localization: englishLocalization
+            localization: englishLocalization,
+            distributionChannel: .direct,
+            customerRoutes: .current(for: .direct)
         )
 
         let recentItem = try #require(menuItem(withIdentifier: "file.openRecent", in: menu))
@@ -57,7 +59,9 @@ struct WindowRoutingTests {
             let menu = MainMenuFactory.makeMenu(
                 target: delegate,
                 application: application,
-                localization: localization
+                localization: localization,
+                distributionChannel: .direct,
+                customerRoutes: .current(for: .direct)
             )
             let menuBarItem = try #require(
                 menuItem(withIdentifier: "view.menuBar", in: menu)
@@ -85,7 +89,9 @@ struct WindowRoutingTests {
         let menu = MainMenuFactory.makeMenu(
             target: delegate,
             application: application,
-            localization: englishLocalization
+            localization: englishLocalization,
+            distributionChannel: .direct,
+            customerRoutes: .current(for: .direct)
         )
         let expectedActions: [String: Selector] = [
             "file.save": #selector(AppDelegate.save(_:)),
@@ -193,7 +199,10 @@ struct WindowRoutingTests {
                 MacPadStringKey.utf8Encoding.rawValue: "UTF-8"
             ]
         ) { localization in
-            let controller = EditorWindowController(localization: localization)
+            let controller = EditorWindowController(
+                localization: localization,
+                fileAccess: directFileAccess
+            )
             let contentView = try #require(controller.window?.contentView)
             let editor = try #require(view(withIdentifier: "editor.text", in: contentView))
             let status = try #require(
@@ -209,8 +218,14 @@ struct WindowRoutingTests {
 
     @Test("main editor wins while a utility panel is key")
     func resolvesMainEditorBeforeFallback() {
-        let mainEditor = EditorWindowController(localization: englishLocalization)
-        let fallbackEditor = EditorWindowController(localization: englishLocalization)
+        let mainEditor = EditorWindowController(
+            localization: englishLocalization,
+            fileAccess: directFileAccess
+        )
+        let fallbackEditor = EditorWindowController(
+            localization: englishLocalization,
+            fileAccess: directFileAccess
+        )
         let utilityPanel = NSPanel()
 
         let resolved = EditorWindowResolver.resolve(
@@ -248,11 +263,14 @@ struct WindowRoutingTests {
         let fileURL = directory.appendingPathComponent("note.txt")
         try Data("MacPad".utf8).write(to: fileURL)
 
-        let editor = EditorWindowController(localization: englishLocalization)
-        try editor.loadFile(fileURL)
+        let editor = EditorWindowController(
+            localization: englishLocalization,
+            fileAccess: directFileAccess
+        )
+        try editor.loadGrantedFile(fileURL)
 
         let resolved = EditorWindowResolver.controller(
-            opening: fileURL,
+            opening: try directFileAccess.makeReference(for: fileURL),
             controllers: [editor]
         )
 
@@ -271,7 +289,8 @@ struct WindowRoutingTests {
         #expect(throws: (any Error).self) {
             try EditorWindowResolver.makeController(
                 opening: directory,
-                localization: englishLocalization
+                localization: englishLocalization,
+                fileAccess: directFileAccess
             )
         }
     }
@@ -285,7 +304,8 @@ struct WindowRoutingTests {
         #expect(throws: (any Error).self) {
             try EditorWindowResolver.makeController(
                 opening: fileURL,
-                localization: englishLocalization
+                localization: englishLocalization,
+                fileAccess: directFileAccess
             )
         }
     }
@@ -297,7 +317,9 @@ struct WindowRoutingTests {
         let menu = MainMenuFactory.makeMenu(
             target: delegate,
             application: application,
-            localization: englishLocalization
+            localization: englishLocalization,
+            distributionChannel: .direct,
+            customerRoutes: .current(for: .direct)
         )
         let newTab = try #require(menuItem(withIdentifier: "file.newTab", in: menu))
         let newWindow = try #require(menuItem(withIdentifier: "file.newWindow", in: menu))
@@ -317,7 +339,9 @@ struct WindowRoutingTests {
         let menu = MainMenuFactory.makeMenu(
             target: delegate,
             application: application,
-            localization: englishLocalization
+            localization: englishLocalization,
+            distributionChannel: .direct,
+            customerRoutes: .current(for: .direct)
         )
         let item = try #require(menuItem(withIdentifier: "view.menuBar", in: menu))
 
@@ -330,7 +354,14 @@ struct WindowRoutingTests {
         let suiteName = "MacPadTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
-        let delegate = AppDelegate(defaults: defaults, localization: englishLocalization)
+        let delegate = AppDelegate(
+            defaults: defaults,
+            localization: englishLocalization,
+            distributionChannel: .direct,
+            customerRoutes: .current(for: .direct),
+            fileAccess: directFileAccess,
+            recentDocumentStore: testRecentDocumentStore(defaults: defaults)
+        )
 
         #expect(!delegate.isMenuBarEnabled)
         #expect(delegate.menuBarStatusItem == nil)
@@ -343,7 +374,14 @@ struct WindowRoutingTests {
         #expect(statusItem.button?.action == #selector(AppDelegate.handleMenuBarStatusItem(_:)))
         #expect(!delegate.applicationShouldTerminateAfterLastWindowClosed(.shared))
         #expect(
-            AppDelegate(defaults: defaults, localization: englishLocalization).isMenuBarEnabled
+            AppDelegate(
+                defaults: defaults,
+                localization: englishLocalization,
+                distributionChannel: .direct,
+                customerRoutes: .current(for: .direct),
+                fileAccess: directFileAccess,
+                recentDocumentStore: testRecentDocumentStore(defaults: defaults)
+            ).isMenuBarEnabled
         )
 
         delegate.handleMenuBarStatusItem(nil)
@@ -362,7 +400,14 @@ struct WindowRoutingTests {
         let suiteName = "MacPadTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
-        let delegate = AppDelegate(defaults: defaults, localization: englishLocalization)
+        let delegate = AppDelegate(
+            defaults: defaults,
+            localization: englishLocalization,
+            distributionChannel: .direct,
+            customerRoutes: .current(for: .direct),
+            fileAccess: directFileAccess,
+            recentDocumentStore: testRecentDocumentStore(defaults: defaults)
+        )
         delegate.toggleMenuBarVisibility(nil)
         defer {
             if delegate.isMenuBarEnabled {
@@ -385,7 +430,14 @@ struct WindowRoutingTests {
         let suiteName = "MacPadTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
-        let delegate = AppDelegate(defaults: defaults, localization: englishLocalization)
+        let delegate = AppDelegate(
+            defaults: defaults,
+            localization: englishLocalization,
+            distributionChannel: .direct,
+            customerRoutes: .current(for: .direct),
+            fileAccess: directFileAccess,
+            recentDocumentStore: testRecentDocumentStore(defaults: defaults)
+        )
 
         delegate.toggleMenuBarVisibility(nil)
         #expect(delegate.editorWindowCount == 0)
@@ -396,9 +448,18 @@ struct WindowRoutingTests {
 
     @Test("activating a tab group moves the complete group to the recent end")
     func windowGroupRecency() throws {
-        let first = EditorWindowController(localization: englishLocalization)
-        let second = EditorWindowController(localization: englishLocalization)
-        let third = EditorWindowController(localization: englishLocalization)
+        let first = EditorWindowController(
+            localization: englishLocalization,
+            fileAccess: directFileAccess
+        )
+        let second = EditorWindowController(
+            localization: englishLocalization,
+            fileAccess: directFileAccess
+        )
+        let third = EditorWindowController(
+            localization: englishLocalization,
+            fileAccess: directFileAccess
+        )
         let firstWindow = try #require(first.window)
         let secondWindow = try #require(second.window)
         firstWindow.addTabbedWindow(secondWindow, ordered: .above)
@@ -429,7 +490,9 @@ struct WindowRoutingTests {
         let menu = MainMenuFactory.makeMenu(
             target: delegate,
             application: application,
-            localization: englishLocalization
+            localization: englishLocalization,
+            distributionChannel: .direct,
+            customerRoutes: .current(for: .direct)
         )
         let recentItem = try #require(menuItem(withIdentifier: "file.openRecent", in: menu))
         let recentMenu = try #require(recentItem.submenu)
@@ -441,18 +504,26 @@ struct WindowRoutingTests {
     func populatesRecentDocumentsMenu() throws {
         let target = appDelegate(localization: englishLocalization)
         let menu = NSMenu(title: "Open Recent")
-        let firstURL = URL(fileURLWithPath: "/tmp/first.txt")
-        let secondURL = URL(fileURLWithPath: "/tmp/second.txt")
+        let firstReference = PersistedFileReference(
+            path: "/tmp/first.txt",
+            bookmarkData: Data([1])
+        )
+        let secondReference = PersistedFileReference(
+            path: "/tmp/second.txt",
+            bookmarkData: Data([2])
+        )
 
         RecentDocumentsMenuBuilder.populate(
             menu,
-            urls: [firstURL, secondURL],
+            references: [firstReference, secondReference],
             target: target,
             localization: englishLocalization
         )
 
         #expect(menu.items[0].title == "first.txt")
-        #expect(menu.items[0].representedObject as? URL == firstURL)
+        #expect(
+            menu.items[0].representedObject as? PersistedFileReference == firstReference
+        )
         #expect(menu.items[0].action == #selector(AppDelegate.openRecentDocument(_:)))
         #expect(menu.items[1].title == "second.txt")
         let clearItem = try #require(
@@ -468,7 +539,7 @@ struct WindowRoutingTests {
 
         RecentDocumentsMenuBuilder.populate(
             menu,
-            urls: [],
+            references: [],
             target: appDelegate(localization: englishLocalization),
             localization: englishLocalization
         )
@@ -478,19 +549,217 @@ struct WindowRoutingTests {
         #expect(!placeholder.isEnabled)
     }
 
-    @Test("successful saves report their final URL")
+    @Test("corrupt recent data remains visibly clearable")
+    func unavailableRecentDocumentsMenu() throws {
+        let menu = NSMenu(title: "Open Recent")
+
+        RecentDocumentsMenuBuilder.populateUnavailable(
+            menu,
+            target: appDelegate(localization: englishLocalization),
+            localization: englishLocalization
+        )
+
+        let placeholder = try #require(menu.items.first)
+        #expect(placeholder.title == "Recent documents are unavailable")
+        #expect(!placeholder.isEnabled)
+        let clearItem = try #require(
+            menu.items.first { $0.identifier?.rawValue == "file.clearRecentMenu" }
+        )
+        #expect(clearItem.isEnabled)
+    }
+
+    @Test("successful Save As reports an attached typed file transition")
     func successfulSaveCallback() throws {
-        let controller = EditorWindowController(localization: englishLocalization)
+        let controller = EditorWindowController(
+            localization: englishLocalization,
+            fileAccess: directFileAccess
+        )
         let fileURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension("txt")
-        var reportedURL: URL?
-        controller.onSuccessfulSave = { reportedURL = $0 }
+        var reportedTransition: SuccessfulFileTransition?
+        var referenceAtStateNotification: PersistedFileReference?
+        controller.onStateChange = {
+            referenceAtStateNotification = controller.fileReference
+        }
+        controller.onSuccessfulSave = { reportedTransition = $0 }
 
         try controller.saveDocument(to: fileURL, encoding: .utf8)
 
-        #expect(reportedURL == fileURL.resolvingSymlinksInPath().standardizedFileURL)
+        let currentReference = try #require(controller.fileReference)
+        #expect(reportedTransition?.previousReference == nil)
+        #expect(reportedTransition?.currentReference == currentReference)
+        #expect(referenceAtStateNotification == currentReference)
+        #expect(currentReference.path == fileURL.resolvingSymlinksInPath().standardizedFileURL.path)
         #expect(FileManager.default.fileExists(atPath: fileURL.path))
+    }
+
+    @Test("failed Save As emits no state or file transition")
+    func failedSaveIsSilent() throws {
+        let controller = EditorWindowController(
+            localization: englishLocalization,
+            fileAccess: directFileAccess
+        )
+        let directoryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directoryURL,
+            withIntermediateDirectories: true
+        )
+        var stateNotificationCount = 0
+        var transitionCount = 0
+        controller.onStateChange = { stateNotificationCount += 1 }
+        controller.onSuccessfulSave = { _ in transitionCount += 1 }
+
+        #expect(throws: (any Error).self) {
+            try controller.saveDocument(to: directoryURL, encoding: .utf8)
+        }
+
+        #expect(stateNotificationCount == 0)
+        #expect(transitionCount == 0)
+    }
+
+    @Test("Store open attaches the refreshed bookmark before state notification")
+    func storeOpenAttachesRefreshedBookmarkBeforeNotification() throws {
+        try withTemporaryDirectory { directory in
+            let originalURL = directory.appendingPathComponent("original.txt")
+            let movedURL = directory.appendingPathComponent("moved.txt")
+            try Data("MacPad".utf8).write(to: originalURL)
+            let fileAccess = SecurityScopedFileAccess(requiresBookmark: true)
+            let reference = try fileAccess.makeReference(for: originalURL)
+            try FileManager.default.moveItem(at: originalURL, to: movedURL)
+            let controller = EditorWindowController(
+                localization: englishLocalization,
+                fileAccess: fileAccess
+            )
+            var referenceAtNotification: PersistedFileReference?
+            controller.onStateChange = {
+                referenceAtNotification = controller.fileReference
+            }
+
+            try controller.loadFile(reference)
+
+            let attached = try #require(controller.fileReference)
+            #expect(attached.path == movedURL.resolvingSymlinksInPath().standardizedFileURL.path)
+            #expect(attached.bookmarkData?.isEmpty == false)
+            #expect(referenceAtNotification == attached)
+        }
+    }
+
+    @Test("current Store save uses the attached bookmark and reports one transition")
+    func currentStoreSaveTransition() throws {
+        try withTemporaryDirectory { directory in
+            let fileURL = directory.appendingPathComponent("current.txt")
+            try Data("before".utf8).write(to: fileURL)
+            let fileAccess = SecurityScopedFileAccess(requiresBookmark: true)
+            let initialReference = try fileAccess.makeReference(for: fileURL)
+            let controller = EditorWindowController(
+                localization: englishLocalization,
+                fileAccess: fileAccess
+            )
+            try controller.loadFile(initialReference)
+            let contentView = try #require(controller.window?.contentView)
+            let editor = try #require(
+                view(withIdentifier: "editor.text", in: contentView) as? NSTextView
+            )
+            editor.string = "after"
+            var transitions: [SuccessfulFileTransition] = []
+            controller.onSuccessfulSave = { transitions.append($0) }
+
+            try controller.saveCurrentDocument(encoding: .utf8)
+
+            let currentReference = try #require(controller.fileReference)
+            #expect(transitions.count == 1)
+            #expect(transitions[0].previousReference == initialReference)
+            #expect(transitions[0].currentReference == currentReference)
+            #expect(currentReference.bookmarkData?.isEmpty == false)
+            #expect(try String(contentsOf: fileURL, encoding: .utf8) == "after")
+        }
+    }
+
+    @Test("reload resolves the current bookmark after a file move")
+    func reloadUsesCurrentReference() throws {
+        try withTemporaryDirectory { directory in
+            let originalURL = directory.appendingPathComponent("reload-original.txt")
+            let movedURL = directory.appendingPathComponent("reload-moved.txt")
+            try Data("before".utf8).write(to: originalURL)
+            let fileAccess = SecurityScopedFileAccess(requiresBookmark: true)
+            let reference = try fileAccess.makeReference(for: originalURL)
+            try FileManager.default.moveItem(at: originalURL, to: movedURL)
+            let controller = EditorWindowController(
+                localization: englishLocalization,
+                fileAccess: fileAccess
+            )
+            try controller.loadFile(reference)
+            try Data("after".utf8).write(to: movedURL, options: .atomic)
+
+            try controller.reloadDocument()
+
+            let contentView = try #require(controller.window?.contentView)
+            let editor = try #require(
+                view(withIdentifier: "editor.text", in: contentView) as? NSTextView
+            )
+            #expect(editor.string == "after")
+            #expect(
+                controller.fileReference?.path
+                    == movedURL.resolvingSymlinksInPath().standardizedFileURL.path
+            )
+        }
+    }
+
+    @Test("session restoration uses bookmarked access and preserves tab metadata")
+    func bookmarkedSessionRestore() throws {
+        try withTemporaryDirectory { directory in
+            let fileURL = directory.appendingPathComponent("session.txt")
+            try Data("one\ntwo".utf8).write(to: fileURL)
+            let fileAccess = SecurityScopedFileAccess(requiresBookmark: true)
+            let reference = try fileAccess.makeReference(for: fileURL)
+            let state = EditorSessionState(
+                id: "session-id",
+                fileReference: reference,
+                selectedLocation: 5,
+                wordWrapEnabled: false,
+                statusBarVisible: false,
+                zoomPercent: 130,
+                lineEnding: .unix
+            )
+            let controller = EditorWindowController(
+                localization: englishLocalization,
+                fileAccess: fileAccess
+            )
+
+            try controller.restoreSessionState(state)
+
+            let restored = try #require(controller.sessionState)
+            #expect(restored.id == state.id)
+            #expect(restored.fileReference == reference)
+            #expect(restored.selectedLocation == state.selectedLocation)
+            #expect(restored.wordWrapEnabled == state.wordWrapEnabled)
+            #expect(restored.statusBarVisible == state.statusBarVisible)
+            #expect(restored.zoomPercent == state.zoomPercent)
+            #expect(restored.lineEnding == state.lineEnding)
+        }
+    }
+
+    @Test("Finder-granted Store open creates and attaches a bookmark")
+    func finderGrantedStoreOpen() throws {
+        try withTemporaryDirectory { directory in
+            let fileURL = directory.appendingPathComponent("finder.txt")
+            try Data("Finder".utf8).write(to: fileURL)
+            let fileAccess = SecurityScopedFileAccess(requiresBookmark: true)
+
+            let controller = try EditorWindowResolver.makeController(
+                opening: fileURL,
+                localization: englishLocalization,
+                fileAccess: fileAccess
+            )
+
+            #expect(controller.fileReference?.bookmarkData?.isEmpty == false)
+            #expect(
+                controller.fileReference?.path
+                    == fileURL.resolvingSymlinksInPath().standardizedFileURL.path
+            )
+        }
     }
 
     @Test("preferred fonts apply without marking the document edited")
@@ -499,7 +768,8 @@ struct WindowRoutingTests {
         let replacementFont = try #require(NSFont(name: "Courier", size: 16))
         let controller = EditorWindowController(
             baseFont: initialFont,
-            localization: englishLocalization
+            localization: englishLocalization,
+            fileAccess: directFileAccess
         )
 
         controller.applyPreferredFont(replacementFont)
@@ -513,7 +783,10 @@ struct WindowRoutingTests {
 
     @Test("text changes defer line-index rebuilding off the editing path")
     func defersLineIndexRebuild() async throws {
-        let controller = EditorWindowController(localization: englishLocalization)
+        let controller = EditorWindowController(
+            localization: englishLocalization,
+            fileAccess: directFileAccess
+        )
         let contentView = try #require(controller.window?.contentView)
         let editor = try #require(view(withIdentifier: "editor.text", in: contentView) as? NSTextView)
         let status = try #require(view(withIdentifier: "editor.status", in: contentView) as? NSTextField)
@@ -531,7 +804,10 @@ struct WindowRoutingTests {
 
     @Test("rapid edits apply only the newest background text analysis")
     func coalescesLineIndexRebuilds() async throws {
-        let controller = EditorWindowController(localization: englishLocalization)
+        let controller = EditorWindowController(
+            localization: englishLocalization,
+            fileAccess: directFileAccess
+        )
         let contentView = try #require(controller.window?.contentView)
         let editor = try #require(view(withIdentifier: "editor.text", in: contentView) as? NSTextView)
         let status = try #require(view(withIdentifier: "editor.status", in: contentView) as? NSTextField)
@@ -549,7 +825,10 @@ struct WindowRoutingTests {
 
     @Test("returning to the original text clears dirty state after analysis")
     func reconcilesDirtyStateOffTheEditingPath() async throws {
-        let controller = EditorWindowController(localization: englishLocalization)
+        let controller = EditorWindowController(
+            localization: englishLocalization,
+            fileAccess: directFileAccess
+        )
         let contentView = try #require(controller.window?.contentView)
         let editor = try #require(view(withIdentifier: "editor.text", in: contentView) as? NSTextView)
 
@@ -598,7 +877,9 @@ struct WindowRoutingTests {
         let menu = MainMenuFactory.makeMenu(
             target: delegate,
             application: application,
-            localization: englishLocalization
+            localization: englishLocalization,
+            distributionChannel: .direct,
+            customerRoutes: .current(for: .direct)
         )
         let shortcuts = allMenuItems(in: menu).compactMap { item -> String? in
             guard !item.keyEquivalent.isEmpty else { return nil }
@@ -615,7 +896,9 @@ struct WindowRoutingTests {
         let menu = MainMenuFactory.makeMenu(
             target: delegate,
             application: application,
-            localization: englishLocalization
+            localization: englishLocalization,
+            distributionChannel: .direct,
+            customerRoutes: .current(for: .direct)
         )
 
         #expect(
@@ -632,9 +915,320 @@ struct WindowRoutingTests {
         )
     }
 
+    @Test("unconfigured Store customer commands fail closed")
+    func unconfiguredStoreCustomerCommandsFailClosed() {
+        let application = NSApplication.shared
+        let routes = CustomerRoutes.current(for: .appStore)
+        let delegate = AppDelegate(
+            defaults: .standard,
+            localization: englishLocalization,
+            distributionChannel: .appStore,
+            customerRoutes: routes,
+            fileAccess: SecurityScopedFileAccess(requiresBookmark: true),
+            recentDocumentStore: testRecentDocumentStore(defaults: .standard)
+        )
+        let menu = MainMenuFactory.makeMenu(
+            target: delegate,
+            application: application,
+            localization: englishLocalization,
+            distributionChannel: .appStore,
+            customerRoutes: routes
+        )
+
+        #expect(menuItem(withIdentifier: "help.macPadHelp", in: menu) == nil)
+        #expect(menuItem(withIdentifier: "help.reportIssue", in: menu) == nil)
+        #expect(menuItem(withIdentifier: "help.privacy", in: menu) == nil)
+        #expect(menuItem(withIdentifier: "help.security", in: menu) == nil)
+        #expect(menuItem(withIdentifier: "help.checkUpdates", in: menu) == nil)
+    }
+
+    @Test("configured Store routes expose support but never direct updates")
+    func configuredStoreCustomerCommands() throws {
+        let application = NSApplication.shared
+        let routes = storeFixtureRoutes
+        let delegate = AppDelegate(
+            defaults: .standard,
+            localization: englishLocalization,
+            distributionChannel: .appStore,
+            customerRoutes: routes,
+            fileAccess: SecurityScopedFileAccess(requiresBookmark: true),
+            recentDocumentStore: testRecentDocumentStore(defaults: .standard)
+        )
+        let menu = MainMenuFactory.makeMenu(
+            target: delegate,
+            application: application,
+            localization: englishLocalization,
+            distributionChannel: .appStore,
+            customerRoutes: routes
+        )
+
+        #expect(
+            try #require(menuItem(withIdentifier: "help.macPadHelp", in: menu)).action
+                == #selector(AppDelegate.openHelp(_:))
+        )
+        #expect(
+            try #require(menuItem(withIdentifier: "help.reportIssue", in: menu)).action
+                == #selector(AppDelegate.reportIssue(_:))
+        )
+        #expect(
+            try #require(menuItem(withIdentifier: "help.privacy", in: menu)).action
+                == #selector(AppDelegate.openPrivacy(_:))
+        )
+        #expect(
+            try #require(menuItem(withIdentifier: "help.security", in: menu)).action
+                == #selector(AppDelegate.openSecurity(_:))
+        )
+        #expect(menuItem(withIdentifier: "help.checkUpdates", in: menu) == nil)
+    }
+
+    @Test("Store About omits direct distribution links")
+    func storeAboutOmitsDirectDistributionLinks() {
+        let delegate = AppDelegate(
+            defaults: .standard,
+            localization: englishLocalization,
+            distributionChannel: .appStore,
+            customerRoutes: storeFixtureRoutes,
+            fileAccess: SecurityScopedFileAccess(requiresBookmark: true),
+            recentDocumentStore: testRecentDocumentStore(defaults: .standard)
+        )
+
+        let credits = delegate.aboutCredits()
+
+        #expect(!credits.string.contains("Public repo"))
+        var linkCount = 0
+        credits.enumerateAttribute(
+            NSAttributedString.Key.link,
+            in: NSRange(location: 0, length: credits.length)
+        ) { value, _, _ in
+            if value != nil {
+                linkCount += 1
+            }
+        }
+        #expect(linkCount == 0)
+    }
+
+    #if !MACPAD_APP_STORE
+    @Test("direct About preserves creator and public repository links")
+    func directAboutPreservesCurrentLinks() {
+        let delegate = appDelegate(localization: englishLocalization)
+
+        let credits = delegate.aboutCredits()
+
+        #expect(credits.string.contains("Created by anvilfilbert"))
+        #expect(credits.string.contains("Public repo: anvilfilbert/MacPad"))
+        var linkCount = 0
+        credits.enumerateAttribute(
+            NSAttributedString.Key.link,
+            in: NSRange(location: 0, length: credits.length)
+        ) { value, _, _ in
+            if value != nil {
+                linkCount += 1
+            }
+        }
+        #expect(linkCount == 2)
+    }
+    #endif
+
+    @Test("recent routing carries persisted references and clearing removes both stores")
+    func appDelegateRecentReferenceRoutingAndClear() throws {
+        try withTemporaryDirectory { directory in
+            let fileURL = directory.appendingPathComponent("recent.txt")
+            try Data("recent".utf8).write(to: fileURL)
+            let suiteName = "MacPadRecentRoutingTests.\(UUID().uuidString)"
+            let defaults = try #require(UserDefaults(suiteName: suiteName))
+            defer { defaults.removePersistentDomain(forName: suiteName) }
+            let recentStore = RecentDocumentStore(
+                defaults: defaults,
+                defaultsKey: "MacPadTests.RecentRouting",
+                maximumCount: 20
+            )
+            let reference = try directFileAccess.makeReference(for: fileURL)
+            try recentStore.add(reference)
+            NSDocumentController.shared.noteNewRecentDocumentURL(fileURL)
+            let delegate = AppDelegate(
+                defaults: defaults,
+                localization: englishLocalization,
+                distributionChannel: .direct,
+                customerRoutes: .current(for: .direct),
+                fileAccess: directFileAccess,
+                recentDocumentStore: recentStore
+            )
+            let menu = NSMenu(title: "Open Recent")
+            menu.identifier = NSUserInterfaceItemIdentifier("file.openRecent")
+
+            delegate.menuNeedsUpdate(menu)
+
+            #expect(menu.items.first?.representedObject as? PersistedFileReference == reference)
+
+            delegate.clearRecentDocuments(nil)
+
+            let storedAfterClear = try recentStore.references()
+            #expect(storedAfterClear.isEmpty)
+            let canonicalPath = fileURL.resolvingSymlinksInPath().standardizedFileURL.path
+            #expect(
+                !NSDocumentController.shared.recentDocumentURLs.contains {
+                    $0.resolvingSymlinksInPath().standardizedFileURL.path == canonicalPath
+                }
+            )
+        }
+    }
+
+    @Test("German restore recovery alert uses stable ordered identifiers")
+    func germanRestoreRecoveryAlert() throws {
+        try withLocalization(
+            languageCode: "de",
+            strings: [
+                MacPadStringKey.sessionRestoreSingleFailure.rawValue:
+                    "Vorheriger Tab konnte nicht wiederhergestellt werden.",
+                MacPadStringKey.sessionRestoreDetail.rawValue: "%1$@\n\n%2$@",
+                MacPadStringKey.locate.rawValue: "Datei suchen …",
+                MacPadStringKey.skip.rawValue: "Überspringen",
+                MacPadStringKey.cancelRestore.rawValue: "Wiederherstellung abbrechen"
+            ]
+        ) { localization in
+            let state = EditorSessionState(
+                id: "failed-tab",
+                fileReference: PersistedFileReference(
+                    path: "/private/tmp/fehlend.txt",
+                    bookmarkData: nil
+                ),
+                selectedLocation: 0,
+                wordWrapEnabled: true,
+                statusBarVisible: true,
+                zoomPercent: 100,
+                lineEnding: .windows
+            )
+            let failure = SessionRestoreFailure(
+                windowIndex: 1,
+                tabIndex: 2,
+                state: state,
+                errorDescription: "Zugriff fehlt"
+            )
+
+            let alert = SessionRestoreAlertFactory.makeAlert(
+                failure: failure,
+                localization: localization
+            )
+
+            #expect(alert.messageText == "Vorheriger Tab konnte nicht wiederhergestellt werden.")
+            #expect(alert.informativeText.contains("fehlend.txt"))
+            #expect(alert.informativeText.contains("Zugriff fehlt"))
+            #expect(alert.buttons.map(\.title) == [
+                "Datei suchen …",
+                "Überspringen",
+                "Wiederherstellung abbrechen"
+            ])
+            #expect(alert.buttons.map { $0.identifier?.rawValue } == [
+                "sessionRestore.locate",
+                "sessionRestore.skip",
+                "sessionRestore.cancel"
+            ])
+        }
+    }
+
+    @Test("Cancel Restore presents nothing and retains exact session bytes")
+    func cancelRestorePreservesOriginalSession() throws {
+        let suiteName = "MacPadRestoreCancelTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let state = missingStoreSessionState(id: "cancelled-tab")
+        let originalData = try JSONEncoder().encode(AppSessionState(tabs: [state]))
+        defaults.set(originalData, forKey: "MacPad.SessionState.v1")
+        let delegate = storeAppDelegate(defaults: defaults)
+        var recoveryCount = 0
+
+        let outcome = delegate.restorePreviousSession(
+            recoveryDecision: { _ in
+                recoveryCount += 1
+                #expect(delegate.editorWindowCount == 0)
+                return .cancel
+            },
+            locateURL: {
+                Issue.record("Cancel Restore must not ask for a replacement URL.")
+                return nil
+            }
+        )
+
+        #expect(outcome == .cancelled)
+        #expect(recoveryCount == 1)
+        #expect(delegate.editorWindowCount == 0)
+        #expect(defaults.data(forKey: "MacPad.SessionState.v1") == originalData)
+    }
+
+    @Test("Locate restores the failed tab with refreshed access and metadata")
+    func locateRestoresFailedTab() throws {
+        try withTemporaryDirectory { directory in
+            let replacementURL = directory.appendingPathComponent("located.txt")
+            try Data("one\ntwo".utf8).write(to: replacementURL)
+            let suiteName = "MacPadRestoreLocateTests.\(UUID().uuidString)"
+            let defaults = try #require(UserDefaults(suiteName: suiteName))
+            defer { defaults.removePersistentDomain(forName: suiteName) }
+            let state = missingStoreSessionState(id: "located-tab")
+            let originalData = try JSONEncoder().encode(AppSessionState(tabs: [state]))
+            defaults.set(originalData, forKey: "MacPad.SessionState.v1")
+            let delegate = storeAppDelegate(defaults: defaults)
+
+            let outcome = delegate.restorePreviousSession(
+                recoveryDecision: { _ in
+                    #expect(delegate.editorWindowCount == 0)
+                    return .locate
+                },
+                locateURL: { replacementURL }
+            )
+
+            #expect(outcome == .restored)
+            #expect(delegate.editorWindowCount == 1)
+            let savedData = try #require(defaults.data(forKey: "MacPad.SessionState.v1"))
+            let restoredSession = try AppSessionState.decode(
+                data: savedData,
+                localization: englishLocalization
+            )
+            let restored = try #require(restoredSession.tabs.first)
+            #expect(restored.id == state.id)
+            #expect(restored.selectedLocation == state.selectedLocation)
+            #expect(restored.wordWrapEnabled == state.wordWrapEnabled)
+            #expect(restored.statusBarVisible == state.statusBarVisible)
+            #expect(restored.zoomPercent == state.zoomPercent)
+            #expect(restored.lineEnding == state.lineEnding)
+            #expect(restored.fileReference?.bookmarkData?.isEmpty == false)
+            #expect(
+                restored.fileReference?.path
+                    == replacementURL.resolvingSymlinksInPath().standardizedFileURL.path
+            )
+        }
+    }
+
+    @Test("Skip explicitly omits only the failed tab and completes restoration")
+    func skipFailedTab() throws {
+        let suiteName = "MacPadRestoreSkipTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let state = missingStoreSessionState(id: "skipped-tab")
+        defaults.set(
+            try JSONEncoder().encode(AppSessionState(tabs: [state])),
+            forKey: "MacPad.SessionState.v1"
+        )
+        let delegate = storeAppDelegate(defaults: defaults)
+
+        let outcome = delegate.restorePreviousSession(
+            recoveryDecision: { _ in .skip },
+            locateURL: {
+                Issue.record("Skip must not ask for a replacement URL.")
+                return nil
+            }
+        )
+
+        #expect(outcome == .restored)
+        #expect(delegate.editorWindowCount == 0)
+        #expect(defaults.object(forKey: "MacPad.SessionState.v1") == nil)
+    }
+
     @Test("editor controls expose accessibility metadata and initial focus")
     func editorAccessibility() throws {
-        let controller = EditorWindowController(localization: englishLocalization)
+        let controller = EditorWindowController(
+            localization: englishLocalization,
+            fileAccess: directFileAccess
+        )
         let contentView = try #require(controller.window?.contentView)
         let editor = try #require(view(withIdentifier: "editor.text", in: contentView))
         let status = try #require(view(withIdentifier: "editor.status", in: contentView))
@@ -702,6 +1296,10 @@ struct WindowRoutingTests {
         MacPadLocalization(bundle: .main)
     }
 
+    private var directFileAccess: SecurityScopedFileAccess {
+        SecurityScopedFileAccess(requiresBookmark: false)
+    }
+
     private var germanFindTranslations: [String: String] {
         [
             MacPadStringKey.findTitle.rawValue: "Suchen",
@@ -719,8 +1317,81 @@ struct WindowRoutingTests {
         ]
     }
 
+    private var storeFixtureRoutes: CustomerRoutes {
+        CustomerRoutes(
+            productURL: URL(string: "https://product.example/macpad"),
+            creatorProfileURL: URL(string: "https://creator.example/macpad"),
+            helpURL: URL(string: "https://help.example/macpad"),
+            supportURL: URL(string: "https://support.example/macpad"),
+            privacyURL: URL(string: "https://privacy.example/macpad"),
+            securityURL: URL(string: "https://security.example/macpad"),
+            updateURL: URL(string: "https://updates.example/macpad"),
+            migrationURL: URL(string: "https://migration.example/macpad")
+        )
+    }
+
     private func appDelegate(localization: MacPadLocalization) -> AppDelegate {
-        AppDelegate(defaults: .standard, localization: localization)
+        AppDelegate(
+            defaults: .standard,
+            localization: localization,
+            distributionChannel: .direct,
+            customerRoutes: .current(for: .direct),
+            fileAccess: directFileAccess,
+            recentDocumentStore: testRecentDocumentStore(defaults: .standard)
+        )
+    }
+
+    private func storeAppDelegate(defaults: UserDefaults) -> AppDelegate {
+        AppDelegate(
+            defaults: defaults,
+            localization: englishLocalization,
+            distributionChannel: .appStore,
+            customerRoutes: .current(for: .appStore),
+            fileAccess: SecurityScopedFileAccess(requiresBookmark: true),
+            recentDocumentStore: testRecentDocumentStore(defaults: defaults)
+        )
+    }
+
+    private func testRecentDocumentStore(defaults: UserDefaults) -> RecentDocumentStore {
+        RecentDocumentStore(
+            defaults: defaults,
+            defaultsKey: "MacPadTests.RecentDocuments.\(UUID().uuidString)",
+            maximumCount: 20
+        )
+    }
+
+    private func missingStoreSessionState(id: String) -> EditorSessionState {
+        EditorSessionState(
+            id: id,
+            fileReference: PersistedFileReference(
+                path: "/private/tmp/does-not-have-a-bookmark-\(UUID().uuidString).txt",
+                bookmarkData: nil
+            ),
+            selectedLocation: 2,
+            wordWrapEnabled: false,
+            statusBarVisible: false,
+            zoomPercent: 130,
+            lineEnding: .unix
+        )
+    }
+
+    private func withTemporaryDirectory<Result>(
+        _ body: (URL) throws -> Result
+    ) throws -> Result {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MacPadWindowTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer {
+            do {
+                try FileManager.default.removeItem(at: directory)
+            } catch {
+                Issue.record(error)
+            }
+        }
+        return try body(directory)
     }
 
     private func withLocalization<Result>(
