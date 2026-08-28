@@ -2,6 +2,19 @@ import Foundation
 import Testing
 @testable import NotepadMacCore
 
+private enum CoordinationWaitError: Error {
+    case timedOut(String)
+}
+
+private func waitForCoordinationSignal(
+    _ semaphore: DispatchSemaphore,
+    name: String
+) throws {
+    guard semaphore.wait(timeout: .now() + 15) == .success else {
+        throw CoordinationWaitError.timedOut(name)
+    }
+}
+
 @Suite("Editor document")
 struct EditorDocumentTests {
     @Test("save refuses to overwrite an externally changed file")
@@ -280,22 +293,38 @@ struct EditorDocumentTests {
         let holderQueue = OperationQueue()
         holderQueue.maxConcurrentOperationCount = 1
         holderQueue.qualityOfService = .userInitiated
+        var holderFinishedObserved = false
         holderQueue.addOperation {
             let coordinator = NSFileCoordinator(filePresenter: nil)
             var coordinationError: NSError?
             coordinator.coordinate(writingItemAt: fileURL, options: [], error: &coordinationError) { _ in
                 holderAcquired.signal()
-                releaseHolder.wait()
+                do {
+                    try waitForCoordinationSignal(releaseHolder, name: "release holder")
+                } catch {
+                    Issue.record(error)
+                }
             }
             #expect(coordinationError == nil)
             holderFinished.signal()
         }
-        #expect(holderAcquired.wait(timeout: .now() + 15) == .success)
+        defer {
+            releaseHolder.signal()
+            if !holderFinishedObserved {
+                do {
+                    try waitForCoordinationSignal(holderFinished, name: "holder finished")
+                } catch {
+                    Issue.record(error)
+                }
+            }
+        }
+        try waitForCoordinationSignal(holderAcquired, name: "holder acquired")
 
         let saveFinished = DispatchSemaphore(value: 0)
         let saveQueue = OperationQueue()
         saveQueue.maxConcurrentOperationCount = 1
         saveQueue.qualityOfService = .userInitiated
+        var saveFinishedObserved = false
         saveQueue.addOperation {
             do {
                 let document = EditorDocument()
@@ -307,14 +336,26 @@ struct EditorDocumentTests {
             }
             saveFinished.signal()
         }
+        defer {
+            releaseHolder.signal()
+            if !saveFinishedObserved {
+                do {
+                    try waitForCoordinationSignal(saveFinished, name: "save finished")
+                } catch {
+                    Issue.record(error)
+                }
+            }
+        }
 
         let earlySaveResult = saveFinished.wait(timeout: .now() + 0.2)
         #expect(earlySaveResult == .timedOut)
         releaseHolder.signal()
-        #expect(holderFinished.wait(timeout: .now() + 15) == .success)
+        try waitForCoordinationSignal(holderFinished, name: "holder finished")
+        holderFinishedObserved = true
         if earlySaveResult == .timedOut {
-            #expect(saveFinished.wait(timeout: .now() + 15) == .success)
+            try waitForCoordinationSignal(saveFinished, name: "save finished")
         }
+        saveFinishedObserved = true
         #expect(try String(contentsOf: fileURL, encoding: .utf8) == "MacPad edit")
     }
 
@@ -330,13 +371,18 @@ struct EditorDocumentTests {
         let saveQueue = OperationQueue()
         saveQueue.maxConcurrentOperationCount = 1
         saveQueue.qualityOfService = .userInitiated
+        var saveFinishedObserved = false
         saveQueue.addOperation {
             do {
                 let document = EditorDocument()
                 try document.loadFile(fileURL)
                 document.updateText("MacPad edit")
                 documentLoaded.signal()
-                beginSave.wait()
+                do {
+                    try waitForCoordinationSignal(beginSave, name: "begin save")
+                } catch {
+                    Issue.record(error)
+                }
                 do {
                     try document.save(to: fileURL)
                     Issue.record("Expected the coordinated external edit to reject the save.")
@@ -350,7 +396,17 @@ struct EditorDocumentTests {
             }
             saveFinished.signal()
         }
-        #expect(documentLoaded.wait(timeout: .now() + 15) == .success)
+        defer {
+            beginSave.signal()
+            if !saveFinishedObserved {
+                do {
+                    try waitForCoordinationSignal(saveFinished, name: "save finished")
+                } catch {
+                    Issue.record(error)
+                }
+            }
+        }
+        try waitForCoordinationSignal(documentLoaded, name: "document loaded")
 
         let holderAcquired = DispatchSemaphore(value: 0)
         let releaseHolder = DispatchSemaphore(value: 0)
@@ -358,6 +414,7 @@ struct EditorDocumentTests {
         let holderQueue = OperationQueue()
         holderQueue.maxConcurrentOperationCount = 1
         holderQueue.qualityOfService = .userInitiated
+        var holderFinishedObserved = false
         holderQueue.addOperation {
             let coordinator = NSFileCoordinator(filePresenter: nil)
             var coordinationError: NSError?
@@ -368,23 +425,39 @@ struct EditorDocumentTests {
                     Issue.record(error)
                 }
                 holderAcquired.signal()
-                releaseHolder.wait()
+                do {
+                    try waitForCoordinationSignal(releaseHolder, name: "release holder")
+                } catch {
+                    Issue.record(error)
+                }
             }
             if let coordinationError {
                 Issue.record(coordinationError)
             }
             holderFinished.signal()
         }
-        #expect(holderAcquired.wait(timeout: .now() + 15) == .success)
+        defer {
+            releaseHolder.signal()
+            if !holderFinishedObserved {
+                do {
+                    try waitForCoordinationSignal(holderFinished, name: "holder finished")
+                } catch {
+                    Issue.record(error)
+                }
+            }
+        }
+        try waitForCoordinationSignal(holderAcquired, name: "holder acquired")
 
         beginSave.signal()
         let earlySaveResult = saveFinished.wait(timeout: .now() + 0.2)
         #expect(earlySaveResult == .timedOut)
         releaseHolder.signal()
-        #expect(holderFinished.wait(timeout: .now() + 15) == .success)
+        try waitForCoordinationSignal(holderFinished, name: "holder finished")
+        holderFinishedObserved = true
         if earlySaveResult == .timedOut {
-            #expect(saveFinished.wait(timeout: .now() + 15) == .success)
+            try waitForCoordinationSignal(saveFinished, name: "save finished")
         }
+        saveFinishedObserved = true
         #expect(try String(contentsOf: fileURL, encoding: .utf8) == "external edit")
     }
 
