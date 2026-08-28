@@ -55,8 +55,24 @@ require_product() {
     fi
 }
 
+clear_product() {
+    product_path="$1"
+    product_name="$2"
+    if [ -e "$product_path" ] || [ -L "$product_path" ]; then
+        if ! /bin/rm -f "$product_path"; then
+            echo "Could not clear old $product_name before localization compilation: $product_path" >&2
+            exit 1
+        fi
+    fi
+}
+
 require_catalog "$LOCALIZABLE_CATALOG" "Localizable.xcstrings"
 require_catalog "$INFO_PLIST_CATALOG" "InfoPlist.xcstrings"
+
+clear_product "$OUTPUT_DIRECTORY/en.lproj/Localizable.strings" "en.lproj/Localizable.strings"
+clear_product "$OUTPUT_DIRECTORY/de.lproj/Localizable.strings" "de.lproj/Localizable.strings"
+clear_product "$OUTPUT_DIRECTORY/en.lproj/InfoPlist.strings" "en.lproj/InfoPlist.strings"
+clear_product "$OUTPUT_DIRECTORY/de.lproj/InfoPlist.strings" "de.lproj/InfoPlist.strings"
 
 xcrun xcstringstool compile "$LOCALIZABLE_CATALOG" \
     --output-directory "$OUTPUT_DIRECTORY" \
