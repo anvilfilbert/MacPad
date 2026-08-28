@@ -76,16 +76,17 @@ struct SecurityScopedFileAccess {
             relativeTo: nil,
             bookmarkDataIsStale: &isStale
         )
-        let canonicalURL = canonical(grantedURL)
         guard grantedURL.startAccessingSecurityScopedResource() else {
+            let deniedPath = grantedURL.path.isEmpty ? reference.path : grantedURL.path
             throw SecurityScopedFileAccessError.securityScopedAccessDenied(
-                path: canonicalURL.path
+                path: deniedPath
             )
         }
         defer {
             grantedURL.stopAccessingSecurityScopedResource()
         }
 
+        let canonicalURL = canonical(grantedURL)
         let refreshedBookmarkData: Data
         if isStale {
             refreshedBookmarkData = try grantedURL.bookmarkData(

@@ -677,6 +677,48 @@ struct WindowRoutingTests {
         }
     }
 
+    @Test("current Store save rejects an external edit after bookmark-tracked move")
+    func currentStoreSaveRejectsExternalEditAfterMove() throws {
+        try withTemporaryDirectory { directory in
+            let originalURL = directory.appendingPathComponent("save-original.txt")
+            let movedURL = directory.appendingPathComponent("save-moved.txt")
+            try Data("original".utf8).write(to: originalURL)
+            let fileAccess = SecurityScopedFileAccess(requiresBookmark: true)
+            let initialReference = try fileAccess.makeReference(for: originalURL)
+            let controller = EditorWindowController(
+                localization: englishLocalization,
+                fileAccess: fileAccess
+            )
+            try controller.loadFile(initialReference)
+            let openedReference = try #require(controller.fileReference)
+            let contentView = try #require(controller.window?.contentView)
+            let editor = try #require(
+                view(withIdentifier: "editor.text", in: contentView) as? NSTextView
+            )
+            editor.string = "MacPad edit"
+            try FileManager.default.moveItem(at: originalURL, to: movedURL)
+            try Data("external edit".utf8).write(to: movedURL)
+            var stateNotificationCount = 0
+            var transitionCount = 0
+            controller.onStateChange = { stateNotificationCount += 1 }
+            controller.onSuccessfulSave = { _ in transitionCount += 1 }
+
+            do {
+                try controller.saveCurrentDocument(encoding: .utf8)
+                Issue.record("Expected the external edit to reject the moved-file save.")
+            } catch EditorDocumentError.fileChangedOnDisk(let path) {
+                #expect(path == movedURL.resolvingSymlinksInPath().standardizedFileURL.path)
+            }
+
+            #expect(try String(contentsOf: movedURL, encoding: .utf8) == "external edit")
+            #expect(editor.string == "MacPad edit")
+            #expect(controller.fileReference == openedReference)
+            #expect(controller.sessionState?.fileReference == openedReference)
+            #expect(stateNotificationCount == 0)
+            #expect(transitionCount == 0)
+        }
+    }
+
     @Test("reload resolves the current bookmark after a file move")
     func reloadUsesCurrentReference() throws {
         try withTemporaryDirectory { directory in
@@ -711,7 +753,7 @@ struct WindowRoutingTests {
     func bookmarkedSessionRestore() throws {
         try withTemporaryDirectory { directory in
             let fileURL = directory.appendingPathComponent("session.txt")
-            try Data("one\ntwo".utf8).write(to: fileURL)
+            try Data("one\r\ntwo".utf8).write(to: fileURL)
             let fileAccess = SecurityScopedFileAccess(requiresBookmark: true)
             let reference = try fileAccess.makeReference(for: fileURL)
             let state = EditorSessionState(
@@ -1159,7 +1201,7 @@ struct WindowRoutingTests {
     func locateRestoresFailedTab() throws {
         try withTemporaryDirectory { directory in
             let replacementURL = directory.appendingPathComponent("located.txt")
-            try Data("one\ntwo".utf8).write(to: replacementURL)
+            try Data("one\r\ntwo".utf8).write(to: replacementURL)
             let suiteName = "MacPadRestoreLocateTests.\(UUID().uuidString)"
             let defaults = try #require(UserDefaults(suiteName: suiteName))
             defer { defaults.removePersistentDomain(forName: suiteName) }

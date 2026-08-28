@@ -133,6 +133,94 @@ struct EditorDocumentTests {
         #expect(try String(contentsOf: fileURL, encoding: .utf8) == "external edit")
     }
 
+    @Test("session reload preserves the saved line ending when disk content differs")
+    func sessionReloadPreservesSavedLineEnding() throws {
+        let directory = try temporaryDirectory()
+        let fileURL = directory.appendingPathComponent("session-line-ending.txt")
+        try Data("first\r\nsecond".utf8).write(to: fileURL)
+        let state = EditorSessionState(
+            id: "saved-session",
+            fileReference: PersistedFileReference(path: fileURL.path, bookmarkData: Data([1])),
+            selectedLocation: 0,
+            wordWrapEnabled: true,
+            statusBarVisible: true,
+            zoomPercent: 100,
+            lineEnding: .unix
+        )
+        let document = EditorDocument()
+
+        try document.restoreSessionStateAndReloadFile(state)
+
+        #expect(document.text == "first\r\nsecond")
+        #expect(document.lineEnding == .unix)
+        #expect(document.sessionState(
+            selectedLocation: 0,
+            wordWrapEnabled: true,
+            statusBarVisible: true,
+            zoomPercent: 100
+        )?.lineEnding == .unix)
+    }
+
+    @Test("current-file save rejects a moved destination changed outside MacPad")
+    func currentFileSaveRejectsMovedExternalChange() throws {
+        let directory = try temporaryDirectory()
+        let originalURL = directory.appendingPathComponent("current-original.txt")
+        let movedURL = directory.appendingPathComponent("current-moved.txt")
+        try Data("original".utf8).write(to: originalURL)
+        let document = EditorDocument()
+        try document.loadFile(originalURL)
+        document.attachFileReference(
+            PersistedFileReference(path: originalURL.path, bookmarkData: Data([0x41]))
+        )
+        let originalReference = document.fileReference
+        let originalDocumentURL = document.fileURL
+        document.updateText("MacPad edit")
+        try FileManager.default.moveItem(at: originalURL, to: movedURL)
+        try Data("external edit".utf8).write(to: movedURL)
+
+        do {
+            try document.saveCurrentFile(at: movedURL, encoding: .utf8)
+            Issue.record("Expected the external edit to reject the moved-file save.")
+        } catch EditorDocumentError.fileChangedOnDisk(let path) {
+            #expect(path == movedURL.resolvingSymlinksInPath().standardizedFileURL.path)
+        } catch {
+            Issue.record(error)
+        }
+
+        #expect(try String(contentsOf: movedURL, encoding: .utf8) == "external edit")
+        #expect(document.fileURL == originalDocumentURL)
+        #expect(document.fileReference == originalReference)
+        #expect(document.text == "MacPad edit")
+        #expect(document.originalText == "original")
+        #expect(document.hasUnsavedChanges)
+    }
+
+    @Test("successful current-file save adopts a bookmark-resolved moved location")
+    func currentFileSaveAdoptsMovedLocationAfterSuccess() throws {
+        let directory = try temporaryDirectory()
+        let originalURL = directory.appendingPathComponent("success-original.txt")
+        let movedURL = directory.appendingPathComponent("success-moved.txt")
+        try Data("original".utf8).write(to: originalURL)
+        let document = EditorDocument()
+        try document.loadFile(originalURL)
+        let bookmarkData = Data([0x42])
+        document.attachFileReference(
+            PersistedFileReference(path: originalURL.path, bookmarkData: bookmarkData)
+        )
+        document.updateText("MacPad edit")
+        try FileManager.default.moveItem(at: originalURL, to: movedURL)
+
+        try document.saveCurrentFile(at: movedURL, encoding: .utf8)
+
+        let canonicalMovedURL = movedURL.resolvingSymlinksInPath().standardizedFileURL
+        #expect(try String(contentsOf: movedURL, encoding: .utf8) == "MacPad edit")
+        #expect(document.fileURL == canonicalMovedURL)
+        #expect(document.fileReference?.path == canonicalMovedURL.path)
+        #expect(document.fileReference?.bookmarkData == bookmarkData)
+        #expect(document.originalText == "MacPad edit")
+        #expect(!document.hasUnsavedChanges)
+    }
+
     @Test("save follows a symbolic link instead of replacing it")
     func preservesSymbolicLink() throws {
         let directory = try temporaryDirectory()

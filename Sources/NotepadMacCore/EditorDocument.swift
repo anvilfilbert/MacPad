@@ -186,26 +186,44 @@ public final class EditorDocument {
     public func save(to url: URL, encoding: TextFileEncoding) throws {
         let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
         let isCurrentFile = fileURL?.standardizedFileURL == resolvedURL
-        let preservedBookmarkData = isCurrentFile ? fileReference?.bookmarkData : nil
-        let outputData = try encodedData(path: resolvedURL.path, encoding: encoding)
-        guard outputData.count <= Self.maximumReadableFileBytes else {
-            throw EditorDocumentError.documentTooLargeToSave(
-                path: resolvedURL.path,
-                sizeBytes: Int64(outputData.count),
-                maximumBytes: Self.maximumReadableFileBytes
-            )
+        if isCurrentFile {
+            try saveCurrentFile(at: resolvedURL, encoding: encoding)
+            return
         }
 
-        let savedURL = if isCurrentFile {
-            try coordinatedOverwriteCurrentFile(outputData, at: resolvedURL)
-        } else {
-            try coordinatedWrite(outputData, to: resolvedURL)
-        }
+        let outputData = try savableData(path: resolvedURL.path, encoding: encoding)
+        let savedURL = try coordinatedWrite(outputData, to: resolvedURL)
+        recordSuccessfulSave(
+            at: savedURL,
+            encoding: encoding,
+            outputData: outputData,
+            bookmarkData: nil
+        )
+    }
+
+    public func saveCurrentFile(at url: URL, encoding: TextFileEncoding) throws {
+        let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
+        let outputData = try savableData(path: resolvedURL.path, encoding: encoding)
+        let savedURL = try coordinatedOverwriteCurrentFile(outputData, at: resolvedURL)
+        recordSuccessfulSave(
+            at: savedURL,
+            encoding: encoding,
+            outputData: outputData,
+            bookmarkData: fileReference?.bookmarkData
+        )
+    }
+
+    private func recordSuccessfulSave(
+        at savedURL: URL,
+        encoding: TextFileEncoding,
+        outputData: Data,
+        bookmarkData: Data?
+    ) {
         fileURL = savedURL
         attachFileReference(
             PersistedFileReference(
                 path: savedURL.path,
-                bookmarkData: preservedBookmarkData
+                bookmarkData: bookmarkData
             )
         )
         originalText = text
@@ -239,6 +257,7 @@ public final class EditorDocument {
         try loadFile(URL(fileURLWithPath: fileReference.path))
         id = state.id
         attachFileReference(fileReference)
+        lineEnding = state.lineEnding
     }
 
     public func sessionState(
@@ -310,6 +329,18 @@ public final class EditorDocument {
             }
             return data
         }
+    }
+
+    private func savableData(path: String, encoding: TextFileEncoding) throws -> Data {
+        let outputData = try encodedData(path: path, encoding: encoding)
+        guard outputData.count <= Self.maximumReadableFileBytes else {
+            throw EditorDocumentError.documentTooLargeToSave(
+                path: path,
+                sizeBytes: Int64(outputData.count),
+                maximumBytes: Self.maximumReadableFileBytes
+            )
+        }
+        return outputData
     }
 
     private func verifyFileHasNotChanged(_ url: URL) throws {

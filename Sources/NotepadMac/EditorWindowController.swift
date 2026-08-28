@@ -721,7 +721,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         }
         editorDocument.updateText(textView.string)
         let result = try fileAccess.access(previousReference) { resolvedURL in
-            try editorDocument.save(to: resolvedURL, encoding: encoding)
+            try editorDocument.saveCurrentFile(at: resolvedURL, encoding: encoding)
         }
         editorDocument.attachFileReference(result.refreshedReference)
         finishSuccessfulSave(previousReference: previousReference)
