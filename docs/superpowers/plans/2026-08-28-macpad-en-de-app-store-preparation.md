@@ -39,7 +39,7 @@
 - Session state stores only `filePath`; Open Recent delegates to `NSDocumentController` and has no persistent bookmark data.
 - `AppDelegate.menuNeedsUpdate(_:)` compares the visible title `Open Recent`; this must be replaced with a stable identifier before localization.
 - `Assets/MacPad-Review.png` is only 633×457 and has alpha, so it is not a valid Mac App Store screenshot.
-- A bounded fresh `swift test --disable-sandbox` diagnosis completed 72 tests in 6 suites with zero failures. The earlier silence was reproduced as SwiftPM `.build` contention, while two coordinated-save tests still contain unbounded worker waits that should be made finite.
+- A bounded fresh `swift test --disable-sandbox` diagnosis completed 72 tests in 6 suites with zero failures when run in the normal macOS host environment. The same command reproducibly hangs after `Build complete!` inside the outer managed Codex filesystem sandbox because the AppKit Swift Testing helper cannot complete there; SwiftPM's `--disable-sandbox` flag does not disable that outer sandbox. One earlier run also encountered `.build` contention, and two coordinated-save tests still contain unbounded worker waits that should be made finite, but neither is the confirmed root cause of the outer-sandbox stall.
 
 ## Architecture Decision
 
@@ -86,7 +86,7 @@ Rejected alternatives:
 
 ---
 
-### Task 1: Bound the coordinated-save test harness and preserve a fresh baseline
+### Task 1: Bound coordinated-save waits and preserve the correct test environment
 
 **Files:**
 - Modify: `Tests/NotepadMacCoreTests/EditorDocumentTests.swift`
@@ -98,13 +98,13 @@ Rejected alternatives:
 
 - [ ] **Step 1: Record the current isolated test evidence**
 
-Run one bounded controller session for:
+Run one bounded controller session in the normal macOS host environment, outside the outer Codex filesystem sandbox, for:
 
 ```bash
 swift test --disable-sandbox
 ```
 
-If it has not completed in 60 seconds, capture `ps -axo pid,ppid,state,etime,command`, terminate only the spawned SwiftPM process tree, and preserve the log. Expected current result is 72 tests, 6 suites, zero failures.
+If it has not completed in 60 seconds, capture `ps -axo pid,ppid,state,etime,command`, terminate only the spawned SwiftPM process tree, and preserve the log. A run inside the managed Codex filesystem sandbox is an environment reproduction, not a valid product pass/fail result. Expected host result is 72 tests, 6 suites, zero failures.
 
 - [ ] **Step 2: Write the failing cleanup-safety check**
 
