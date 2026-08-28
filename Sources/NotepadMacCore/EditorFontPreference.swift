@@ -1,15 +1,19 @@
 import Foundation
 
-public enum EditorFontPreferenceError: LocalizedError, Equatable {
+public enum EditorFontPreferenceError: LocalizedError, MacPadLocalizedError, Equatable {
     case emptyPostScriptName
     case invalidPointSize(Double)
 
     public var errorDescription: String? {
+        localizedErrorDescription(using: MacPadLocalization(bundle: .main))
+    }
+
+    public func localizedErrorDescription(using localization: MacPadLocalization) -> String {
         switch self {
         case .emptyPostScriptName:
-            return "Editor font name must not be empty."
+            return localization.string(.emptyFontName)
         case let .invalidPointSize(pointSize):
-            return "Editor font size must be between 6 and 72 points: \(pointSize)."
+            return localization.invalidFontPointSize(pointSize: pointSize)
         }
     }
 }

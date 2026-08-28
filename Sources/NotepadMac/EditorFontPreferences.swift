@@ -1,13 +1,17 @@
 import AppKit
 import NotepadMacCore
 
-enum EditorFontPreferencesError: LocalizedError {
+enum EditorFontPreferencesError: LocalizedError, MacPadLocalizedError {
     case unavailableFont(String)
 
     var errorDescription: String? {
+        localizedErrorDescription(using: MacPadLocalization(bundle: .main))
+    }
+
+    func localizedErrorDescription(using localization: MacPadLocalization) -> String {
         switch self {
         case let .unavailableFont(fontName):
-            return "Saved editor font is not available: \(fontName)."
+            return localization.savedFontUnavailable(fontName: fontName)
         }
     }
 }

@@ -1,5 +1,18 @@
 import Foundation
 
+private enum SessionStateLocalization {
+    static let userInfoKey = CodingUserInfoKey(
+        rawValue: "local.macpad.session-state-localization"
+    )!
+
+    static func from(_ decoder: Decoder) -> MacPadLocalization {
+        if let localization = decoder.userInfo[userInfoKey] as? MacPadLocalization {
+            return localization
+        }
+        return MacPadLocalization(bundle: .main)
+    }
+}
+
 public struct AppSessionState: Codable, Equatable {
     public static let maximumWindowCount = 50
     public static let maximumTabsPerWindow = 100
@@ -17,6 +30,15 @@ public struct AppSessionState: Codable, Equatable {
         windows.flatMap(\.tabs)
     }
 
+    public static func decode(
+        data: Data,
+        localization: MacPadLocalization
+    ) throws -> AppSessionState {
+        let decoder = JSONDecoder()
+        decoder.userInfo[SessionStateLocalization.userInfoKey] = localization
+        return try decoder.decode(AppSessionState.self, from: data)
+    }
+
     private enum CodingKeys: String, CodingKey {
         case windows
         case tabs
@@ -29,7 +51,10 @@ public struct AppSessionState: Codable, Equatable {
             var decodedWindows: [EditorWindowSessionState] = []
             while !windowsContainer.isAtEnd {
                 guard decodedWindows.count < Self.maximumWindowCount else {
-                    throw Self.limitError(codingPath: decoder.codingPath)
+                    throw Self.limitError(
+                        codingPath: decoder.codingPath,
+                        localization: SessionStateLocalization.from(decoder)
+                    )
                 }
                 decodedWindows.append(try windowsContainer.decode(EditorWindowSessionState.self))
             }
@@ -39,7 +64,10 @@ public struct AppSessionState: Codable, Equatable {
             var decodedTabs: [EditorSessionState] = []
             while !tabsContainer.isAtEnd {
                 guard decodedTabs.count < Self.maximumTabsPerWindow else {
-                    throw Self.limitError(codingPath: decoder.codingPath)
+                    throw Self.limitError(
+                        codingPath: decoder.codingPath,
+                        localization: SessionStateLocalization.from(decoder)
+                    )
                 }
                 decodedTabs.append(try tabsContainer.decode(EditorSessionState.self))
             }
@@ -54,11 +82,14 @@ public struct AppSessionState: Codable, Equatable {
         try container.encode(windows, forKey: .windows)
     }
 
-    private static func limitError(codingPath: [any CodingKey]) -> DecodingError {
+    private static func limitError(
+        codingPath: [any CodingKey],
+        localization: MacPadLocalization
+    ) -> DecodingError {
         DecodingError.dataCorrupted(
             .init(
                 codingPath: codingPath,
-                debugDescription: "Session contains more windows or tabs than MacPad supports."
+                debugDescription: localization.string(.sessionWindowOrTabLimit)
             )
         )
     }
@@ -122,7 +153,8 @@ public struct EditorWindowSessionState: Codable, Equatable {
                 throw DecodingError.dataCorrupted(
                     .init(
                         codingPath: decoder.codingPath,
-                        debugDescription: "Session contains more tabs than MacPad supports."
+                        debugDescription: SessionStateLocalization.from(decoder)
+                            .string(.sessionTabLimit)
                     )
                 )
             }

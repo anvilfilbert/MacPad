@@ -3,6 +3,24 @@ import Testing
 
 @Suite("Text metrics")
 struct TextMetricsTests {
+    @Test("line-ending labels use the injected German bundle")
+    func localizesLineEndingLabels() throws {
+        try LocalizationFixture.with(
+            languageCode: "de",
+            strings: [
+                MacPadStringKey.windowsLineEnding.rawValue: "Windows (CRLF)",
+                MacPadStringKey.unixLineEnding.rawValue: "Unix (LF)",
+                MacPadStringKey.classicMacLineEnding.rawValue: "Macintosh (CR)",
+                MacPadStringKey.mixedLineEnding.rawValue: "Gemischt"
+            ]
+        ) { localization in
+            #expect(LineEnding.windows.statusLabel(using: localization) == "Windows (CRLF)")
+            #expect(LineEnding.unix.statusLabel(using: localization) == "Unix (LF)")
+            #expect(LineEnding.classicMac.statusLabel(using: localization) == "Macintosh (CR)")
+            #expect(LineEnding.mixed.statusLabel(using: localization) == "Gemischt")
+        }
+    }
+
     @Test("indexed cursor positions use UTF-16 text-view locations")
     func indexedCursorPositions() {
         let index = TextLineIndex(text: "first\nsecond\n")

@@ -2,31 +2,60 @@ import CryptoKit
 import Darwin
 import Foundation
 
-public enum EditorDocumentError: LocalizedError {
+public protocol MacPadLocalizedError: Error {
+    func localizedErrorDescription(using localization: MacPadLocalization) -> String
+}
+
+public func macPadLocalizedDescription(
+    _ error: any Error,
+    using localization: MacPadLocalization
+) -> String {
+    guard let localizedError = error as? any MacPadLocalizedError else {
+        return error.localizedDescription
+    }
+    return localizedError.localizedErrorDescription(using: localization)
+}
+
+public enum EditorDocumentError: LocalizedError, MacPadLocalizedError {
     case fileTooLarge(path: String, sizeBytes: Int64, maximumBytes: Int64)
     case documentTooLargeToSave(path: String, sizeBytes: Int64, maximumBytes: Int64)
     case fileIsNotRegular(path: String)
     case fileChangedOnDisk(path: String)
     case fileCoordinationFailed(path: String)
     case unsupportedTextEncoding(path: String)
-    case textCannotBeSaved(path: String, encoding: String)
+    case textCannotBeSaved(path: String, encoding: TextFileEncoding)
 
     public var errorDescription: String? {
+        localizedErrorDescription(using: MacPadLocalization(bundle: .main))
+    }
+
+    public func localizedErrorDescription(using localization: MacPadLocalization) -> String {
         switch self {
         case let .fileTooLarge(path, sizeBytes, maximumBytes):
-            return "File is too large to open safely: \(path) is \(sizeBytes) bytes, maximum is \(maximumBytes) bytes."
+            return localization.fileTooLarge(
+                path: path,
+                sizeBytes: sizeBytes,
+                maximumBytes: maximumBytes
+            )
         case let .documentTooLargeToSave(path, sizeBytes, maximumBytes):
-            return "Document is too large to save safely: \(path) would be \(sizeBytes) bytes, maximum is \(maximumBytes) bytes."
+            return localization.documentTooLarge(
+                path: path,
+                sizeBytes: sizeBytes,
+                maximumBytes: maximumBytes
+            )
         case let .fileIsNotRegular(path):
-            return "Only regular files can be opened safely: \(path)."
+            return localization.regularFilesOnly(path: path)
         case let .fileChangedOnDisk(path):
-            return "The file changed on disk after MacPad opened it: \(path). Reload it or use Save As to avoid overwriting another edit."
+            return localization.fileChangedOnDisk(path: path)
         case let .fileCoordinationFailed(path):
-            return "macOS did not grant coordinated write access to the file: \(path)."
+            return localization.coordinatedWriteDenied(path: path)
         case let .unsupportedTextEncoding(path):
-            return "File is not readable as supported plain text: \(path)."
+            return localization.unsupportedTextEncoding(path: path)
         case let .textCannotBeSaved(path, encoding):
-            return "The document contains text that cannot be represented as \(encoding): \(path)."
+            return localization.unrepresentableText(
+                encoding: encoding.statusLabel(using: localization),
+                path: path
+            )
         }
     }
 }
@@ -40,19 +69,23 @@ public enum TextFileEncoding: CaseIterable, Equatable, Sendable {
     case isoLatin1
 
     public var statusLabel: String {
+        statusLabel(using: MacPadLocalization(bundle: .main))
+    }
+
+    public func statusLabel(using localization: MacPadLocalization) -> String {
         switch self {
         case .utf8:
-            return "UTF-8"
+            return localization.string(.utf8Encoding)
         case .utf8WithByteOrderMark:
-            return "UTF-8 BOM"
+            return localization.string(.utf8BOMEncoding)
         case .utf16LittleEndian:
-            return "UTF-16 LE"
+            return localization.string(.utf16LittleEndianEncoding)
         case .utf16BigEndian:
-            return "UTF-16 BE"
+            return localization.string(.utf16BigEndianEncoding)
         case .windows1252:
-            return "Windows-1252"
+            return localization.string(.windows1252Encoding)
         case .isoLatin1:
-            return "ISO-8859-1"
+            return localization.string(.iso88591Encoding)
         }
     }
 }
@@ -90,7 +123,11 @@ public final class EditorDocument {
     }
 
     public var displayName: String {
-        fileURL?.lastPathComponent ?? "Untitled"
+        displayName(using: MacPadLocalization(bundle: .main))
+    }
+
+    public func displayName(using localization: MacPadLocalization) -> String {
+        fileURL?.lastPathComponent ?? localization.string(.untitled)
     }
 
     public func loadFile(_ url: URL) throws {
@@ -212,24 +249,24 @@ public final class EditorDocument {
             return Data([0xEF, 0xBB, 0xBF]) + Data(outputText.utf8)
         case .utf16LittleEndian:
             guard let data = outputText.data(using: .utf16LittleEndian, allowLossyConversion: false) else {
-                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding.statusLabel)
+                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding)
             }
             return Data([0xFF, 0xFE]) + data
         case .utf16BigEndian:
             guard let data = outputText.data(using: .utf16BigEndian, allowLossyConversion: false) else {
-                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding.statusLabel)
+                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding)
             }
             return Data([0xFE, 0xFF]) + data
         case .windows1252:
             guard let data = outputText.data(using: .windowsCP1252, allowLossyConversion: false) else {
-                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding.statusLabel)
+                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding)
             }
             return data
         case .isoLatin1:
             guard let data = outputText.data(using: .isoLatin1, allowLossyConversion: false) else {
                 throw EditorDocumentError.textCannotBeSaved(
                     path: path,
-                    encoding: encoding.statusLabel
+                    encoding: encoding
                 )
             }
             return data

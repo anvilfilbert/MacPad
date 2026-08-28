@@ -33,14 +33,24 @@ enum EditorWindowResolver {
         }
     }
 
-    static func makeController(opening url: URL) throws -> EditorWindowController {
-        let controller = EditorWindowController()
+    static func makeController(
+        opening url: URL,
+        localization: MacPadLocalization
+    ) throws -> EditorWindowController {
+        let controller = EditorWindowController(localization: localization)
         try controller.loadFile(url)
         return controller
     }
 
-    static func makeController(opening url: URL, baseFont: NSFont) throws -> EditorWindowController {
-        let controller = EditorWindowController(baseFont: baseFont)
+    static func makeController(
+        opening url: URL,
+        baseFont: NSFont,
+        localization: MacPadLocalization
+    ) throws -> EditorWindowController {
+        let controller = EditorWindowController(
+            baseFont: baseFont,
+            localization: localization
+        )
         try controller.loadFile(url)
         return controller
     }
@@ -85,6 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     private let sessionDefaultsKey = "MacPad.SessionState.v1"
     private let menuBarDefaultsKey = "MacPad.ShowInMenuBar"
     private let defaults: UserDefaults
+    private let localization: MacPadLocalization
     private let sessionLogger = Logger(subsystem: "local.macpad.app", category: "session")
     private var windows: [EditorWindowController] = []
     private var isRestoringSession = false
@@ -96,12 +107,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     override init() {
         defaults = .standard
+        localization = MacPadLocalization(bundle: .main)
         super.init()
         preferredFont = Self.loadPreferredFont()
     }
 
-    init(defaults: UserDefaults) {
+    init(defaults: UserDefaults, localization: MacPadLocalization) {
         self.defaults = defaults
+        self.localization = localization
         super.init()
         preferredFont = Self.loadPreferredFont()
     }
@@ -117,7 +130,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSWindow.allowsAutomaticWindowTabbing = false
         let application = NSApplication.shared
-        application.mainMenu = MainMenuFactory.makeMenu(target: self, application: application)
+        application.mainMenu = MainMenuFactory.makeMenu(
+            target: self,
+            application: application,
+            localization: localization
+        )
         updateMenuBarStatusItem()
 
         let launchURLs = pendingOpenURLs
@@ -219,11 +236,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
-        guard menu.title == "Open Recent" else { return }
+        guard menu.identifier == NSUserInterfaceItemIdentifier("file.openRecent") else { return }
         RecentDocumentsMenuBuilder.populate(
             menu,
             urls: NSDocumentController.shared.recentDocumentURLs,
-            target: self
+            target: self,
+            localization: localization
         )
     }
 
@@ -264,7 +282,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         do {
             let controller = try EditorWindowResolver.makeController(
                 opening: url,
-                baseFont: preferredFont
+                baseFont: preferredFont,
+                localization: localization
             )
             configure(controller)
             present(controller, asTab: keyWindowController != nil)
@@ -275,7 +294,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     private func makeWindowController() -> EditorWindowController {
-        let controller = EditorWindowController(baseFont: preferredFont)
+        let controller = EditorWindowController(
+            baseFont: preferredFont,
+            localization: localization
+        )
         configure(controller)
         return controller
     }
@@ -335,7 +357,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     private func aboutCredits() -> NSAttributedString {
-        let text = "Created by anvilfilbert\nPublic repo: anvilfilbert/MacPad"
+        let text = [
+            localization.aboutCreatedBy(creator: "anvilfilbert"),
+            localization.aboutPublicRepository(repository: "anvilfilbert/MacPad")
+        ].joined(separator: "\n")
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
 
@@ -426,8 +451,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
                 defaults.set(false, forKey: menuBarDefaultsKey)
                 let alert = NSAlert()
                 alert.alertStyle = .warning
-                alert.messageText = "Could not add MacPad to the menu bar."
-                alert.informativeText = "macOS did not provide a menu-bar button."
+                alert.messageText = localization.string(.menuBarCreationFailure)
+                alert.informativeText = localization.string(.menuBarButtonUnavailable)
                 alert.runModal()
                 return
             }
@@ -439,8 +464,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             button.target = self
             button.action = #selector(handleMenuBarStatusItem(_:))
             button.sendAction(on: [.leftMouseUp])
-            button.toolTip = "Open a new MacPad window"
-            button.setAccessibilityLabel("Open a new MacPad window")
+            let openWindowDescription = localization.string(.menuBarOpenNewWindow)
+            button.toolTip = openWindowDescription
+            button.setAccessibilityLabel(openWindowDescription)
             menuBarStatusItem = statusItem
             return
         }
@@ -458,7 +484,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
         let session: AppSessionState
         do {
-            session = try JSONDecoder().decode(AppSessionState.self, from: data)
+            session = try AppSessionState.decode(data: data, localization: localization)
         } catch {
             defaults.removeObject(forKey: sessionDefaultsKey)
             sessionLogger.error(
@@ -485,7 +511,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
                     present(controller, asTab: !restoredControllers.isEmpty)
                     restoredControllers.append((index, controller))
                 } catch {
-                    restoreFailures.append("\(tab.filePath ?? "Untitled"): \(error.localizedDescription)")
+                    restoreFailures.append(
+                        localization.sessionRestoreFailureLine(
+                            fileName: tab.filePath ?? localization.string(.untitled),
+                            errorDescription: macPadLocalizedDescription(
+                                error,
+                                using: localization
+                            )
+                        )
+                    )
                 }
             }
 
@@ -623,15 +657,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     private func showSessionRestoreError(filePath: String?, error: Error) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Could not restore a previous MacPad tab."
-        alert.informativeText = "\(filePath ?? "Untitled")\n\n\(error.localizedDescription)"
+        alert.messageText = localization.string(.sessionRestoreSingleFailure)
+        alert.informativeText = localization.sessionRestoreDetail(
+            fileName: filePath ?? localization.string(.untitled),
+            errorDescription: macPadLocalizedDescription(error, using: localization)
+        )
         alert.runModal()
     }
 
     private func showSessionRestoreErrors(_ failures: [String]) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Some previous MacPad tabs could not be restored."
+        alert.messageText = localization.string(.sessionRestoreMultipleFailure)
         alert.informativeText = failures.joined(separator: "\n")
         alert.runModal()
     }
@@ -639,8 +676,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     private func showOpenError(url: URL, error: Error) {
         let alert = NSAlert()
         alert.alertStyle = .critical
-        alert.messageText = "Could not open \(url.lastPathComponent)."
-        alert.informativeText = error.localizedDescription
+        alert.messageText = localization.openFailure(fileName: url.lastPathComponent)
+        alert.informativeText = macPadLocalizedDescription(error, using: localization)
         alert.runModal()
     }
 
@@ -652,7 +689,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         guard NSWorkspace.shared.open(url) else {
             let alert = NSAlert()
             alert.alertStyle = .warning
-            alert.messageText = "Could not open the link."
+            alert.messageText = localization.string(.linkOpenFailure)
             alert.informativeText = value
             alert.runModal()
             return
@@ -685,8 +722,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             )
             let alert = NSAlert()
             alert.alertStyle = .warning
-            alert.messageText = "Could not save the editor font."
-            alert.informativeText = error.localizedDescription
+            alert.messageText = localization.string(.fontSaveFailure)
+            alert.informativeText = macPadLocalizedDescription(error, using: localization)
             alert.runModal()
         }
     }

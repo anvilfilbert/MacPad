@@ -105,15 +105,19 @@ public enum LineEnding: String, Codable, Equatable {
     case mixed
 
     public var statusLabel: String {
+        statusLabel(using: MacPadLocalization(bundle: .main))
+    }
+
+    public func statusLabel(using localization: MacPadLocalization) -> String {
         switch self {
         case .windows:
-            return "Windows (CRLF)"
+            return localization.string(.windowsLineEnding)
         case .unix:
-            return "Unix (LF)"
+            return localization.string(.unixLineEnding)
         case .classicMac:
-            return "Macintosh (CR)"
+            return localization.string(.classicMacLineEnding)
         case .mixed:
-            return "Mixed"
+            return localization.string(.mixedLineEnding)
         }
     }
 

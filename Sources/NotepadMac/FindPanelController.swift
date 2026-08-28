@@ -2,39 +2,75 @@ import AppKit
 import NotepadMacCore
 
 final class FindPanelController: NSWindowController {
+    private let localization: MacPadLocalization
     private let findField = NSTextField()
     private let replaceField = NSTextField()
-    private let replaceLabel = NSTextField(labelWithString: "Replace with:")
-    private let findNextButton = NSButton(title: "Find Next", target: nil, action: nil)
-    private let findPreviousButton = NSButton(title: "Find Previous", target: nil, action: nil)
-    private let replaceButton = NSButton(title: "Replace", target: nil, action: nil)
-    private let replaceAllButton = NSButton(title: "Replace All", target: nil, action: nil)
-    private let matchCaseButton = NSButton(checkboxWithTitle: "Match case", target: nil, action: nil)
-    private let wrapAroundButton = NSButton(checkboxWithTitle: "Wrap around", target: nil, action: nil)
+    private let replaceLabel: NSTextField
+    private let findNextButton: NSButton
+    private let findPreviousButton: NSButton
+    private let replaceButton: NSButton
+    private let replaceAllButton: NSButton
+    private let matchCaseButton: NSButton
+    private let wrapAroundButton: NSButton
+    private var replaceRows: [NSGridRow] = []
     private let onFindNext: (String, FindOptions) -> Void
     private let onFindPrevious: (String, FindOptions) -> Void
     private let onReplace: (String, String, FindOptions) -> Void
     private let onReplaceAll: (String, String, FindOptions) -> Void
 
     init(
+        localization: MacPadLocalization,
         onFindNext: @escaping (String, FindOptions) -> Void,
         onFindPrevious: @escaping (String, FindOptions) -> Void,
         onReplace: @escaping (String, String, FindOptions) -> Void,
         onReplaceAll: @escaping (String, String, FindOptions) -> Void
     ) {
+        self.localization = localization
+        replaceLabel = NSTextField(labelWithString: localization.string(.replaceWith))
+        findNextButton = NSButton(
+            title: localization.string(.findNext),
+            target: nil,
+            action: nil
+        )
+        findPreviousButton = NSButton(
+            title: localization.string(.findPrevious),
+            target: nil,
+            action: nil
+        )
+        replaceButton = NSButton(
+            title: localization.string(.replaceTitle),
+            target: nil,
+            action: nil
+        )
+        replaceAllButton = NSButton(
+            title: localization.string(.replaceAll),
+            target: nil,
+            action: nil
+        )
+        matchCaseButton = NSButton(
+            checkboxWithTitle: localization.string(.matchCase),
+            target: nil,
+            action: nil
+        )
+        wrapAroundButton = NSButton(
+            checkboxWithTitle: localization.string(.wrapAround),
+            target: nil,
+            action: nil
+        )
         self.onFindNext = onFindNext
         self.onFindPrevious = onFindPrevious
         self.onReplace = onReplace
         self.onReplaceAll = onReplaceAll
 
         let window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 430, height: 204),
+            contentRect: .zero,
             styleMask: [.titled, .closable, .utilityWindow],
             backing: .buffered,
             defer: false
         )
         window.hidesOnDeactivate = false
-        window.title = "Find"
+        window.title = localization.string(.findTitle)
+        window.contentMinSize = NSSize(width: 500, height: 204)
         window.autorecalculatesKeyViewLoop = false
         super.init(window: window)
         setupUI()
@@ -47,7 +83,8 @@ final class FindPanelController: NSWindowController {
     func show(initialTerm: String, showReplace: Bool) {
         findField.stringValue = initialTerm
         setReplaceVisible(showReplace)
-        window?.title = showReplace ? "Replace" : "Find"
+        window?.contentView?.layoutSubtreeIfNeeded()
+        window?.title = localization.string(showReplace ? .replaceTitle : .findTitle)
         window?.center()
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
@@ -55,9 +92,13 @@ final class FindPanelController: NSWindowController {
     }
 
     private func setupUI() {
-        guard let contentView = window?.contentView else { return }
+        guard let window, let contentView = window.contentView else {
+            preconditionFailure("Find panel requires a content view.")
+        }
 
-        let findLabel = NSTextField(labelWithString: "Find what:")
+        let findLabel = NSTextField(labelWithString: localization.string(.findWhat))
+        findLabel.identifier = NSUserInterfaceItemIdentifier("find.termLabel")
+        replaceLabel.identifier = NSUserInterfaceItemIdentifier("find.replacementLabel")
         findPreviousButton.target = self
         findPreviousButton.action = #selector(findPrevious)
         findNextButton.target = self
@@ -74,19 +115,33 @@ final class FindPanelController: NSWindowController {
         replaceAllButton.identifier = NSUserInterfaceItemIdentifier("find.replaceAll")
         matchCaseButton.identifier = NSUserInterfaceItemIdentifier("find.matchCase")
         wrapAroundButton.identifier = NSUserInterfaceItemIdentifier("find.wrapAround")
-        findField.setAccessibilityLabel("Find what")
-        replaceField.setAccessibilityLabel("Replace with")
-        findNextButton.setAccessibilityLabel("Find next")
-        findPreviousButton.setAccessibilityLabel("Find previous")
-        replaceButton.setAccessibilityLabel("Replace")
-        replaceAllButton.setAccessibilityLabel("Replace all")
-        matchCaseButton.setAccessibilityLabel("Match case")
-        wrapAroundButton.setAccessibilityLabel("Wrap around")
+        findField.setAccessibilityLabel(localization.string(.findWhatAccessibilityLabel))
+        replaceField.setAccessibilityLabel(
+            localization.string(.replaceWithAccessibilityLabel)
+        )
+        findNextButton.setAccessibilityLabel(localization.string(.findNext))
+        findPreviousButton.setAccessibilityLabel(localization.string(.findPrevious))
+        replaceButton.setAccessibilityLabel(localization.string(.replaceTitle))
+        replaceAllButton.setAccessibilityLabel(localization.string(.replaceAll))
+        matchCaseButton.setAccessibilityLabel(localization.string(.matchCase))
+        wrapAroundButton.setAccessibilityLabel(localization.string(.wrapAround))
         wrapAroundButton.state = .on
+
+        for button in [
+            findNextButton,
+            findPreviousButton,
+            replaceButton,
+            replaceAllButton,
+            matchCaseButton,
+            wrapAroundButton
+        ] {
+            button.setContentCompressionResistancePriority(.required, for: .horizontal)
+        }
 
         let options = NSStackView(views: [matchCaseButton, wrapAroundButton])
         options.orientation = .horizontal
         options.spacing = 16
+        options.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         let grid = NSGridView(views: [
             [findLabel, findField, findNextButton],
@@ -95,28 +150,49 @@ final class FindPanelController: NSWindowController {
             [replaceLabel, replaceField, replaceButton],
             [NSGridCell.emptyContentView, NSGridCell.emptyContentView, replaceAllButton]
         ])
-        grid.translatesAutoresizingMaskIntoConstraints = false
+        grid.identifier = NSUserInterfaceItemIdentifier("find.grid")
         grid.rowSpacing = 10
         grid.columnSpacing = 10
+        grid.column(at: 0).xPlacement = .trailing
         grid.column(at: 1).width = 220
+        grid.column(at: 1).xPlacement = .fill
+        grid.column(at: 2).xPlacement = .fill
+        for rowIndex in 0..<grid.numberOfRows {
+            grid.row(at: rowIndex).yPlacement = .center
+        }
+        grid.mergeCells(
+            inHorizontalRange: NSRange(location: 1, length: 2),
+            verticalRange: NSRange(location: 2, length: 1)
+        )
+        replaceRows = [grid.row(at: 3), grid.row(at: 4)]
         contentView.addSubview(grid)
 
+        setReplaceVisible(true)
+        let fittingSize = grid.fittingSize
+        window.setContentSize(
+            NSSize(
+                width: max(window.contentMinSize.width, fittingSize.width + 32),
+                height: max(window.contentMinSize.height, fittingSize.height + 32)
+            )
+        )
+        grid.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             grid.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            grid.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -16),
-            grid.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16)
+            grid.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            grid.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            grid.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -16)
         ])
+        contentView.layoutSubtreeIfNeeded()
 
-        window?.defaultButtonCell = findNextButton.cell as? NSButtonCell
-        window?.initialFirstResponder = findField
+        window.defaultButtonCell = findNextButton.cell as? NSButtonCell
+        window.initialFirstResponder = findField
         setReplaceVisible(false)
     }
 
     private func setReplaceVisible(_ visible: Bool) {
-        replaceLabel.isHidden = !visible
-        replaceField.isHidden = !visible
-        replaceButton.isHidden = !visible
-        replaceAllButton.isHidden = !visible
+        for row in replaceRows {
+            row.isHidden = !visible
+        }
         configureKeyViewLoop(showReplace: visible)
     }
 

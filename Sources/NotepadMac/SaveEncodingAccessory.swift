@@ -7,15 +7,20 @@ final class SaveEncodingAccessory {
     let picker: NSPopUpButton
     private let encodingOptions = TextFileEncoding.allCases
 
-    init(selectedEncoding: TextFileEncoding) {
+    init(
+        selectedEncoding: TextFileEncoding,
+        localization: MacPadLocalization
+    ) {
         let picker = NSPopUpButton(frame: .zero, pullsDown: false)
-        picker.addItems(withTitles: encodingOptions.map(\.statusLabel))
+        picker.addItems(
+            withTitles: encodingOptions.map { $0.statusLabel(using: localization) }
+        )
         picker.selectItem(at: encodingOptions.firstIndex(of: selectedEncoding) ?? 0)
         picker.identifier = NSUserInterfaceItemIdentifier("save.encoding")
-        picker.setAccessibilityLabel("Text encoding")
+        picker.setAccessibilityLabel(localization.string(.textEncoding))
         self.picker = picker
 
-        let encodingLabel = NSTextField(labelWithString: "Encoding:")
+        let encodingLabel = NSTextField(labelWithString: localization.string(.encodingLabel))
         let stack = NSStackView(views: [encodingLabel, picker])
         stack.orientation = .horizontal
         stack.spacing = 8

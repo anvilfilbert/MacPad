@@ -17,6 +17,105 @@ private func waitForCoordinationSignal(
 
 @Suite("Editor document")
 struct EditorDocumentTests {
+    @Test("document display values and errors use the injected German bundle")
+    func localizesDocumentValuesAndErrors() throws {
+        try LocalizationFixture.with(
+            languageCode: "de",
+            strings: [
+                MacPadStringKey.untitled.rawValue: "Ohne Titel",
+                MacPadStringKey.windowsLineEnding.rawValue: "Windows (CRLF)",
+                MacPadStringKey.utf8Encoding.rawValue: "UTF-8",
+                MacPadStringKey.windows1252Encoding.rawValue: "Windows-1252",
+                MacPadStringKey.fileTooLarge.rawValue:
+                    "Die Datei ist zu groß, um sie sicher zu öffnen: %1$@ hat %2$lld Byte, maximal zulässig sind %3$lld Byte.",
+                MacPadStringKey.documentTooLarge.rawValue:
+                    "Das Dokument ist zu groß, um es sicher zu sichern: %1$@ hätte %2$lld Byte, maximal zulässig sind %3$lld Byte.",
+                MacPadStringKey.regularFilesOnly.rawValue:
+                    "Nur reguläre Dateien können sicher geöffnet werden: %1$@.",
+                MacPadStringKey.fileChangedOnDisk.rawValue:
+                    "Die Datei wurde nach dem Öffnen in MacPad auf dem Datenträger geändert: %1$@. Neu laden oder mit ‚Sichern unter‘ sichern, damit keine andere Änderung überschrieben wird.",
+                MacPadStringKey.coordinatedWriteDenied.rawValue:
+                    "macOS hat keinen koordinierten Schreibzugriff auf die Datei gewährt: %1$@.",
+                MacPadStringKey.unsupportedTextEncoding.rawValue:
+                    "Die Datei kann nicht als unterstützter Klartext gelesen werden: %1$@.",
+                MacPadStringKey.unrepresentableText.rawValue:
+                    "Das Dokument enthält Text, der nicht als %1$@ dargestellt werden kann: %2$@."
+            ]
+        ) { localization in
+            let document = EditorDocument()
+            #expect(document.displayName(using: localization) == "Ohne Titel")
+            #expect(TextFileEncoding.utf8.statusLabel(using: localization) == "UTF-8")
+
+            let cases: [(EditorDocumentError, String)] = [
+                (
+                    .fileTooLarge(path: "/tmp/note.txt", sizeBytes: 11, maximumBytes: 10),
+                    "Die Datei ist zu groß, um sie sicher zu öffnen: /tmp/note.txt hat 11 Byte, maximal zulässig sind 10 Byte."
+                ),
+                (
+                    .documentTooLargeToSave(
+                        path: "/tmp/note.txt",
+                        sizeBytes: 11,
+                        maximumBytes: 10
+                    ),
+                    "Das Dokument ist zu groß, um es sicher zu sichern: /tmp/note.txt hätte 11 Byte, maximal zulässig sind 10 Byte."
+                ),
+                (
+                    .fileIsNotRegular(path: "/tmp/folder"),
+                    "Nur reguläre Dateien können sicher geöffnet werden: /tmp/folder."
+                ),
+                (
+                    .fileChangedOnDisk(path: "/tmp/note.txt"),
+                    "Die Datei wurde nach dem Öffnen in MacPad auf dem Datenträger geändert: /tmp/note.txt. Neu laden oder mit ‚Sichern unter‘ sichern, damit keine andere Änderung überschrieben wird."
+                ),
+                (
+                    .fileCoordinationFailed(path: "/tmp/note.txt"),
+                    "macOS hat keinen koordinierten Schreibzugriff auf die Datei gewährt: /tmp/note.txt."
+                ),
+                (
+                    .unsupportedTextEncoding(path: "/tmp/note.txt"),
+                    "Die Datei kann nicht als unterstützter Klartext gelesen werden: /tmp/note.txt."
+                ),
+                (
+                    .textCannotBeSaved(path: "/tmp/note.txt", encoding: .windows1252),
+                    "Das Dokument enthält Text, der nicht als Windows-1252 dargestellt werden kann: /tmp/note.txt."
+                )
+            ]
+
+            for (error, expectedDescription) in cases {
+                #expect(error.localizedErrorDescription(using: localization) == expectedDescription)
+            }
+        }
+    }
+
+    @Test("session limit decoding uses the injected German bundle")
+    func localizesSessionLimitDecodingError() throws {
+        try LocalizationFixture.with(
+            languageCode: "de",
+            strings: [
+                MacPadStringKey.sessionWindowOrTabLimit.rawValue:
+                    "Die Sitzung enthält mehr Fenster oder Tabs, als MacPad unterstützt."
+            ]
+        ) { localization in
+            let windows = Array(
+                repeating: #"{"tabs":[],"selectedTabIndex":0}"#,
+                count: AppSessionState.maximumWindowCount + 1
+            ).joined(separator: ",")
+            let data = Data(#"{"windows":[\#(windows)]}"#.utf8)
+
+            do {
+                _ = try AppSessionState.decode(data: data, localization: localization)
+                Issue.record("Expected an over-limit session to fail decoding.")
+            } catch DecodingError.dataCorrupted(let context) {
+                #expect(
+                    context.debugDescription
+                        == "Die Sitzung enthält mehr Fenster oder Tabs, als MacPad unterstützt."
+                )
+            } catch {
+                Issue.record(error)
+            }
+        }
+    }
+
     @Test("save refuses to overwrite an externally changed file")
     func rejectsExternalModification() throws {
         let directory = try temporaryDirectory()
@@ -496,5 +595,69 @@ struct EditorDocumentTests {
             withIntermediateDirectories: true
         )
         return directory
+    }
+}
+
+enum LocalizationFixture {
+    static func with<Result>(
+        languageCode: String,
+        strings: [String: String],
+        body: (MacPadLocalization) throws -> Result
+    ) throws -> Result {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+            .appendingPathComponent("MacPadLocalization.bundle", isDirectory: true)
+        defer {
+            do {
+                try FileManager.default.removeItem(at: root)
+            } catch {
+                Issue.record(error)
+            }
+        }
+
+        let contents = root.appendingPathComponent("Contents", isDirectory: true)
+        let resources = contents.appendingPathComponent("Resources", isDirectory: true)
+        let localizationDirectory = resources.appendingPathComponent(
+            "\(languageCode).lproj",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: localizationDirectory,
+            withIntermediateDirectories: true
+        )
+
+        let info = CoreLocalizationBundleInfo(
+            developmentRegion: languageCode,
+            identifier: "local.macpad.tests.core-localization.\(UUID().uuidString)",
+            localizations: [languageCode],
+            packageType: "BNDL"
+        )
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .xml
+        try encoder.encode(info).write(
+            to: contents.appendingPathComponent("Info.plist"),
+            options: .atomic
+        )
+        try encoder.encode(strings).write(
+            to: localizationDirectory.appendingPathComponent("Localizable.strings"),
+            options: .atomic
+        )
+
+        let bundle = try #require(Bundle(path: root.path))
+        return try body(MacPadLocalization(bundle: bundle))
+    }
+}
+
+private struct CoreLocalizationBundleInfo: Encodable {
+    let developmentRegion: String
+    let identifier: String
+    let localizations: [String]
+    let packageType: String
+
+    private enum CodingKeys: String, CodingKey {
+        case developmentRegion = "CFBundleDevelopmentRegion"
+        case identifier = "CFBundleIdentifier"
+        case localizations = "CFBundleLocalizations"
+        case packageType = "CFBundlePackageType"
     }
 }
