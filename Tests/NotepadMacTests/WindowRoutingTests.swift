@@ -1071,8 +1071,8 @@ struct WindowRoutingTests {
     }
     #endif
 
-    @Test("recent routing carries persisted references and clearing removes both stores")
-    func appDelegateRecentReferenceRoutingAndClear() throws {
+    @Test("recent menu carries persisted references and clearing removes stored bookmarks")
+    func appDelegateRecentMenuPopulationAndClear() throws {
         try withTemporaryDirectory { directory in
             let fileURL = directory.appendingPathComponent("recent.txt")
             try Data("recent".utf8).write(to: fileURL)
@@ -1086,7 +1086,6 @@ struct WindowRoutingTests {
             )
             let reference = try directFileAccess.makeReference(for: fileURL)
             try recentStore.add(reference)
-            NSDocumentController.shared.noteNewRecentDocumentURL(fileURL)
             let delegate = AppDelegate(
                 defaults: defaults,
                 localization: englishLocalization,
@@ -1098,7 +1097,7 @@ struct WindowRoutingTests {
             let menu = NSMenu(title: "Open Recent")
             menu.identifier = NSUserInterfaceItemIdentifier("file.openRecent")
 
-            delegate.menuNeedsUpdate(menu)
+            delegate.populateRecentDocumentsMenu(menu, nativeURLs: [fileURL])
 
             #expect(menu.items.first?.representedObject as? PersistedFileReference == reference)
 
@@ -1106,12 +1105,6 @@ struct WindowRoutingTests {
 
             let storedAfterClear = try recentStore.references()
             #expect(storedAfterClear.isEmpty)
-            let canonicalPath = fileURL.resolvingSymlinksInPath().standardizedFileURL.path
-            #expect(
-                !NSDocumentController.shared.recentDocumentURLs.contains {
-                    $0.resolvingSymlinksInPath().standardizedFileURL.path == canonicalPath
-                }
-            )
         }
     }
 

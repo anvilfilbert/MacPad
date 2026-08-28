@@ -350,8 +350,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         guard menu.identifier == NSUserInterfaceItemIdentifier("file.openRecent") else { return }
+        populateRecentDocumentsMenu(
+            menu,
+            nativeURLs: NSDocumentController.shared.recentDocumentURLs
+        )
+    }
+
+    func populateRecentDocumentsMenu(_ menu: NSMenu, nativeURLs: [URL]) {
         do {
-            let nativeURLs = NSDocumentController.shared.recentDocumentURLs
             let references = if distributionChannel == .direct {
                 try recentDocumentStore.directReferences(inNativeOrder: nativeURLs)
             } else {
