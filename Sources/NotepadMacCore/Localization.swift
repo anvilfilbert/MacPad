@@ -57,6 +57,8 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case replaceTitle = "replace.title"
     case findWhat = "find.what"
     case replaceWith = "find.replaceWith"
+    case findWhatAccessibilityLabel = "find.accessibility.what"
+    case replaceWithAccessibilityLabel = "find.accessibility.replaceWith"
     case replaceAll = "find.replaceAll"
     case matchCase = "find.matchCase"
     case wrapAround = "find.wrapAround"
@@ -96,6 +98,7 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case linkOpenFailure = "link.openFailure"
     case fontSaveFailure = "font.saveFailure"
     case aboutCreatedBy = "about.createdBy"
+    case aboutPublicRepository = "about.publicRepository"
     case fileTooLarge = "error.fileTooLarge"
     case documentTooLarge = "error.documentTooLarge"
     case regularFilesOnly = "error.regularFilesOnly"
@@ -177,6 +180,8 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .replaceTitle: "Replace"
         case .findWhat: "Find what:"
         case .replaceWith: "Replace with:"
+        case .findWhatAccessibilityLabel: "Find what"
+        case .replaceWithAccessibilityLabel: "Replace with"
         case .replaceAll: "Replace All"
         case .matchCase: "Match case"
         case .wrapAround: "Wrap around"
@@ -216,6 +221,7 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .linkOpenFailure: "Could not open the link."
         case .fontSaveFailure: "Could not save the editor font."
         case .aboutCreatedBy: "Created by %1$@"
+        case .aboutPublicRepository: "Public repo: %1$@"
         case .fileTooLarge: "File is too large to open safely: %1$@ is %2$lld bytes, maximum is %3$lld bytes."
         case .documentTooLarge: "Document is too large to save safely: %1$@ would be %2$lld bytes, maximum is %3$lld bytes."
         case .regularFilesOnly: "Only regular files can be opened safely: %1$@."
@@ -298,6 +304,10 @@ public struct MacPadLocalization: Sendable {
 
     public func aboutCreatedBy(creator: String) -> String {
         formatted(.aboutCreatedBy, arguments: [creator])
+    }
+
+    public func aboutPublicRepository(repository: String) -> String {
+        formatted(.aboutPublicRepository, arguments: [repository])
     }
 
     public func fileTooLarge(

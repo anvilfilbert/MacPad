@@ -16,6 +16,7 @@ struct LocalizationTests {
         #expect(placeholderMismatches.isEmpty)
         #expect(catalog.unexpectedPluralCategories.isEmpty)
         #expect(catalog.nonManualKeys.isEmpty)
+        #expect(catalog.localizationValueViolations.isEmpty)
         #expect(Set(catalog.strings.keys) == expectedKeys)
         for key in MacPadStringKey.allCases {
             #expect(catalog.value(for: key.rawValue, locale: "en") == key.englishValue)
@@ -33,9 +34,145 @@ struct LocalizationTests {
         #expect(placeholderMismatches.isEmpty)
         #expect(catalog.unexpectedPluralCategories.isEmpty)
         #expect(catalog.nonManualKeys.isEmpty)
+        #expect(catalog.localizationValueViolations.isEmpty)
         #expect(Set(catalog.strings.keys) == Set(["CFBundleTypeName"]))
         #expect(catalog.value(for: "CFBundleTypeName", locale: "en") == "Plain Text")
         #expect(catalog.value(for: "CFBundleTypeName", locale: "de") == "Klartext")
+    }
+
+    @Test("Current About and Find accessibility strings have dedicated keys")
+    func currentSourceInventoryKeys() throws {
+        let catalog = try loadCatalog(named: "Localizable.xcstrings")
+        let expectedValues: [String: [String: String]] = [
+            "about.publicRepository": [
+                "en": "Public repo: %1$@",
+                "de": "Öffentliches Repository: %1$@"
+            ],
+            "find.accessibility.what": [
+                "en": "Find what",
+                "de": "Suchtext"
+            ],
+            "find.accessibility.replaceWith": [
+                "en": "Replace with",
+                "de": "Ersatztext"
+            ]
+        ]
+
+        for (key, localizations) in expectedValues {
+            for (locale, value) in localizations {
+                #expect(catalog.value(for: key, locale: locale) == value)
+            }
+        }
+    }
+
+    @Test("Catalog contract rejects non-translated string and plural units")
+    func rejectsNonTranslatedUnits() {
+        let stringLocalization = CatalogLocalization(
+            stringUnit: CatalogStringUnit(state: "needs_review", value: "Text"),
+            variations: nil
+        )
+        let pluralLocalization = CatalogLocalization(
+            stringUnit: nil,
+            variations: CatalogVariations(
+                plural: [
+                    "one": CatalogVariation(
+                        stringUnit: CatalogStringUnit(state: "new", value: "%1$lld item")
+                    ),
+                    "other": CatalogVariation(
+                        stringUnit: CatalogStringUnit(state: "translated", value: "%1$lld items")
+                    )
+                ]
+            )
+        )
+
+        #expect(
+            Set(stringLocalization.contractViolations(key: "fixture.string", locale: "de"))
+                == Set([
+                    .nonTranslatedState(
+                        key: "fixture.string",
+                        locale: "de",
+                        variant: "string",
+                        state: "needs_review"
+                    )
+                ])
+        )
+        #expect(
+            Set(pluralLocalization.contractViolations(key: "fixture.plural", locale: "en"))
+                == Set([
+                    .nonTranslatedState(
+                        key: "fixture.plural",
+                        locale: "en",
+                        variant: "one",
+                        state: "new"
+                    )
+                ])
+        )
+    }
+
+    @Test("Catalog contract rejects invalid localization value shapes")
+    func rejectsInvalidLocalizationValueShapes() {
+        let translatedUnit = CatalogStringUnit(state: "translated", value: "Text")
+        let both = CatalogLocalization(
+            stringUnit: translatedUnit,
+            variations: CatalogVariations(
+                plural: ["other": CatalogVariation(stringUnit: translatedUnit)]
+            )
+        )
+        let neither = CatalogLocalization(stringUnit: nil, variations: nil)
+        let emptyString = CatalogLocalization(
+            stringUnit: CatalogStringUnit(state: "translated", value: " \n "),
+            variations: nil
+        )
+        let emptyPlural = CatalogLocalization(
+            stringUnit: nil,
+            variations: CatalogVariations(plural: [:])
+        )
+        let missingOther = CatalogLocalization(
+            stringUnit: nil,
+            variations: CatalogVariations(
+                plural: ["one": CatalogVariation(stringUnit: translatedUnit)]
+            )
+        )
+        let emptyOther = CatalogLocalization(
+            stringUnit: nil,
+            variations: CatalogVariations(
+                plural: [
+                    "other": CatalogVariation(
+                        stringUnit: CatalogStringUnit(state: "translated", value: "")
+                    )
+                ]
+            )
+        )
+
+        #expect(
+            Set(both.contractViolations(key: "fixture.both", locale: "en"))
+                == Set([.invalidValueShape(key: "fixture.both", locale: "en")])
+        )
+        #expect(
+            Set(neither.contractViolations(key: "fixture.neither", locale: "en"))
+                == Set([.invalidValueShape(key: "fixture.neither", locale: "en")])
+        )
+        #expect(
+            Set(emptyString.contractViolations(key: "fixture.empty", locale: "en"))
+                == Set([.emptyValue(key: "fixture.empty", locale: "en", variant: "string")])
+        )
+        #expect(
+            Set(emptyPlural.contractViolations(key: "fixture.emptyPlural", locale: "en"))
+                == Set([
+                    .emptyPlural(key: "fixture.emptyPlural", locale: "en"),
+                    .missingPluralOther(key: "fixture.emptyPlural", locale: "en")
+                ])
+        )
+        #expect(
+            Set(missingOther.contractViolations(key: "fixture.missingOther", locale: "de"))
+                == Set([.missingPluralOther(key: "fixture.missingOther", locale: "de")])
+        )
+        #expect(
+            Set(emptyOther.contractViolations(key: "fixture.emptyOther", locale: "de"))
+                == Set([
+                    .emptyValue(key: "fixture.emptyOther", locale: "de", variant: "other")
+                ])
+        )
     }
 
     @Test("German safety copy and invariant encoding labels are exact")
@@ -98,6 +235,12 @@ struct LocalizationTests {
                 path: "/tmp/note.txt"
             ) == "The document contains text that cannot be represented as ISO-8859-1: /tmp/note.txt."
         )
+        #expect(
+            localization.aboutPublicRepository(repository: "anvilfilbert/MacPad")
+                == "Public repo: anvilfilbert/MacPad"
+        )
+        #expect(localization.string(.findWhatAccessibilityLabel) == "Find what")
+        #expect(localization.string(.replaceWithAccessibilityLabel) == "Replace with")
     }
 }
 
@@ -162,6 +305,14 @@ private struct Catalog: Decodable {
         .sorted()
     }
 
+    var localizationValueViolations: [CatalogContractViolation] {
+        strings.flatMap { key, string in
+            string.localizations.flatMap { locale, localization in
+                localization.contractViolations(key: key, locale: locale)
+            }
+        }
+    }
+
     func value(for key: String, locale: String) -> String? {
         strings[key]?.localizations[locale]?.stringUnit?.value
     }
@@ -197,6 +348,36 @@ private struct CatalogLocalization: Decodable {
     let stringUnit: CatalogStringUnit?
     let variations: CatalogVariations?
 
+    func contractViolations(
+        key: String,
+        locale: String
+    ) -> [CatalogContractViolation] {
+        switch (stringUnit, variations?.plural) {
+        case let (.some(unit), .none):
+            return unit.contractViolations(key: key, locale: locale, variant: "string")
+        case let (.none, .some(plural)):
+            var violations: [CatalogContractViolation] = []
+            if plural.isEmpty {
+                violations.append(.emptyPlural(key: key, locale: locale))
+            }
+            if plural["other"] == nil {
+                violations.append(.missingPluralOther(key: key, locale: locale))
+            }
+            violations.append(
+                contentsOf: plural.flatMap { category, variation in
+                    variation.stringUnit.contractViolations(
+                        key: key,
+                        locale: locale,
+                        variant: category
+                    )
+                }
+            )
+            return violations
+        default:
+            return [.invalidValueShape(key: key, locale: locale)]
+        }
+    }
+
     var hasNonEmptyValues: Bool {
         if let stringUnit {
             return !stringUnit.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -218,6 +399,28 @@ private struct CatalogLocalization: Decodable {
 private struct CatalogStringUnit: Decodable {
     let state: String
     let value: String
+
+    func contractViolations(
+        key: String,
+        locale: String,
+        variant: String
+    ) -> [CatalogContractViolation] {
+        var violations: [CatalogContractViolation] = []
+        if state != "translated" {
+            violations.append(
+                .nonTranslatedState(
+                    key: key,
+                    locale: locale,
+                    variant: variant,
+                    state: state
+                )
+            )
+        }
+        if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            violations.append(.emptyValue(key: key, locale: locale, variant: variant))
+        }
+        return violations
+    }
 }
 
 private struct CatalogVariations: Decodable {
@@ -226,6 +429,14 @@ private struct CatalogVariations: Decodable {
 
 private struct CatalogVariation: Decodable {
     let stringUnit: CatalogStringUnit
+}
+
+private enum CatalogContractViolation: Hashable {
+    case invalidValueShape(key: String, locale: String)
+    case nonTranslatedState(key: String, locale: String, variant: String, state: String)
+    case emptyValue(key: String, locale: String, variant: String)
+    case emptyPlural(key: String, locale: String)
+    case missingPluralOther(key: String, locale: String)
 }
 
 private func loadCatalog(named name: String) throws -> Catalog {
