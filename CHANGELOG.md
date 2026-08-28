@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1
+
+- Restored Dock reopening while menu-bar mode keeps MacPad running after the last editor window closes.
+- Added an AppKit lifecycle regression test for reopening with no visible windows.
+
 ## 1.3.0
 
 - Added an optional, persistent `View > Show MacPad in Menu Bar` launcher. It is OFF by default, keeps the normal Dock behavior, and opens a new empty window with one click.
