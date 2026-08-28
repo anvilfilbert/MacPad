@@ -241,21 +241,44 @@ public struct WindowFrameState: Codable, Equatable, Sendable {
 
 public struct EditorSessionState: Codable, Equatable {
     public let id: String
-    public let filePath: String?
+    public let fileReference: PersistedFileReference?
     public let selectedLocation: Int
     public let wordWrapEnabled: Bool
     public let statusBarVisible: Bool
     public let zoomPercent: Int
     public let lineEnding: LineEnding
 
+    public var filePath: String? {
+        fileReference?.path
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id
+        case fileReference
         case filePath
         case selectedLocation
         case wordWrapEnabled
         case statusBarVisible
         case zoomPercent
         case lineEnding
+    }
+
+    public init(
+        id: String,
+        fileReference: PersistedFileReference?,
+        selectedLocation: Int,
+        wordWrapEnabled: Bool,
+        statusBarVisible: Bool,
+        zoomPercent: Int,
+        lineEnding: LineEnding
+    ) {
+        self.id = id
+        self.fileReference = fileReference
+        self.selectedLocation = selectedLocation
+        self.wordWrapEnabled = wordWrapEnabled
+        self.statusBarVisible = statusBarVisible
+        self.zoomPercent = zoomPercent
+        self.lineEnding = lineEnding
     }
 
     public init(
@@ -267,19 +290,35 @@ public struct EditorSessionState: Codable, Equatable {
         zoomPercent: Int,
         lineEnding: LineEnding
     ) {
-        self.id = id
-        self.filePath = filePath
-        self.selectedLocation = selectedLocation
-        self.wordWrapEnabled = wordWrapEnabled
-        self.statusBarVisible = statusBarVisible
-        self.zoomPercent = zoomPercent
-        self.lineEnding = lineEnding
+        self.init(
+            id: id,
+            fileReference: filePath.map {
+                PersistedFileReference(path: $0, bookmarkData: nil)
+            },
+            selectedLocation: selectedLocation,
+            wordWrapEnabled: wordWrapEnabled,
+            statusBarVisible: statusBarVisible,
+            zoomPercent: zoomPercent,
+            lineEnding: lineEnding
+        )
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
-        filePath = try container.decodeIfPresent(String.self, forKey: .filePath)
+        if container.contains(.fileReference) {
+            fileReference = try container.decodeIfPresent(
+                PersistedFileReference.self,
+                forKey: .fileReference
+            )
+        } else {
+            fileReference = try container.decodeIfPresent(
+                String.self,
+                forKey: .filePath
+            ).map {
+                PersistedFileReference(path: $0, bookmarkData: nil)
+            }
+        }
         selectedLocation = max(0, try container.decodeIfPresent(Int.self, forKey: .selectedLocation) ?? 0)
         wordWrapEnabled = try container.decodeIfPresent(Bool.self, forKey: .wordWrapEnabled) ?? true
         statusBarVisible = try container.decodeIfPresent(Bool.self, forKey: .statusBarVisible) ?? true
@@ -290,7 +329,7 @@ public struct EditorSessionState: Codable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
-        try container.encodeIfPresent(filePath, forKey: .filePath)
+        try container.encodeIfPresent(fileReference, forKey: .fileReference)
         try container.encode(selectedLocation, forKey: .selectedLocation)
         try container.encode(wordWrapEnabled, forKey: .wordWrapEnabled)
         try container.encode(statusBarVisible, forKey: .statusBarVisible)

@@ -95,6 +95,7 @@ public final class EditorDocument {
 
     public private(set) var id: String
     public private(set) var fileURL: URL?
+    public private(set) var fileReference: PersistedFileReference?
     public private(set) var text: String
     public private(set) var originalText: String
     public private(set) var lineEnding: LineEnding
@@ -113,6 +114,9 @@ public final class EditorDocument {
     ) {
         self.id = id
         self.fileURL = fileURL
+        self.fileReference = fileURL.map {
+            PersistedFileReference(path: $0.path, bookmarkData: nil)
+        }
         self.text = text
         self.originalText = originalText
         self.lineEnding = lineEnding
@@ -132,12 +136,24 @@ public final class EditorDocument {
 
     public func loadFile(_ url: URL) throws {
         let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
+        let preservedBookmarkData: Data? = if fileURL?.resolvingSymlinksInPath().standardizedFileURL
+            == resolvedURL {
+            fileReference?.bookmarkData
+        } else {
+            nil
+        }
         let data = try Self.readBoundedRegularFile(resolvedURL)
         let decodedText = try Self.decodeText(data, path: resolvedURL.path)
         let loadedText = decodedText.text
 
         id = UUID().uuidString
         fileURL = resolvedURL
+        attachFileReference(
+            PersistedFileReference(
+                path: resolvedURL.path,
+                bookmarkData: preservedBookmarkData
+            )
+        )
         text = loadedText
         originalText = loadedText
         lineEnding = LineEnding.detected(in: loadedText)
@@ -170,6 +186,7 @@ public final class EditorDocument {
     public func save(to url: URL, encoding: TextFileEncoding) throws {
         let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
         let isCurrentFile = fileURL?.standardizedFileURL == resolvedURL
+        let preservedBookmarkData = isCurrentFile ? fileReference?.bookmarkData : nil
         let outputData = try encodedData(path: resolvedURL.path, encoding: encoding)
         guard outputData.count <= Self.maximumReadableFileBytes else {
             throw EditorDocumentError.documentTooLargeToSave(
@@ -185,6 +202,12 @@ public final class EditorDocument {
             try coordinatedWrite(outputData, to: resolvedURL)
         }
         fileURL = savedURL
+        attachFileReference(
+            PersistedFileReference(
+                path: savedURL.path,
+                bookmarkData: preservedBookmarkData
+            )
+        )
         originalText = text
         textEncoding = encoding
         shouldRestoreInSession = true
@@ -194,7 +217,10 @@ public final class EditorDocument {
 
     public func restoreSessionState(_ state: EditorSessionState) {
         id = state.id
-        fileURL = state.filePath.map(URL.init(fileURLWithPath:))
+        fileReference = state.fileReference
+        fileURL = state.fileReference.map {
+            URL(fileURLWithPath: $0.path)
+        }
         text = ""
         originalText = ""
         lineEnding = state.lineEnding
@@ -205,13 +231,14 @@ public final class EditorDocument {
     }
 
     public func restoreSessionStateAndReloadFile(_ state: EditorSessionState) throws {
-        guard let filePath = state.filePath else {
+        guard let fileReference = state.fileReference else {
             restoreSessionState(state)
             return
         }
 
-        try loadFile(URL(fileURLWithPath: filePath))
+        try loadFile(URL(fileURLWithPath: fileReference.path))
         id = state.id
+        attachFileReference(fileReference)
     }
 
     public func sessionState(
@@ -223,12 +250,24 @@ public final class EditorDocument {
         guard shouldRestoreInSession else { return nil }
         return EditorSessionState(
             id: id,
-            filePath: fileURL?.path,
+            fileReference: fileReference,
             selectedLocation: selectedLocation,
             wordWrapEnabled: wordWrapEnabled,
             statusBarVisible: statusBarVisible,
             zoomPercent: zoomPercent,
             lineEnding: lineEnding
+        )
+    }
+
+    public func attachFileReference(_ reference: PersistedFileReference) {
+        guard let fileURL else {
+            preconditionFailure("Cannot attach a file reference to an untitled document.")
+        }
+        let resolvedURL = fileURL.resolvingSymlinksInPath().standardizedFileURL
+        self.fileURL = resolvedURL
+        fileReference = PersistedFileReference(
+            path: resolvedURL.path,
+            bookmarkData: reference.bookmarkData
         )
     }
 
