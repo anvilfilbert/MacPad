@@ -28,7 +28,7 @@
 - Keep `local.macpad.app` as the repository placeholder until the owner approves a production identifier.
 - Never add a Team ID, certificate, provisioning profile, signing secret, App Store Connect record, upload step, notarization credential, or final Store URL.
 - Draft price only: MacPad USD 2.99; future bundle USD 3.99. Do not set pricing or territories externally.
-- Preserve unrelated `.playwright-cli/` files and `docs/domain-name-research-2026-08-28.md` without editing, committing, or deleting them.
+- Preserve unrelated untracked workspace files and directories without editing, committing, or deleting them.
 - Use focused commits, no force pushes, and the protected-branch pull-request workflow.
 
 ## Inspection Baseline
@@ -69,7 +69,7 @@ Rejected alternatives:
 - `MacPad.xcodeproj`: native application target and shared Direct/AppStore schemes.
 - `scripts/compile-localizations.sh`: deterministic catalog compilation for the manual direct bundle.
 - `scripts/check-localizations.swift`: typed catalog structure, locale, completeness, placeholder, and plural validation.
-- `scripts/archive-local.sh`: credential-free local Xcode archive candidate creation and ad-hoc entitlement inspection.
+- `scripts/archive-local.sh`: credential-free unsigned Xcode archive candidate creation and structural artifact inspection.
 - `scripts/app-store-preflight.sh`: one read-only credential-free Store/direct verification entrypoint.
 - `scripts/validate-store-screenshots.sh`: exact dimensions, alpha, format, and filename validation.
 - `docs/app-store-preparation.md`: the single authoritative bilingual Store copy, evidence, recommendations, owner gates, and readiness matrix.
@@ -724,7 +724,7 @@ Add `Resources/Assets.xcassets` to the Xcode resources phase and set `ASSETCATAL
 
 - [ ] **Step 3: Create a credential-free archive candidate**
 
-`scripts/archive-local.sh` uses a temporary DerivedData and archive directory, runs `xcodebuild archive` with `CODE_SIGNING_ALLOWED=NO`, then copies the app to a verification directory and ad-hoc signs that copy with `Resources/AppStore.entitlements`. It never exports, uploads, notarizes, or reads a signing identity.
+`scripts/archive-local.sh` uses a temporary DerivedData and archive directory, runs `xcodebuild archive` with `CODE_SIGNING_ALLOWED=NO`, then copies the unsigned app to a verification directory without signing it. It never signs, exports, uploads, notarizes, or reads a signing identity.
 
 - [ ] **Step 4: Inspect the archive**
 
@@ -740,7 +740,7 @@ MacPad.app/Contents/Resources/AppIcon.icns
 MacPad.app/Contents/Resources/LICENSE
 ```
 
-It checks `codesign -d --entitlements :-`, `plutil`, `lipo`, bundle version, placeholder identifier, localizations, category, and absence of private paths/secrets. It recursively scans the Store app's executable and resources and fails on customer-route domain tokens including `github.com`, `githubusercontent.com`, `sourceforge.net`, `anvilfilbert.github.io`, and `deepwiki.com`, plus `/releases/latest`. A separate runtime test verifies that Store About does not display a public-repository credit; do not reject an otherwise unused shared localized label merely because both channels compile the same catalog. Engineering provenance in an archive-side manifest is allowed only when it is outside the app bundle and cannot be linked or displayed by the app.
+It checks that the archive and verification copy have no signature directory, then inspects `plutil`, `lipo`, bundle version, placeholder identifier, localizations, category, and absence of private paths/secrets. The preflight separately lints the source entitlement plist; signed runtime entitlement acceptance remains owner-gated. It recursively scans the Store app's executable and resources and fails on customer-route domain tokens including `github.com`, `githubusercontent.com`, `sourceforge.net`, `anvilfilbert.github.io`, and `deepwiki.com`, plus `/releases/latest`. A separate runtime test verifies that Store About does not display a public-repository credit; do not reject an otherwise unused shared localized label merely because both channels compile the same catalog. Engineering provenance in an archive-side manifest is allowed only when it is outside the app bundle and cannot be linked or displayed by the app.
 
 - [ ] **Step 5: Add credential-free CI coverage**
 
@@ -911,9 +911,9 @@ Register the built app with Launch Services, open System Settings → General �
 
 With a saved open document and an edited dirty document, change the per-app language and relaunch. Verify the saved document/session restores. Verify the dirty document triggers the normal Save/Don't Save/Cancel owner choice before termination; choose Save and confirm content is preserved. Do not persist document text in preferences.
 
-- [ ] **Step 3: Run the Store sandbox sequence with an ad-hoc entitled build**
+- [ ] **Step 3: Record the signed Store sandbox sequence as authorization-gated**
 
-Use a temporary external fixture directory and perform, in order:
+All signing is prohibited in this task. Record the scenario as `SKIPPED-AUTHORIZATION`, with no candidate path or hash, until the owner separately authorizes a signed Store candidate. After that separate authorization, use a temporary external fixture directory and perform, in order:
 
 ```text
 Open → edit → Save → quit → relaunch → session restore → Open Recent → Save As → external modification → conflict alert → Reload → Print → menu-bar new document
@@ -957,14 +957,14 @@ git commit -m "docs: record localization and Store preparation"
 
 - [ ] **Step 2: Run the complete repository checks**
 
+Do not run `scripts/build-app.sh` or `scripts/package-release.sh` in this task because the direct-release path performs ad-hoc signing. Use only the unsigned Xcode and archive checks below while all signing remains prohibited.
+
 ```bash
 git diff --check
 plutil -lint Resources/Info.plist Resources/AppStore.entitlements
 ./scripts/verify-public-repo.sh
 ./scripts/check-localizations.sh
 swift test --disable-sandbox
-./scripts/build-app.sh
-./scripts/package-release.sh
 ./scripts/app-store-preflight.sh
 ./scripts/validate-store-screenshots.sh
 xcodebuild -project MacPad.xcodeproj -scheme MacPad-Direct -configuration DirectRelease -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO SWIFT_TREAT_WARNINGS_AS_ERRORS=YES build
@@ -975,7 +975,7 @@ Record exact test pass/fail/skip totals, build exit codes, archive path, app ver
 
 - [ ] **Step 3: Inspect artifacts and future repository-privacy readiness**
 
-Verify the ZIP/archive contain the Apache-2.0 license, no local user paths, personal names, email addresses, IPs, serial numbers, credentials, profiles, certificates, Team IDs, or private notes. Confirm `.playwright-cli/`, `outputs/`, and `docs/domain-name-research-2026-08-28.md` remain outside this task's diff. Verify the two binding cross-project documents are unchanged by this task.
+Verify the ZIP/archive contain the Apache-2.0 license, no local user paths, personal names, email addresses, IPs, serial numbers, credentials, profiles, certificates, Team IDs, or private notes. Confirm unrelated untracked workspace artifacts remain outside this task's diff. Verify the two binding cross-project documents are unchanged by this task.
 
 Record, without mutating settings, whether the current release workflow has tag publication, unauthenticated private-incompatible fetches, public-only attestation, or GitHub Release customer dependencies; whether the current account plan supports private Actions, CodeQL, and attestations; and which checks must move to the later cross-project CI-adaptation gate. Do not claim the repository is privacy-ready merely because the current public workflow passes.
 
