@@ -40,5 +40,8 @@ jobs:
       - name: Check localizations
         run: ./scripts/check-localizations.sh
 
+      - name: Verify ad-hoc-signed direct package
+        run: ./scripts/package-release.sh
+
       - name: Run unsigned native preflight
         run: ./scripts/app-store-preflight.sh

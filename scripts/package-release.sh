@@ -70,7 +70,7 @@ verify_localization_products() {
   require_non_empty_regular_file "$app_path/Contents/Resources/de.lproj/InfoPlist.strings" "extracted German InfoPlist.strings product"
 }
 
-verify_hardened_runtime() {
+verify_ad_hoc_hardened_runtime() {
   local app_path="$1"
   local signature_details
   if ! signature_details="$(/usr/bin/codesign -dv --verbose=4 "$app_path" 2>&1)"; then
@@ -79,6 +79,18 @@ verify_hardened_runtime() {
   fi
   if ! /usr/bin/grep -Eq 'flags=.*runtime' <<<"$signature_details"; then
     echo "Extracted app is missing the Hardened Runtime flag at $app_path: $signature_details" >&2
+    exit 1
+  fi
+  if ! /usr/bin/grep -Eq '^Signature=adhoc$' <<<"$signature_details"; then
+    echo "Extracted app is not ad-hoc signed at $app_path: $signature_details" >&2
+    exit 1
+  fi
+  if ! /usr/bin/grep -Eq '^TeamIdentifier=not set$' <<<"$signature_details"; then
+    echo "Extracted ad-hoc app has an unexpected Team identifier at $app_path: $signature_details" >&2
+    exit 1
+  fi
+  if /usr/bin/grep -Eq '^Authority=' <<<"$signature_details"; then
+    echo "Extracted ad-hoc app unexpectedly has a signing authority at $app_path: $signature_details" >&2
     exit 1
   fi
 }
@@ -108,7 +120,7 @@ EXTRACTED_APP="$VERIFY_DIR/MacPad.app"
 /usr/bin/codesign --verify --deep --strict "$EXTRACTED_APP"
 verify_localization_products "$EXTRACTED_APP"
 verify_plist_contract "$EXTRACTED_APP/Contents/Info.plist"
-verify_hardened_runtime "$EXTRACTED_APP"
+verify_ad_hoc_hardened_runtime "$EXTRACTED_APP"
 
 BUNDLED_LICENSE="$EXTRACTED_APP/Contents/Resources/LICENSE"
 if [[ ! -f "$BUNDLED_LICENSE" ]]; then
