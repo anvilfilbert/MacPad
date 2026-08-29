@@ -707,9 +707,12 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         let previousReference = editorDocument.fileReference
         editorDocument.updateText(textView.string)
         let result = try fileAccess.accessGrantedURL(url) { grantedURL in
-            try editorDocument.save(to: grantedURL, encoding: encoding)
+            try editorDocument.writeNewFile(to: grantedURL, encoding: encoding)
         }
-        editorDocument.attachFileReference(result.refreshedReference)
+        editorDocument.commitNewFileSave(
+            result.value,
+            bookmarkData: result.refreshedReference.bookmarkData
+        )
         finishSuccessfulSave(previousReference: previousReference)
     }
 

@@ -619,6 +619,61 @@ struct WindowRoutingTests {
         #expect(transitionCount == 0)
     }
 
+    @Test("Save As stays attached to its previous state when bookmark persistence fails")
+    func saveAsPersistenceFailureKeepsPreviousState() throws {
+        try withTemporaryDirectory { directory in
+            let originalURL = directory.appendingPathComponent("original.txt")
+            let fileURL = directory.appendingPathComponent("written-without-access.txt")
+            try Data("original".utf8).write(to: originalURL)
+            try Data("before".utf8).write(to: fileURL)
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o000],
+                ofItemAtPath: fileURL.path
+            )
+            defer {
+                try? FileManager.default.setAttributes(
+                    [.posixPermissions: 0o600],
+                    ofItemAtPath: fileURL.path
+                )
+            }
+            let fileAccess = SecurityScopedFileAccess(requiresBookmark: true)
+            let originalReference = try fileAccess.makeReference(for: originalURL)
+            let controller = EditorWindowController(
+                localization: englishLocalization,
+                fileAccess: fileAccess
+            )
+            try controller.loadFile(originalReference)
+            let contentView = try #require(controller.window?.contentView)
+            let editor = try #require(
+                view(withIdentifier: "editor.text", in: contentView) as? NSTextView
+            )
+            editor.string = "after"
+            var stateNotificationCount = 0
+            var transitionCount = 0
+            var accessError: SecurityScopedFileAccessError?
+            controller.onStateChange = { stateNotificationCount += 1 }
+            controller.onSuccessfulSave = { _ in transitionCount += 1 }
+
+            do {
+                try controller.saveDocument(to: fileURL, encoding: .utf8)
+                Issue.record("Expected bookmark creation to fail after the write.")
+            } catch let error as SecurityScopedFileAccessError {
+                accessError = error
+            }
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o600],
+                ofItemAtPath: fileURL.path
+            )
+
+            #expect(accessError != nil)
+            #expect(try String(contentsOf: fileURL, encoding: .utf8) == "after")
+            #expect(controller.fileReference == originalReference)
+            #expect(controller.sessionState?.fileReference == originalReference)
+            #expect(stateNotificationCount == 0)
+            #expect(transitionCount == 0)
+        }
+    }
+
     @Test("Store open attaches the refreshed bookmark before state notification")
     func storeOpenAttachesRefreshedBookmarkBeforeNotification() throws {
         try withTemporaryDirectory { directory in

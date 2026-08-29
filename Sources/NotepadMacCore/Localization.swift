@@ -119,6 +119,7 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case sessionTabLimit = "error.sessionTabLimit"
     case missingPersistentAccess = "error.missingPersistentAccess"
     case securityScopedAccessDenied = "error.securityScopedAccessDenied"
+    case persistentAccessUnavailableAfterWrite = "error.persistentAccessUnavailableAfterWrite"
     case invalidRecentDocumentData = "error.invalidRecentDocumentData"
     case windowsLineEnding = "lineEnding.windows"
     case unixLineEnding = "lineEnding.unix"
@@ -251,6 +252,7 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .sessionTabLimit: "Session contains more tabs than MacPad supports."
         case .missingPersistentAccess: "MacPad no longer has persistent access to this file: %1$@. Choose the file again to restore access."
         case .securityScopedAccessDenied: "macOS did not grant MacPad access to this file: %1$@. Choose the file again to restore access."
+        case .persistentAccessUnavailableAfterWrite: "MacPad saved this file, but could not retain access to it: %1$@. macOS reported: %2$@. Choose Save As and select the file again before closing this document."
         case .invalidRecentDocumentData: "Saved recent-document access data is invalid. Clear the Open Recent menu to remove it."
         case .windowsLineEnding: "Windows (CRLF)"
         case .unixLineEnding: "Unix (LF)"
@@ -378,6 +380,16 @@ public struct MacPadLocalization: Sendable {
 
     public func securityScopedAccessDenied(path: String) -> String {
         formatted(.securityScopedAccessDenied, arguments: [path])
+    }
+
+    public func persistentAccessUnavailableAfterWrite(
+        path: String,
+        reason: String
+    ) -> String {
+        formatted(
+            .persistentAccessUnavailableAfterWrite,
+            arguments: [path, reason]
+        )
     }
 
     private func formatted(

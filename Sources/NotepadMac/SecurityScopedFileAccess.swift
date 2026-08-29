@@ -9,6 +9,7 @@ struct ResolvedFileAccess<Value> {
 enum SecurityScopedFileAccessError: LocalizedError, MacPadLocalizedError, Equatable {
     case missingPersistentAccess(path: String)
     case securityScopedAccessDenied(path: String)
+    case persistentAccessUnavailableAfterWrite(path: String, reason: String)
 
     var errorDescription: String? {
         localizedErrorDescription(using: MacPadLocalization(bundle: .main))
@@ -20,6 +21,11 @@ enum SecurityScopedFileAccessError: LocalizedError, MacPadLocalizedError, Equata
             return localization.missingPersistentAccess(path: path)
         case let .securityScopedAccessDenied(path):
             return localization.securityScopedAccessDenied(path: path)
+        case let .persistentAccessUnavailableAfterWrite(path, reason):
+            return localization.persistentAccessUnavailableAfterWrite(
+                path: path,
+                reason: reason
+            )
         }
     }
 }
@@ -114,7 +120,15 @@ struct SecurityScopedFileAccess {
     ) throws -> ResolvedFileAccess<Value> {
         let canonicalURL = canonical(url)
         let value = try operation(canonicalURL)
-        let reference = try makeReference(for: canonicalURL)
+        let reference: PersistedFileReference
+        do {
+            reference = try makeReference(for: canonicalURL)
+        } catch {
+            throw SecurityScopedFileAccessError.persistentAccessUnavailableAfterWrite(
+                path: canonicalURL.path,
+                reason: error.localizedDescription
+            )
+        }
         return ResolvedFileAccess(value: value, refreshedReference: reference)
     }
 

@@ -90,6 +90,12 @@ public enum TextFileEncoding: CaseIterable, Equatable, Sendable {
     }
 }
 
+public struct WrittenDocumentSave: Sendable {
+    fileprivate let savedURL: URL
+    fileprivate let encoding: TextFileEncoding
+    fileprivate let outputData: Data
+}
+
 public final class EditorDocument {
     public static let maximumReadableFileBytes: Int64 = 25 * 1024 * 1024
 
@@ -191,13 +197,33 @@ public final class EditorDocument {
             return
         }
 
+        let writtenSave = try writeNewFile(to: resolvedURL, encoding: encoding)
+        commitNewFileSave(writtenSave, bookmarkData: nil)
+    }
+
+    public func writeNewFile(
+        to url: URL,
+        encoding: TextFileEncoding
+    ) throws -> WrittenDocumentSave {
+        let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
         let outputData = try savableData(path: resolvedURL.path, encoding: encoding)
         let savedURL = try coordinatedWrite(outputData, to: resolvedURL)
-        recordSuccessfulSave(
-            at: savedURL,
+        return WrittenDocumentSave(
+            savedURL: savedURL,
             encoding: encoding,
-            outputData: outputData,
-            bookmarkData: nil
+            outputData: outputData
+        )
+    }
+
+    public func commitNewFileSave(
+        _ writtenSave: WrittenDocumentSave,
+        bookmarkData: Data?
+    ) {
+        recordSuccessfulSave(
+            at: writtenSave.savedURL,
+            encoding: writtenSave.encoding,
+            outputData: writtenSave.outputData,
+            bookmarkData: bookmarkData
         )
     }
 

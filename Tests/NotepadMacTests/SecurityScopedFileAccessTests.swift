@@ -168,6 +168,53 @@ struct SecurityScopedFileAccessTests {
         }
     }
 
+    @Test("granted Save As reports when the write succeeds but persistence fails")
+    func grantedURLReportsPersistenceFailureAfterWrite() throws {
+        try withTemporaryDirectory { directory in
+            let fileURL = directory.appendingPathComponent("written-without-access.txt")
+            let access = SecurityScopedFileAccess(requiresBookmark: true)
+            var accessError: SecurityScopedFileAccessError?
+            defer {
+                try? FileManager.default.setAttributes(
+                    [.posixPermissions: 0o600],
+                    ofItemAtPath: fileURL.path
+                )
+            }
+
+            do {
+                _ = try access.accessGrantedURL(fileURL) { grantedURL in
+                    try Data("written".utf8).write(to: grantedURL, options: .atomic)
+                    try FileManager.default.setAttributes(
+                        [.posixPermissions: 0o000],
+                        ofItemAtPath: grantedURL.path
+                    )
+                }
+                Issue.record("Expected bookmark creation to fail after the write.")
+            } catch let error as SecurityScopedFileAccessError {
+                accessError = error
+            }
+            try FileManager.default.setAttributes(
+                [.posixPermissions: 0o600],
+                ofItemAtPath: fileURL.path
+            )
+
+            #expect(try String(contentsOf: fileURL, encoding: .utf8) == "written")
+            let description = accessError?.localizedErrorDescription(
+                using: MacPadLocalization(bundle: .main)
+            )
+            #expect(
+                description?.contains(
+                    "MacPad saved this file, but could not retain access to it:"
+                ) == true
+            )
+            #expect(
+                description?.contains(
+                    "Choose Save As and select the file again before closing this document."
+                ) == true
+            )
+        }
+    }
+
     @Test("granted operation errors escape without bookmark creation")
     func grantedOperationErrorIsPreserved() throws {
         try withTemporaryDirectory { directory in
