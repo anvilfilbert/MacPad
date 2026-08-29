@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Localized the native app interface and packaged metadata with English and German resources.
+- Added security-scoped bookmark persistence and recovery for sandbox-oriented file access across session restore, Open Recent, and save-conflict handling.
+- Added separate Direct and AppStore Xcode configurations, a complete AppIcon asset catalog, and a credential-free unsigned archive preflight.
+- Prepared bilingual App Store metadata and added a fail-closed validator for future Store screenshots; no screenshots or signed distribution artifacts are included.
+
 ## 1.3.1
 
 - Restored Dock reopening while menu-bar mode keeps MacPad running after the last editor window closes.
