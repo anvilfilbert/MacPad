@@ -47,6 +47,14 @@ If macOS warns that the app is from an unidentified developer, right-click `MacP
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
+## App Store preparation
+
+Repository-local English and German metadata drafts, privacy and support
+copy, compliance evidence, and unresolved owner gates are tracked in
+[App Store preparation](docs/app-store-preparation.md). This is preparation
+material only: it does not mean MacPad has been production-signed, notarized,
+submitted, approved, distributed, or published on the Mac App Store.
+
 ## Features
 
 - Plain-text editing with native undo, cut, copy, paste, delete, and select all
