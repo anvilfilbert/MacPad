@@ -104,7 +104,10 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case linkOpenFailure = "link.openFailure"
     case fontSaveFailure = "font.saveFailure"
     case aboutCreatedBy = "about.createdBy"
-    case aboutPublicRepository = "about.publicRepository"
+    case aboutWebsite = "about.website"
+    case aboutSupport = "about.support"
+    case aboutPrivacyPolicy = "about.privacyPolicy"
+    case aboutSourceCode = "about.sourceCode"
     case fileTooLarge = "error.fileTooLarge"
     case documentTooLarge = "error.documentTooLarge"
     case regularFilesOnly = "error.regularFilesOnly"
@@ -226,7 +229,10 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .linkOpenFailure: "Could not open the link."
         case .fontSaveFailure: "Could not save the editor font."
         case .aboutCreatedBy: "Created by %1$@"
-        case .aboutPublicRepository: "Public repo: %1$@"
+        case .aboutWebsite: "Website: %1$@"
+        case .aboutSupport: "Support: %1$@"
+        case .aboutPrivacyPolicy: "Privacy Policy"
+        case .aboutSourceCode: "Source Code: %1$@"
         case .fileTooLarge: "File is too large to open safely: %1$@ is %2$lld bytes, maximum is %3$lld bytes."
         case .documentTooLarge: "Document is too large to save safely: %1$@ would be %2$lld bytes, maximum is %3$lld bytes."
         case .regularFilesOnly: "Only regular files can be opened safely: %1$@."
@@ -313,8 +319,16 @@ public struct MacPadLocalization: Sendable {
         formatted(.aboutCreatedBy, arguments: [creator])
     }
 
-    public func aboutPublicRepository(repository: String) -> String {
-        formatted(.aboutPublicRepository, arguments: [repository])
+    public func aboutWebsite(host: String) -> String {
+        formatted(.aboutWebsite, arguments: [host])
+    }
+
+    public func aboutSupport(emailAddress: String) -> String {
+        formatted(.aboutSupport, arguments: [emailAddress])
+    }
+
+    public func aboutSourceCode(repository: String) -> String {
+        formatted(.aboutSourceCode, arguments: [repository])
     }
 
     public func fileTooLarge(

@@ -524,30 +524,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     func aboutCredits() -> NSAttributedString {
         let creator = "anvilfilbert"
+        let websiteHost = "macpad.net"
+        let supportEmailAddress = "support@macpad.net"
         let repository = "anvilfilbert/MacPad"
-        let text: String
+        var lines = [
+            localization.aboutCreatedBy(creator: creator),
+            localization.aboutWebsite(host: websiteHost),
+            localization.aboutSupport(emailAddress: supportEmailAddress),
+            localization.string(.aboutPrivacyPolicy)
+        ]
         if distributionChannel == .direct {
-            text = [
-                localization.aboutCreatedBy(creator: creator),
-                localization.aboutPublicRepository(repository: repository)
-            ].joined(separator: "\n")
-        } else {
-            text = localization.aboutCreatedBy(creator: creator)
+            lines.append(localization.aboutSourceCode(repository: repository))
         }
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
 
         let credits = NSMutableAttributedString(
-            string: text,
+            string: lines.joined(separator: "\n"),
             attributes: [
                 .font: NSFont.systemFont(ofSize: 11),
                 .foregroundColor: NSColor.secondaryLabelColor,
                 .paragraphStyle: paragraph
             ]
         )
+        addLink(to: websiteHost, in: credits, url: customerRoutes.productURL)
+        addLink(
+            to: supportEmailAddress,
+            in: credits,
+            url: customerRoutes.supportEmailURL
+        )
+        addLink(
+            to: localization.string(.aboutPrivacyPolicy),
+            in: credits,
+            url: customerRoutes.privacyURL
+        )
         if distributionChannel == .direct {
             addLink(to: creator, in: credits, url: customerRoutes.creatorProfileURL)
-            addLink(to: repository, in: credits, url: customerRoutes.productURL)
+            addLink(to: repository, in: credits, url: customerRoutes.sourceCodeURL)
         }
         return credits
     }

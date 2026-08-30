@@ -36,7 +36,7 @@ permanent assumptions.
 | --- | --- | --- |
 | Dependencies | Package.swift | The package declares only the local NotepadMacCore and NotepadMac targets and their tests. It declares no external package dependency. |
 | Imports | Sources | AppKit, Foundation, CryptoKit, Darwin, OSLog, UniformTypeIdentifiers, and the local NotepadMacCore module are used. No third-party module is imported. |
-| Customer links | Sources/NotepadMac/DistributionChannel.swift and Sources/NotepadMac/AppDelegate.swift | The Direct channel currently contains GitHub routes. The App Store channel resolves every customer route to nil. NSWorkspace opens a configured route in the user's default browser; MacPad does not implement a web view or network client. |
+| Customer links | Sources/NotepadMac/DistributionChannel.swift and Sources/NotepadMac/AppDelegate.swift | Both channels compile the approved product, support, support-email, and privacy destinations on macpad.net. The Direct channel additionally retains its temporary GitHub Help, source-code, creator-profile, and update routes. The App Store channel omits those direct-distribution routes. NSWorkspace opens a configured route in the user's default browser or mail client; MacPad does not implement a web view or network client. |
 | Preferences | Sources/NotepadMac/AppDelegate.swift and Sources/NotepadMac/EditorFontPreferences.swift | The exact keys are MacPad.SessionState.v1, MacPad.ShowInMenuBar, MacPad.RecentDocumentBookmarks.v1, and MacPad.EditorFont.v1. |
 | Session data | Sources/NotepadMacCore/SessionState.swift | Saved-document file references and bookmark data, selection, word-wrap, status-bar, zoom, line-ending, tab ordering, and window state may be stored locally. Document text is not stored in preferences. |
 | File access | Sources/NotepadMacCore/EditorDocument.swift and Sources/NotepadMac/SecurityScopedFileAccess.swift | MacPad reads and writes user-selected files, coordinates writes, writes atomically, and uses app-scoped security bookmarks for persistent Store access. |
@@ -53,11 +53,12 @@ App Privacy as transmitting data off the device in a form retained beyond
 the time needed to service a real-time request. Apple also states that data
 processed only on the device is not collected for the App Privacy answers.
 
-Opening a future approved Help, Support, Privacy, or Security route leaves
-MacPad and opens the destination in the default browser. The public website
-must describe its own processing separately. Store routes remain absent
-until the owner approves the exact public URL contract and the routes are
-compiled into a later candidate.
+Opening a configured Help, Support, Privacy, or Security route leaves MacPad
+and opens the destination in the default browser. The support email opens in
+the default mail client. The public website must describe its own processing
+separately. The compiled macpad.net destinations remain a hard release gate
+until Shared Services verifies that the correct anonymous MacPad pages are
+live in English and German.
 
 Draft App Privacy answer: **No data collected.** The owner must enter and
 attest that answer in App Store Connect only after a final-source,
@@ -225,24 +226,31 @@ Version nicht bereit und verlangt es für spätere Versionen.
 
 ## Public URL contract
 
-> OWNER INPUT REQUIRED: final HTTPS public URL contract on an owner-controlled domain.
+The owner approved these repository-local destinations:
 
-Domain research is not approval. The final contract must supply stable,
-anonymous English and German destinations for:
+- product and Website: `https://macpad.net`;
+- customer support: `https://macpad.net/support`;
+- support email: `support@macpad.net` through `mailto:support@macpad.net`; and
+- privacy policy: `https://macpad.net/privacy`.
+
+The URLs are compiled preparation, not production verification. macpad.net
+does not yet serve the correct MacPad site, so no candidate may be released
+until Shared Services verifies the exact anonymous English and German pages.
+
+The remaining public contract must still supply stable, anonymous English
+and German destinations for:
 
 - product and marketing information;
 - Help and documentation;
-- support and issue reporting with actual public contact information;
-- the privacy policy;
 - security reporting;
 - release notes;
 - direct-user migration and update guidance; and
 - the final Mac App Store listing.
 
-App Store Help, Support, Privacy, and Security commands remain absent. They
-must not fall back to GitHub, SourceForge, or an invented hostname while the
-contract is unresolved. The exact routes may be added only after the owner
-approves them and the anonymous bilingual pages are verified.
+The App Store Help menu now exposes the approved Support and Privacy routes,
+but still omits unconfigured Help and Security commands as well as every
+direct update or source-repository route. Unresolved routes must not fall
+back to GitHub, SourceForge, or an invented hostname.
 
 The following page copy is ready for publication only after the bracketed
 owner inputs are resolved and the complete page is reviewed on the approved
@@ -443,9 +451,9 @@ selects. Printing uses the standard macOS print panel.
    external-change warning and reload path.
 6. Enable the optional menu-bar item and create a new empty window from it.
 7. Verify English and German through the macOS per-app language setting.
-8. No account or credentials are required. Help, Support, Privacy, and
-   Security routes remain absent until the approved public routes are
-   compiled.
+8. No account or credentials are required. Support and Privacy use the
+   approved macpad.net routes. Help and Security remain absent. Do not use
+   this candidate for review until the configured routes are verified live.
 
 ### Deutsche Hinweise
 
@@ -474,9 +482,10 @@ wird der Standard-Druckdialog von macOS verwendet.
    leeres Fenster.
 7. Prüfe Englisch und Deutsch über die macOS-Einstellung für die
    App-Sprache.
-8. Es sind kein Konto und keine Zugangsdaten nötig. Hilfe, Support,
-   Datenschutz und Sicherheit bleiben ohne Befehl, bis die freigegebenen
-   öffentlichen Routen kompiliert sind.
+8. Es sind kein Konto und keine Zugangsdaten nötig. Support und Datenschutz
+   verwenden die freigegebenen macpad.net-Routen. Hilfe und Sicherheit
+   bleiben ohne Befehl. Dieser Kandidat darf erst nach der Live-Prüfung der
+   konfigurierten Routen zur Prüfung verwendet werden.
 
 ## Draft owner decisions
 
@@ -554,7 +563,7 @@ cell is therefore fail-closed.
 | Recent files | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Native recents and repository-managed references remain usable or fail clearly |
 | Security-scoped bookmarks | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Bookmark refresh is balanced; inaccessible files offer the approved Locate path |
 | Conflict and recovery behavior | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | External changes, reload, and recovery choices do not overwrite content silently |
-| Help, Support, Privacy, and Security | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Every approved domain route opens anonymously in English and German |
+| Help, Support, Privacy, and Security | COMPILED / NOT LIVE-VERIFIED | COMPILED / NOT LIVE-VERIFIED | Every configured domain route opens the correct anonymous MacPad page in English and German; unconfigured Help and Security routes remain absent |
 | Migration and update guidance | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | The transition build points only to the verified migration page; that page exposes the Store link after live-listing verification |
 
 Do not publish instructions telling a user to overwrite, replace, remove, or

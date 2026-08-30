@@ -55,11 +55,15 @@ scan_file() {
   local customer_route_pattern='github[.]com|githubusercontent[.]com|sourceforge[.]net|anvilfilbert[.]github[.]io|deepwiki[.]com|/releases/latest'
   local email_separator='@'
   local approved_icon_filenames_pattern='^(icon_16x16'"$email_separator"'2x[.]png|icon_32x32'"$email_separator"'2x[.]png|icon_128x128'"$email_separator"'2x[.]png|icon_256x256'"$email_separator"'2x[.]png|icon_512x512'"$email_separator"'2x[.]png)$'
-  local private_content_pattern='(/U''sers/[^/[:space:]]+|/ho''me/[^/[:space:]]+|[A-Za-z0-9._%+-]+'"$email_separator"'[A-Za-z0-9.-]+[.][A-Za-z]{2,}|github_''pat_[A-Za-z0-9_]+|gh[opusr]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|BEGIN (RSA |EC |OPENSSH )?PRIVATE ''KEY|(^|[^0-9])(10[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}|192[.]168[.][0-9]{1,3}[.][0-9]{1,3}|172[.](1[6-9]|2[0-9]|3[01])[.][0-9]{1,3}[.][0-9]{1,3})([^0-9]|$))'
+  local email_pattern='[A-Za-z0-9._%+-]+'"$email_separator"'[A-Za-z0-9.-]+[.][A-Za-z]{2,}'
+  local private_content_pattern='(/U''sers/[^/[:space:]]+|/ho''me/[^/[:space:]]+|github_''pat_[A-Za-z0-9_]+|gh[opusr]_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|BEGIN (RSA |EC |OPENSSH )?PRIVATE ''KEY|(^|[^0-9])(10[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}|192[.]168[.][0-9]{1,3}[.][0-9]{1,3}|172[.](1[6-9]|2[0-9]|3[01])[.][0-9]{1,3}[.][0-9]{1,3})([^0-9]|$))'
   local strings_output
-  local privacy_strings_output
+  local icon_filtered_strings_output
+  local email_matches_output
   local route_status=0
   local filter_status=0
+  local email_status=0
+  local unexpected_email_status=0
   local privacy_status=0
 
   if ! strings_output="$(mktemp "$TEMP_ROOT/scanned-strings.XXXXXX")"; then
@@ -82,11 +86,15 @@ scan_file() {
       ;;
   esac
 
-  if ! privacy_strings_output="$(mktemp "$TEMP_ROOT/privacy-strings.XXXXXX")"; then
-    fail "could not create temporary privacy-scan input for Store artifact file: $file_path"
+  if ! icon_filtered_strings_output="$(mktemp "$TEMP_ROOT/icon-filtered-strings.XXXXXX")"; then
+    fail "could not create temporary icon-filtered input for Store artifact file: $file_path"
   fi
 
-  LC_ALL=C /usr/bin/grep -Ev "$approved_icon_filenames_pattern" "$strings_output" >"$privacy_strings_output" || filter_status=$?
+  if ! email_matches_output="$(mktemp "$TEMP_ROOT/email-matches.XXXXXX")"; then
+    fail "could not create temporary email-scan output for Store artifact file: $file_path"
+  fi
+
+  LC_ALL=C /usr/bin/grep -Ev "$approved_icon_filenames_pattern" "$strings_output" >"$icon_filtered_strings_output" || filter_status=$?
   case "$filter_status" in
     0 | 1)
       ;;
@@ -95,10 +103,34 @@ scan_file() {
       ;;
   esac
 
-  LC_ALL=C /usr/bin/grep -E "$private_content_pattern" "$privacy_strings_output" >/dev/null || privacy_status=$?
+  LC_ALL=C /usr/bin/grep -Eo "$email_pattern" \
+    "$icon_filtered_strings_output" >"$email_matches_output" || email_status=$?
+  case "$email_status" in
+    0)
+      LC_ALL=C /usr/bin/grep -Fxv 'support@macpad.net' \
+        "$email_matches_output" >/dev/null || unexpected_email_status=$?
+      case "$unexpected_email_status" in
+        0)
+          fail "unapproved email found in Store artifact file: $file_path"
+          ;;
+        1)
+          ;;
+        *)
+          fail "approved support-email comparison failed with grep status $unexpected_email_status for Store artifact file: $file_path"
+          ;;
+      esac
+      ;;
+    1)
+      ;;
+    *)
+      fail "email scan failed with grep status $email_status for Store artifact file: $file_path"
+      ;;
+  esac
+
+  LC_ALL=C /usr/bin/grep -E "$private_content_pattern" "$icon_filtered_strings_output" >/dev/null || privacy_status=$?
   case "$privacy_status" in
     0)
-      fail "private path, email, credential, private key, or private IP found in Store artifact file: $file_path"
+      fail "private path, credential, private key, or private IP found in Store artifact file: $file_path"
       ;;
     1)
       ;;

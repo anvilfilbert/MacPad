@@ -300,8 +300,16 @@ validate_channel_builds() {
   [[ -s "$direct_executable" ]] || fail "Direct build executable is missing or empty: $direct_executable"
   /usr/bin/strings -a "$direct_executable" | /usr/bin/grep -F 'github.com/anvilfilbert/MacPad' >/dev/null || fail "Direct executable does not retain the GitHub transition route"
   /usr/bin/strings -a "$direct_executable" | /usr/bin/grep -F '/releases/latest' >/dev/null || fail "Direct executable does not retain the update transition route"
+  /usr/bin/strings -a "$direct_executable" | /usr/bin/grep -F 'https://macpad.net/support' >/dev/null || fail "Direct executable is missing the approved support route"
+  /usr/bin/strings -a "$direct_executable" | /usr/bin/grep -F 'mailto:support@macpad.net' >/dev/null || fail "Direct executable is missing the approved support email"
+  /usr/bin/strings -a "$direct_executable" | /usr/bin/grep -F 'https://macpad.net/privacy' >/dev/null || fail "Direct executable is missing the approved privacy route"
 
   [[ -d "$store_app" ]] || fail "Store build app is missing: $store_app"
+  local store_executable="$store_app/Contents/MacOS/MacPad"
+  [[ -s "$store_executable" ]] || fail "Store build executable is missing or empty: $store_executable"
+  /usr/bin/strings -a "$store_executable" | /usr/bin/grep -F 'https://macpad.net/support' >/dev/null || fail "Store executable is missing the approved support route"
+  /usr/bin/strings -a "$store_executable" | /usr/bin/grep -F 'mailto:support@macpad.net' >/dev/null || fail "Store executable is missing the approved support email"
+  /usr/bin/strings -a "$store_executable" | /usr/bin/grep -F 'https://macpad.net/privacy' >/dev/null || fail "Store executable is missing the approved privacy route"
   validate_localization_products "$direct_app" DirectRelease
   validate_localization_products "$store_app" AppStore
 }

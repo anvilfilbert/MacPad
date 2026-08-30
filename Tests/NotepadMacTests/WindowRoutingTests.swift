@@ -1055,8 +1055,8 @@ struct WindowRoutingTests {
         )
     }
 
-    @Test("unconfigured Store customer commands fail closed")
-    func unconfiguredStoreCustomerCommandsFailClosed() {
+    @Test("current Store menu exposes permanent support and privacy only")
+    func currentStoreMenuExposesPermanentSupportAndPrivacyOnly() throws {
         let application = NSApplication.shared
         let routes = CustomerRoutes.current(for: .appStore)
         let delegate = AppDelegate(
@@ -1076,8 +1076,14 @@ struct WindowRoutingTests {
         )
 
         #expect(menuItem(withIdentifier: "help.macPadHelp", in: menu) == nil)
-        #expect(menuItem(withIdentifier: "help.reportIssue", in: menu) == nil)
-        #expect(menuItem(withIdentifier: "help.privacy", in: menu) == nil)
+        #expect(
+            try #require(menuItem(withIdentifier: "help.reportIssue", in: menu)).action
+                == #selector(AppDelegate.reportIssue(_:))
+        )
+        #expect(
+            try #require(menuItem(withIdentifier: "help.privacy", in: menu)).action
+                == #selector(AppDelegate.openPrivacy(_:))
+        )
         #expect(menuItem(withIdentifier: "help.security", in: menu) == nil)
         #expect(menuItem(withIdentifier: "help.checkUpdates", in: menu) == nil)
     }
@@ -1121,51 +1127,80 @@ struct WindowRoutingTests {
         #expect(menuItem(withIdentifier: "help.checkUpdates", in: menu) == nil)
     }
 
-    @Test("Store About omits direct distribution links")
-    func storeAboutOmitsDirectDistributionLinks() {
+    @Test("Store About exposes permanent localized contact links only")
+    func storeAboutExposesPermanentLocalizedContactLinksOnly() {
         let delegate = AppDelegate(
             defaults: .standard,
             localization: englishLocalization,
             distributionChannel: .appStore,
-            customerRoutes: storeFixtureRoutes,
+            customerRoutes: .current(for: .appStore),
             fileAccess: SecurityScopedFileAccess(requiresBookmark: true),
             recentDocumentStore: testRecentDocumentStore(defaults: .standard)
         )
 
         let credits = delegate.aboutCredits()
 
+        #expect(credits.string.contains("Created by anvilfilbert"))
+        #expect(credits.string.contains("Website: macpad.net"))
+        #expect(credits.string.contains("Support: support@macpad.net"))
+        #expect(credits.string.contains("Privacy Policy"))
+        #expect(!credits.string.contains("Source Code"))
         #expect(!credits.string.contains("Public repo"))
-        var linkCount = 0
-        credits.enumerateAttribute(
-            NSAttributedString.Key.link,
-            in: NSRange(location: 0, length: credits.length)
-        ) { value, _, _ in
-            if value != nil {
-                linkCount += 1
-            }
-        }
-        #expect(linkCount == 0)
+        #expect(
+            linkDestinations(in: credits) == Set([
+                "https://macpad.net",
+                "mailto:support@macpad.net",
+                "https://macpad.net/privacy"
+            ])
+        )
     }
 
     #if !MACPAD_APP_STORE
-    @Test("direct About preserves creator and public repository links")
-    func directAboutPreservesCurrentLinks() {
+    @Test("direct About adds permanent links and preserves source information")
+    func directAboutAddsPermanentLinksAndPreservesSourceInformation() {
         let delegate = appDelegate(localization: englishLocalization)
 
         let credits = delegate.aboutCredits()
 
         #expect(credits.string.contains("Created by anvilfilbert"))
-        #expect(credits.string.contains("Public repo: anvilfilbert/MacPad"))
-        var linkCount = 0
-        credits.enumerateAttribute(
-            NSAttributedString.Key.link,
-            in: NSRange(location: 0, length: credits.length)
-        ) { value, _, _ in
-            if value != nil {
-                linkCount += 1
-            }
+        #expect(credits.string.contains("Website: macpad.net"))
+        #expect(credits.string.contains("Support: support@macpad.net"))
+        #expect(credits.string.contains("Privacy Policy"))
+        #expect(credits.string.contains("Source Code: anvilfilbert/MacPad"))
+        #expect(
+            linkDestinations(in: credits) == Set([
+                "https://github.com/anvilfilbert",
+                "https://macpad.net",
+                "mailto:support@macpad.net",
+                "https://macpad.net/privacy",
+                "https://github.com/anvilfilbert/MacPad"
+            ])
+        )
+    }
+
+    @Test("German About uses German labels with the same permanent destinations")
+    func germanAboutUsesGermanLabelsWithSamePermanentDestinations() throws {
+        try withLocalization(
+            languageCode: "de",
+            strings: germanAboutTranslations
+        ) { localization in
+            let credits = appDelegate(localization: localization).aboutCredits()
+
+            #expect(credits.string.contains("Erstellt von anvilfilbert"))
+            #expect(credits.string.contains("Website: macpad.net"))
+            #expect(credits.string.contains("Support: support@macpad.net"))
+            #expect(credits.string.contains("Datenschutzerklärung"))
+            #expect(credits.string.contains("Quellcode: anvilfilbert/MacPad"))
+            #expect(
+                linkDestinations(in: credits) == Set([
+                    "https://github.com/anvilfilbert",
+                    "https://macpad.net",
+                    "mailto:support@macpad.net",
+                    "https://macpad.net/privacy",
+                    "https://github.com/anvilfilbert/MacPad"
+                ])
+            )
         }
-        #expect(linkCount == 2)
     }
     #endif
 
@@ -1425,6 +1460,19 @@ struct WindowRoutingTests {
         allViews(in: view).first { $0.identifier?.rawValue == identifier }
     }
 
+    private func linkDestinations(in credits: NSAttributedString) -> Set<String> {
+        var destinations: Set<String> = []
+        credits.enumerateAttribute(
+            NSAttributedString.Key.link,
+            in: NSRange(location: 0, length: credits.length)
+        ) { value, _, _ in
+            if let url = value as? URL {
+                destinations.insert(url.absoluteString)
+            }
+        }
+        return destinations
+    }
+
     private var englishLocalization: MacPadLocalization {
         MacPadLocalization(bundle: .main)
     }
@@ -1450,12 +1498,24 @@ struct WindowRoutingTests {
         ]
     }
 
+    private var germanAboutTranslations: [String: String] {
+        [
+            MacPadStringKey.aboutCreatedBy.rawValue: "Erstellt von %1$@",
+            MacPadStringKey.aboutWebsite.rawValue: "Website: %1$@",
+            MacPadStringKey.aboutSupport.rawValue: "Support: %1$@",
+            MacPadStringKey.aboutPrivacyPolicy.rawValue: "Datenschutzerklärung",
+            MacPadStringKey.aboutSourceCode.rawValue: "Quellcode: %1$@"
+        ]
+    }
+
     private var storeFixtureRoutes: CustomerRoutes {
         CustomerRoutes(
             productURL: URL(string: "https://product.example/macpad"),
             creatorProfileURL: URL(string: "https://creator.example/macpad"),
+            sourceCodeURL: URL(string: "https://source.example/macpad"),
             helpURL: URL(string: "https://help.example/macpad"),
             supportURL: URL(string: "https://support.example/macpad"),
+            supportEmailURL: URL(string: "mailto:support@macpad.net"),
             privacyURL: URL(string: "https://privacy.example/macpad"),
             securityURL: URL(string: "https://security.example/macpad"),
             updateURL: URL(string: "https://updates.example/macpad"),

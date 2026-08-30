@@ -77,9 +77,21 @@ struct LocalizationTests {
     func currentSourceInventoryKeys() throws {
         let catalog = try loadCatalog(named: "Localizable.xcstrings")
         let expectedValues: [String: [String: String]] = [
-            "about.publicRepository": [
-                "en": "Public repo: %1$@",
-                "de": "Öffentliches Repository: %1$@"
+            "about.website": [
+                "en": "Website: %1$@",
+                "de": "Website: %1$@"
+            ],
+            "about.support": [
+                "en": "Support: %1$@",
+                "de": "Support: %1$@"
+            ],
+            "about.privacyPolicy": [
+                "en": "Privacy Policy",
+                "de": "Datenschutzerklärung"
+            ],
+            "about.sourceCode": [
+                "en": "Source Code: %1$@",
+                "de": "Quellcode: %1$@"
             ],
             "find.accessibility.what": [
                 "en": "Find what",
@@ -256,9 +268,15 @@ struct LocalizationTests {
                 path: "/tmp/note.txt"
             ) == "The document contains text that cannot be represented as ISO-8859-1: /tmp/note.txt."
         )
+        #expect(localization.aboutWebsite(host: "macpad.net") == "Website: macpad.net")
         #expect(
-            localization.aboutPublicRepository(repository: "anvilfilbert/MacPad")
-                == "Public repo: anvilfilbert/MacPad"
+            localization.aboutSupport(emailAddress: "support@macpad.net")
+                == "Support: support@macpad.net"
+        )
+        #expect(localization.string(.aboutPrivacyPolicy) == "Privacy Policy")
+        #expect(
+            localization.aboutSourceCode(repository: "anvilfilbert/MacPad")
+                == "Source Code: anvilfilbert/MacPad"
         )
         #expect(localization.string(.findWhatAccessibilityLabel) == "Find what")
         #expect(localization.string(.replaceWithAccessibilityLabel) == "Replace with")
