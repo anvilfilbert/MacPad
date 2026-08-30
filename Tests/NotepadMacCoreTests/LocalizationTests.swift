@@ -40,6 +40,39 @@ struct LocalizationTests {
         #expect(catalog.value(for: "CFBundleTypeName", locale: "de") == "Klartext")
     }
 
+    @Test("Technical terminology catalog is exhaustive in English and German")
+    func technicalTermsCatalogContract() throws {
+        let catalog = try loadCatalog(named: "TechnicalTerms.xcstrings")
+        let placeholderMismatches = try catalog.placeholderMismatches()
+        let expectedGermanValues: [MacPadTechnicalTermKey: String] = [
+            .utf8: "UTF-8",
+            .utf8WithByteOrderMark: "UTF-8 BOM",
+            .utf16LittleEndian: "UTF-16 LE",
+            .utf16BigEndian: "UTF-16 BE",
+            .windows1252: "Windows-1252",
+            .iso88591: "ISO-8859-1",
+            .windowsLineEnding: "Windows (CRLF)",
+            .unixLineEnding: "Unix (LF)",
+            .classicMacLineEnding: "Macintosh (CR)",
+            .mixedLineEndings: "Gemischt"
+        ]
+        let expectedKeys = Set(MacPadTechnicalTermKey.allCases.map(\.rawValue))
+
+        #expect(catalog.sourceLanguage == "en")
+        #expect(catalog.locales == Set(["en", "de"]))
+        #expect(catalog.missingGermanKeys.isEmpty)
+        #expect(placeholderMismatches.isEmpty)
+        #expect(catalog.unexpectedPluralCategories.isEmpty)
+        #expect(catalog.nonManualKeys.isEmpty)
+        #expect(catalog.localizationValueViolations.isEmpty)
+        #expect(Set(catalog.strings.keys) == expectedKeys)
+        #expect(Set(expectedGermanValues.keys) == Set(MacPadTechnicalTermKey.allCases))
+        for key in MacPadTechnicalTermKey.allCases {
+            #expect(catalog.value(for: key.rawValue, locale: "en") == key.englishValue)
+            #expect(catalog.value(for: key.rawValue, locale: "de") == expectedGermanValues[key])
+        }
+    }
+
     @Test("Current About and Find accessibility strings have dedicated keys")
     func currentSourceInventoryKeys() throws {
         let catalog = try loadCatalog(named: "Localizable.xcstrings")
@@ -175,8 +208,8 @@ struct LocalizationTests {
         )
     }
 
-    @Test("German safety copy and invariant encoding labels are exact")
-    func germanSafetyAndEncodingContract() throws {
+    @Test("German safety copy remains in the sentence catalog")
+    func germanSafetyContract() throws {
         let catalog = try loadCatalog(named: "Localizable.xcstrings")
         let expectedSafetyValues: [MacPadStringKey: String] = [
             .save: "Sichern",
@@ -193,18 +226,6 @@ struct LocalizationTests {
         ]
         for (key, value) in expectedSafetyValues {
             #expect(catalog.value(for: key.rawValue, locale: "de") == value)
-        }
-
-        let invariantEncodingKeys: [MacPadStringKey] = [
-            .utf8Encoding,
-            .utf8BOMEncoding,
-            .utf16LittleEndianEncoding,
-            .utf16BigEndianEncoding,
-            .windows1252Encoding,
-            .iso88591Encoding
-        ]
-        for key in invariantEncodingKeys {
-            #expect(catalog.value(for: key.rawValue, locale: "de") == key.englishValue)
         }
     }
 

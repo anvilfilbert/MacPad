@@ -15,8 +15,9 @@ private enum LocalizationValidationError: Error, CustomStringConvertible {
     case pluralCategoryMismatch(key: String, english: Set<String>, german: Set<String>)
     case invalidFormat(key: String, locale: String, variant: String, detail: String)
     case placeholderMismatch(key: String, variant: String)
-    case duplicateSemanticKey(String)
+    case duplicateSemanticKey(path: String, key: String)
     case catalogKeyMismatch(missing: Set<String>, unexpected: Set<String>)
+    case technicalTermsKeyMismatch(missing: Set<String>, unexpected: Set<String>)
     case infoPlistKeyMismatch(Set<String>)
 
     var description: String {
@@ -45,10 +46,12 @@ private enum LocalizationValidationError: Error, CustomStringConvertible {
             return "Invalid placeholder in '\(key)' [\(locale)/\(variant)]: \(detail)"
         case let .placeholderMismatch(key, variant):
             return "Placeholder type, count, or argument index differs for '\(key)' [\(variant)] between English and German."
-        case let .duplicateSemanticKey(key):
-            return "Duplicate semantic localization key in Localization.swift: \(key)."
+        case let .duplicateSemanticKey(path, key):
+            return "Duplicate semantic localization key in \(path): \(key)."
         case let .catalogKeyMismatch(missing, unexpected):
             return "Localizable.xcstrings does not match MacPadStringKey; missing=\(missing.sorted()), unexpected=\(unexpected.sorted())."
+        case let .technicalTermsKeyMismatch(missing, unexpected):
+            return "TechnicalTerms.xcstrings does not match MacPadTechnicalTermKey; missing=\(missing.sorted()), unexpected=\(unexpected.sorted())."
         case let .infoPlistKeyMismatch(keys):
             return "InfoPlist.xcstrings must contain exactly CFBundleTypeName; found \(keys.sorted())."
         }
@@ -372,7 +375,10 @@ private func semanticKeys(in sourceURL: URL) throws -> Set<String> {
         }
         let key = String(source[keyRange])
         guard keys.insert(key).inserted else {
-            throw LocalizationValidationError.duplicateSemanticKey(key)
+            throw LocalizationValidationError.duplicateSemanticKey(
+                path: sourceURL.path,
+                key: key
+            )
         }
     }
     return keys
@@ -380,8 +386,10 @@ private func semanticKeys(in sourceURL: URL) throws -> Set<String> {
 
 private func validateCatalogKeys(
     localizable: Catalog,
+    technicalTerms: Catalog,
     infoPlist: Catalog,
-    localizationSourceURL: URL
+    localizationSourceURL: URL,
+    technicalTermsSourceURL: URL
 ) throws {
     let expectedKeys = try semanticKeys(in: localizationSourceURL)
     let catalogKeys = Set(localizable.strings.keys)
@@ -391,6 +399,14 @@ private func validateCatalogKeys(
             unexpected: catalogKeys.subtracting(expectedKeys)
         )
     }
+    let expectedTechnicalTermKeys = try semanticKeys(in: technicalTermsSourceURL)
+    let technicalTermCatalogKeys = Set(technicalTerms.strings.keys)
+    guard expectedTechnicalTermKeys == technicalTermCatalogKeys else {
+        throw LocalizationValidationError.technicalTermsKeyMismatch(
+            missing: expectedTechnicalTermKeys.subtracting(technicalTermCatalogKeys),
+            unexpected: technicalTermCatalogKeys.subtracting(expectedTechnicalTermKeys)
+        )
+    }
     let infoPlistKeys = Set(infoPlist.strings.keys)
     guard infoPlistKeys == ["CFBundleTypeName"] else {
         throw LocalizationValidationError.infoPlistKeyMismatch(infoPlistKeys)
@@ -398,25 +414,31 @@ private func validateCatalogKeys(
 }
 
 private func runValidation(arguments: [String]) throws {
-    guard arguments.count == 4 else {
+    guard arguments.count == 6 else {
         throw LocalizationValidationError.usage(
-            "Usage: check-localizations.swift <Localizable.xcstrings> <InfoPlist.xcstrings> <Localization.swift>"
+            "Usage: check-localizations.swift <Localizable.xcstrings> <TechnicalTerms.xcstrings> <InfoPlist.xcstrings> <Localization.swift> <TechnicalTerms.swift>"
         )
     }
     let localizableURL = URL(fileURLWithPath: arguments[1], isDirectory: false)
-    let infoPlistURL = URL(fileURLWithPath: arguments[2], isDirectory: false)
-    let localizationSourceURL = URL(fileURLWithPath: arguments[3], isDirectory: false)
+    let technicalTermsURL = URL(fileURLWithPath: arguments[2], isDirectory: false)
+    let infoPlistURL = URL(fileURLWithPath: arguments[3], isDirectory: false)
+    let localizationSourceURL = URL(fileURLWithPath: arguments[4], isDirectory: false)
+    let technicalTermsSourceURL = URL(fileURLWithPath: arguments[5], isDirectory: false)
     let localizable = try decodeCatalog(at: localizableURL)
+    let technicalTerms = try decodeCatalog(at: technicalTermsURL)
     let infoPlist = try decodeCatalog(at: infoPlistURL)
     try validateCatalog(localizable, path: localizableURL.path)
+    try validateCatalog(technicalTerms, path: technicalTermsURL.path)
     try validateCatalog(infoPlist, path: infoPlistURL.path)
     try validateCatalogKeys(
         localizable: localizable,
+        technicalTerms: technicalTerms,
         infoPlist: infoPlist,
-        localizationSourceURL: localizationSourceURL
+        localizationSourceURL: localizationSourceURL,
+        technicalTermsSourceURL: technicalTermsSourceURL
     )
     print(
-        "Validated \(localizable.strings.count) Localizable keys and \(infoPlist.strings.count) InfoPlist key for en and de."
+        "Validated \(localizable.strings.count) Localizable keys, \(technicalTerms.strings.count) technical-term keys, and \(infoPlist.strings.count) InfoPlist key for en and de."
     )
 }
 

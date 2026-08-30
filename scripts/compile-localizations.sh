@@ -10,6 +10,7 @@ fi
 CATALOG_DIRECTORY="$1"
 OUTPUT_DIRECTORY="$2"
 LOCALIZABLE_CATALOG="$CATALOG_DIRECTORY/Localizable.xcstrings"
+TECHNICAL_TERMS_CATALOG="$CATALOG_DIRECTORY/TechnicalTerms.xcstrings"
 INFO_PLIST_CATALOG="$CATALOG_DIRECTORY/InfoPlist.xcstrings"
 
 if [ ! -d "$CATALOG_DIRECTORY" ]; then
@@ -67,14 +68,20 @@ clear_product() {
 }
 
 require_catalog "$LOCALIZABLE_CATALOG" "Localizable.xcstrings"
+require_catalog "$TECHNICAL_TERMS_CATALOG" "TechnicalTerms.xcstrings"
 require_catalog "$INFO_PLIST_CATALOG" "InfoPlist.xcstrings"
 
 clear_product "$OUTPUT_DIRECTORY/en.lproj/Localizable.strings" "en.lproj/Localizable.strings"
 clear_product "$OUTPUT_DIRECTORY/de.lproj/Localizable.strings" "de.lproj/Localizable.strings"
+clear_product "$OUTPUT_DIRECTORY/en.lproj/TechnicalTerms.strings" "en.lproj/TechnicalTerms.strings"
+clear_product "$OUTPUT_DIRECTORY/de.lproj/TechnicalTerms.strings" "de.lproj/TechnicalTerms.strings"
 clear_product "$OUTPUT_DIRECTORY/en.lproj/InfoPlist.strings" "en.lproj/InfoPlist.strings"
 clear_product "$OUTPUT_DIRECTORY/de.lproj/InfoPlist.strings" "de.lproj/InfoPlist.strings"
 
 xcrun xcstringstool compile "$LOCALIZABLE_CATALOG" \
+    --output-directory "$OUTPUT_DIRECTORY" \
+    --serialization-format text
+xcrun xcstringstool compile "$TECHNICAL_TERMS_CATALOG" \
     --output-directory "$OUTPUT_DIRECTORY" \
     --serialization-format text
 xcrun xcstringstool compile "$INFO_PLIST_CATALOG" \
@@ -83,5 +90,7 @@ xcrun xcstringstool compile "$INFO_PLIST_CATALOG" \
 
 require_product "$OUTPUT_DIRECTORY/en.lproj/Localizable.strings" "en.lproj/Localizable.strings"
 require_product "$OUTPUT_DIRECTORY/de.lproj/Localizable.strings" "de.lproj/Localizable.strings"
+require_product "$OUTPUT_DIRECTORY/en.lproj/TechnicalTerms.strings" "en.lproj/TechnicalTerms.strings"
+require_product "$OUTPUT_DIRECTORY/de.lproj/TechnicalTerms.strings" "de.lproj/TechnicalTerms.strings"
 require_product "$OUTPUT_DIRECTORY/en.lproj/InfoPlist.strings" "en.lproj/InfoPlist.strings"
 require_product "$OUTPUT_DIRECTORY/de.lproj/InfoPlist.strings" "de.lproj/InfoPlist.strings"

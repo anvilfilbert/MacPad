@@ -69,6 +69,8 @@ verify_direct_bundle_contract() {
   local app_path="$1"
   require_non_empty_regular_file "$app_path/Contents/Resources/en.lproj/Localizable.strings" "English Localizable.strings product"
   require_non_empty_regular_file "$app_path/Contents/Resources/de.lproj/Localizable.strings" "German Localizable.strings product"
+  require_non_empty_regular_file "$app_path/Contents/Resources/en.lproj/TechnicalTerms.strings" "English TechnicalTerms.strings product"
+  require_non_empty_regular_file "$app_path/Contents/Resources/de.lproj/TechnicalTerms.strings" "German TechnicalTerms.strings product"
   require_non_empty_regular_file "$app_path/Contents/Resources/en.lproj/InfoPlist.strings" "English InfoPlist.strings product"
   require_non_empty_regular_file "$app_path/Contents/Resources/de.lproj/InfoPlist.strings" "German InfoPlist.strings product"
   verify_plist_contract "$app_path/Contents/Info.plist"

@@ -194,9 +194,11 @@ struct WindowRoutingTests {
                 MacPadStringKey.documentText.rawValue: "Dokumenttext",
                 MacPadStringKey.documentStatus.rawValue: "Dokumentstatus",
                 MacPadStringKey.statusLine.rawValue:
-                    "Z. %1$lld, Sp. %2$lld  |  %3$lld%%  |  %4$@  |  %5$@",
-                MacPadStringKey.windowsLineEnding.rawValue: "Windows (CRLF)",
-                MacPadStringKey.utf8Encoding.rawValue: "UTF-8"
+                    "Z. %1$lld, Sp. %2$lld  |  %3$lld%%  |  %4$@  |  %5$@"
+            ],
+            technicalTerms: [
+                "macpad.term.line-ending.windows-crlf": "Windows-Zeilenende (CRLF)",
+                "macpad.term.encoding.utf8": "Technischer Begriff UTF-8"
             ]
         ) { localization in
             let controller = EditorWindowController(
@@ -212,7 +214,10 @@ struct WindowRoutingTests {
             #expect(controller.window?.title == "Ohne Titel - MacPad")
             #expect(editor.accessibilityLabel() == "Dokumenttext")
             #expect(status.accessibilityLabel() == "Dokumentstatus")
-            #expect(status.stringValue.hasPrefix("Z. 1, Sp. 1"))
+            #expect(
+                status.stringValue
+                    == "Z. 1, Sp. 1  |  100%  |  Windows-Zeilenende (CRLF)  |  Technischer Begriff UTF-8"
+            )
         }
     }
 
@@ -967,6 +972,44 @@ struct WindowRoutingTests {
         #expect(accessory.selectedEncoding == .utf8)
     }
 
+    @Test("Save As sentence and technical terms use the same German bundle")
+    func saveEncodingUsesGermanTechnicalTerms() throws {
+        try withLocalization(
+            languageCode: "de",
+            strings: [
+                MacPadStringKey.encodingLabel.rawValue: "Zeichenkodierung:",
+                MacPadStringKey.textEncoding.rawValue: "Textkodierung"
+            ],
+            technicalTerms: [
+                "macpad.term.encoding.utf8": "Technischer Begriff UTF-8",
+                "macpad.term.encoding.utf8-bom": "Technischer Begriff UTF-8 BOM",
+                "macpad.term.encoding.utf16-le": "Technischer Begriff UTF-16 LE",
+                "macpad.term.encoding.utf16-be": "Technischer Begriff UTF-16 BE",
+                "macpad.term.encoding.windows-1252": "Technischer Begriff Windows-1252",
+                "macpad.term.encoding.iso-8859-1": "Technischer Begriff ISO-8859-1"
+            ]
+        ) { localization in
+            let accessory = SaveEncodingAccessory(
+                selectedEncoding: .utf16LittleEndian,
+                localization: localization
+            )
+
+            #expect(accessory.picker.accessibilityLabel() == "Textkodierung")
+            #expect(
+                accessory.picker.itemTitles
+                    == [
+                        "Technischer Begriff UTF-8",
+                        "Technischer Begriff UTF-8 BOM",
+                        "Technischer Begriff UTF-16 LE",
+                        "Technischer Begriff UTF-16 BE",
+                        "Technischer Begriff Windows-1252",
+                        "Technischer Begriff ISO-8859-1"
+                    ]
+            )
+            #expect(accessory.selectedEncoding == .utf16LittleEndian)
+        }
+    }
+
     @Test("menu has no duplicate keyboard shortcuts")
     func menuShortcutsAreUnique() {
         let application = NSApplication.shared
@@ -1489,6 +1532,31 @@ struct WindowRoutingTests {
         strings: [String: String],
         body: (MacPadLocalization) throws -> Result
     ) throws -> Result {
+        try withLocalization(
+            languageCode: languageCode,
+            tables: ["Localizable": strings],
+            body: body
+        )
+    }
+
+    private func withLocalization<Result>(
+        languageCode: String,
+        strings: [String: String],
+        technicalTerms: [String: String],
+        body: (MacPadLocalization) throws -> Result
+    ) throws -> Result {
+        try withLocalization(
+            languageCode: languageCode,
+            tables: ["Localizable": strings, "TechnicalTerms": technicalTerms],
+            body: body
+        )
+    }
+
+    private func withLocalization<Result>(
+        languageCode: String,
+        tables: [String: [String: String]],
+        body: (MacPadLocalization) throws -> Result
+    ) throws -> Result {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
             .appendingPathComponent("MacPadLocalization.bundle", isDirectory: true)
@@ -1523,10 +1591,12 @@ struct WindowRoutingTests {
             to: contents.appendingPathComponent("Info.plist"),
             options: .atomic
         )
-        try encoder.encode(strings).write(
-            to: localizationDirectory.appendingPathComponent("Localizable.strings"),
-            options: .atomic
-        )
+        for (table, strings) in tables {
+            try encoder.encode(strings).write(
+                to: localizationDirectory.appendingPathComponent("\(table).strings"),
+                options: .atomic
+            )
+        }
 
         let bundle = try #require(Bundle(path: root.path))
         return try body(MacPadLocalization(bundle: bundle))

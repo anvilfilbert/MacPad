@@ -121,17 +121,6 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case securityScopedAccessDenied = "error.securityScopedAccessDenied"
     case persistentAccessUnavailableAfterWrite = "error.persistentAccessUnavailableAfterWrite"
     case invalidRecentDocumentData = "error.invalidRecentDocumentData"
-    case windowsLineEnding = "lineEnding.windows"
-    case unixLineEnding = "lineEnding.unix"
-    case classicMacLineEnding = "lineEnding.classicMac"
-    case mixedLineEnding = "lineEnding.mixed"
-    case utf8Encoding = "encoding.utf8"
-    case utf8BOMEncoding = "encoding.utf8BOM"
-    case utf16LittleEndianEncoding = "encoding.utf16LittleEndian"
-    case utf16BigEndianEncoding = "encoding.utf16BigEndian"
-    case windows1252Encoding = "encoding.windows1252"
-    case iso88591Encoding = "encoding.iso88591"
-
     public var englishValue: String {
         switch self {
         case .mainMenu: "Main Menu"
@@ -254,16 +243,6 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .securityScopedAccessDenied: "macOS did not grant MacPad access to this file: %1$@. Choose the file again to restore access."
         case .persistentAccessUnavailableAfterWrite: "MacPad saved this file, but could not retain access to it: %1$@. macOS reported: %2$@. Choose Save As and select the file again before closing this document."
         case .invalidRecentDocumentData: "Saved recent-document access data is invalid. Clear the Open Recent menu to remove it."
-        case .windowsLineEnding: "Windows (CRLF)"
-        case .unixLineEnding: "Unix (LF)"
-        case .classicMacLineEnding: "Macintosh (CR)"
-        case .mixedLineEnding: "Mixed"
-        case .utf8Encoding: "UTF-8"
-        case .utf8BOMEncoding: "UTF-8 BOM"
-        case .utf16LittleEndianEncoding: "UTF-16 LE"
-        case .utf16BigEndianEncoding: "UTF-16 BE"
-        case .windows1252Encoding: "Windows-1252"
-        case .iso88591Encoding: "ISO-8859-1"
         }
     }
 }
@@ -285,6 +264,14 @@ public struct MacPadLocalization: Sendable {
 
     public func localized(_ key: MacPadStringKey) -> String {
         string(key)
+    }
+
+    public func technicalTerm(_ key: MacPadTechnicalTermKey) -> String {
+        bundle.localizedString(
+            forKey: key.rawValue,
+            value: key.englishValue,
+            table: "TechnicalTerms"
+        )
     }
 
     public func windowTitle(documentName: String) -> String {

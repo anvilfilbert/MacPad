@@ -111,13 +111,13 @@ public enum LineEnding: String, Codable, Equatable {
     public func statusLabel(using localization: MacPadLocalization) -> String {
         switch self {
         case .windows:
-            return localization.string(.windowsLineEnding)
+            return localization.technicalTerm(.windowsLineEnding)
         case .unix:
-            return localization.string(.unixLineEnding)
+            return localization.technicalTerm(.unixLineEnding)
         case .classicMac:
-            return localization.string(.classicMacLineEnding)
+            return localization.technicalTerm(.classicMacLineEnding)
         case .mixed:
-            return localization.string(.mixedLineEnding)
+            return localization.technicalTerm(.mixedLineEndings)
         }
     }
 

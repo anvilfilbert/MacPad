@@ -143,6 +143,8 @@ require_nonempty_file "$RESOURCE_DIRECTORY/AppIcon.icns"
 require_nonempty_file "$RESOURCE_DIRECTORY/LICENSE"
 require_nonempty_file "$RESOURCE_DIRECTORY/en.lproj/Localizable.strings"
 require_nonempty_file "$RESOURCE_DIRECTORY/de.lproj/Localizable.strings"
+require_nonempty_file "$RESOURCE_DIRECTORY/en.lproj/TechnicalTerms.strings"
+require_nonempty_file "$RESOURCE_DIRECTORY/de.lproj/TechnicalTerms.strings"
 require_nonempty_file "$RESOURCE_DIRECTORY/en.lproj/InfoPlist.strings"
 require_nonempty_file "$RESOURCE_DIRECTORY/de.lproj/InfoPlist.strings"
 

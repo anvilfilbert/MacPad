@@ -264,6 +264,20 @@ validate_common_build_settings() {
   require_build_setting "$settings_path" ENABLE_HARDENED_RUNTIME YES
 }
 
+validate_localization_products() {
+  local app_path="$1"
+  local channel_name="$2"
+  local locale
+  local table
+
+  for locale in en de; do
+    for table in Localizable TechnicalTerms InfoPlist; do
+      local product_path="$app_path/Contents/Resources/$locale.lproj/$table.strings"
+      [[ -s "$product_path" ]] || fail "$channel_name build is missing a non-empty $locale.lproj/$table.strings product: $product_path"
+    done
+  done
+}
+
 validate_channel_builds() {
   local direct_result
   local store_result
@@ -288,6 +302,8 @@ validate_channel_builds() {
   /usr/bin/strings -a "$direct_executable" | /usr/bin/grep -F '/releases/latest' >/dev/null || fail "Direct executable does not retain the update transition route"
 
   [[ -d "$store_app" ]] || fail "Store build app is missing: $store_app"
+  validate_localization_products "$direct_app" DirectRelease
+  validate_localization_products "$store_app" AppStore
 }
 
 cd "$ROOT_DIR"

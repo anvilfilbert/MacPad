@@ -66,6 +66,8 @@ verify_localization_products() {
   local app_path="$1"
   require_non_empty_regular_file "$app_path/Contents/Resources/en.lproj/Localizable.strings" "extracted English Localizable.strings product"
   require_non_empty_regular_file "$app_path/Contents/Resources/de.lproj/Localizable.strings" "extracted German Localizable.strings product"
+  require_non_empty_regular_file "$app_path/Contents/Resources/en.lproj/TechnicalTerms.strings" "extracted English TechnicalTerms.strings product"
+  require_non_empty_regular_file "$app_path/Contents/Resources/de.lproj/TechnicalTerms.strings" "extracted German TechnicalTerms.strings product"
   require_non_empty_regular_file "$app_path/Contents/Resources/en.lproj/InfoPlist.strings" "extracted English InfoPlist.strings product"
   require_non_empty_regular_file "$app_path/Contents/Resources/de.lproj/InfoPlist.strings" "extracted German InfoPlist.strings product"
 }

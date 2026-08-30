@@ -23,9 +23,6 @@ struct EditorDocumentTests {
             languageCode: "de",
             strings: [
                 MacPadStringKey.untitled.rawValue: "Ohne Titel",
-                MacPadStringKey.windowsLineEnding.rawValue: "Windows (CRLF)",
-                MacPadStringKey.utf8Encoding.rawValue: "UTF-8",
-                MacPadStringKey.windows1252Encoding.rawValue: "Windows-1252",
                 MacPadStringKey.fileTooLarge.rawValue:
                     "Die Datei ist zu groß, um sie sicher zu öffnen: %1$@ hat %2$lld Byte, maximal zulässig sind %3$lld Byte.",
                 MacPadStringKey.documentTooLarge.rawValue:
@@ -40,11 +37,29 @@ struct EditorDocumentTests {
                     "Die Datei kann nicht als unterstützter Klartext gelesen werden: %1$@.",
                 MacPadStringKey.unrepresentableText.rawValue:
                     "Das Dokument enthält Text, der nicht als %1$@ dargestellt werden kann: %2$@."
+            ],
+            technicalTerms: [
+                "macpad.term.encoding.utf8": "Technischer Begriff UTF-8",
+                "macpad.term.encoding.utf8-bom": "Technischer Begriff UTF-8 BOM",
+                "macpad.term.encoding.utf16-le": "Technischer Begriff UTF-16 LE",
+                "macpad.term.encoding.utf16-be": "Technischer Begriff UTF-16 BE",
+                "macpad.term.encoding.windows-1252": "Technischer Begriff Windows-1252",
+                "macpad.term.encoding.iso-8859-1": "Technischer Begriff ISO-8859-1"
             ]
         ) { localization in
             let document = EditorDocument()
             #expect(document.displayName(using: localization) == "Ohne Titel")
-            #expect(TextFileEncoding.utf8.statusLabel(using: localization) == "UTF-8")
+            #expect(
+                TextFileEncoding.allCases.map { $0.statusLabel(using: localization) }
+                    == [
+                        "Technischer Begriff UTF-8",
+                        "Technischer Begriff UTF-8 BOM",
+                        "Technischer Begriff UTF-16 LE",
+                        "Technischer Begriff UTF-16 BE",
+                        "Technischer Begriff Windows-1252",
+                        "Technischer Begriff ISO-8859-1"
+                    ]
+            )
 
             let cases: [(EditorDocumentError, String)] = [
                 (
@@ -77,7 +92,7 @@ struct EditorDocumentTests {
                 ),
                 (
                     .textCannotBeSaved(path: "/tmp/note.txt", encoding: .windows1252),
-                    "Das Dokument enthält Text, der nicht als Windows-1252 dargestellt werden kann: /tmp/note.txt."
+                    "Das Dokument enthält Text, der nicht als Technischer Begriff Windows-1252 dargestellt werden kann: /tmp/note.txt."
                 )
             ]
 
@@ -692,6 +707,31 @@ enum LocalizationFixture {
         strings: [String: String],
         body: (MacPadLocalization) throws -> Result
     ) throws -> Result {
+        try with(
+            languageCode: languageCode,
+            tables: ["Localizable": strings],
+            body: body
+        )
+    }
+
+    static func with<Result>(
+        languageCode: String,
+        strings: [String: String],
+        technicalTerms: [String: String],
+        body: (MacPadLocalization) throws -> Result
+    ) throws -> Result {
+        try with(
+            languageCode: languageCode,
+            tables: ["Localizable": strings, "TechnicalTerms": technicalTerms],
+            body: body
+        )
+    }
+
+    private static func with<Result>(
+        languageCode: String,
+        tables: [String: [String: String]],
+        body: (MacPadLocalization) throws -> Result
+    ) throws -> Result {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
             .appendingPathComponent("MacPadLocalization.bundle", isDirectory: true)
@@ -726,10 +766,12 @@ enum LocalizationFixture {
             to: contents.appendingPathComponent("Info.plist"),
             options: .atomic
         )
-        try encoder.encode(strings).write(
-            to: localizationDirectory.appendingPathComponent("Localizable.strings"),
-            options: .atomic
-        )
+        for (table, strings) in tables {
+            try encoder.encode(strings).write(
+                to: localizationDirectory.appendingPathComponent("\(table).strings"),
+                options: .atomic
+            )
+        }
 
         let bundle = try #require(Bundle(path: root.path))
         return try body(MacPadLocalization(bundle: bundle))

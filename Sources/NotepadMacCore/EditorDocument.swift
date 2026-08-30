@@ -75,17 +75,17 @@ public enum TextFileEncoding: CaseIterable, Equatable, Sendable {
     public func statusLabel(using localization: MacPadLocalization) -> String {
         switch self {
         case .utf8:
-            return localization.string(.utf8Encoding)
+            return localization.technicalTerm(.utf8)
         case .utf8WithByteOrderMark:
-            return localization.string(.utf8BOMEncoding)
+            return localization.technicalTerm(.utf8WithByteOrderMark)
         case .utf16LittleEndian:
-            return localization.string(.utf16LittleEndianEncoding)
+            return localization.technicalTerm(.utf16LittleEndian)
         case .utf16BigEndian:
-            return localization.string(.utf16BigEndianEncoding)
+            return localization.technicalTerm(.utf16BigEndian)
         case .windows1252:
-            return localization.string(.windows1252Encoding)
+            return localization.technicalTerm(.windows1252)
         case .isoLatin1:
-            return localization.string(.iso88591Encoding)
+            return localization.technicalTerm(.iso88591)
         }
     }
 }

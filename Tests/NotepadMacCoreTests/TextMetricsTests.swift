@@ -7,17 +7,24 @@ struct TextMetricsTests {
     func localizesLineEndingLabels() throws {
         try LocalizationFixture.with(
             languageCode: "de",
-            strings: [
-                MacPadStringKey.windowsLineEnding.rawValue: "Windows (CRLF)",
-                MacPadStringKey.unixLineEnding.rawValue: "Unix (LF)",
-                MacPadStringKey.classicMacLineEnding.rawValue: "Macintosh (CR)",
-                MacPadStringKey.mixedLineEnding.rawValue: "Gemischt"
+            strings: [:],
+            technicalTerms: [
+                "macpad.term.line-ending.windows-crlf": "Windows-Zeilenende (CRLF)",
+                "macpad.term.line-ending.unix-lf": "Unix-Zeilenende (LF)",
+                "macpad.term.line-ending.classic-mac-cr": "Mac-Zeilenende (CR)",
+                "macpad.term.line-ending.mixed": "Gemischte Zeilenenden"
             ]
         ) { localization in
-            #expect(LineEnding.windows.statusLabel(using: localization) == "Windows (CRLF)")
-            #expect(LineEnding.unix.statusLabel(using: localization) == "Unix (LF)")
-            #expect(LineEnding.classicMac.statusLabel(using: localization) == "Macintosh (CR)")
-            #expect(LineEnding.mixed.statusLabel(using: localization) == "Gemischt")
+            let lineEndings: [LineEnding] = [.windows, .unix, .classicMac, .mixed]
+            #expect(
+                lineEndings.map { $0.statusLabel(using: localization) }
+                    == [
+                        "Windows-Zeilenende (CRLF)",
+                        "Unix-Zeilenende (LF)",
+                        "Mac-Zeilenende (CR)",
+                        "Gemischte Zeilenenden"
+                    ]
+            )
         }
     }
 
