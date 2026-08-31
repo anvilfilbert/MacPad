@@ -2,6 +2,20 @@ import AppKit
 import NotepadMacCore
 
 final class FindPanelController: NSWindowController {
+    private enum SizingMode {
+        case find
+        case replace
+
+        var minimumContentSize: NSSize {
+            switch self {
+            case .find:
+                NSSize(width: 500, height: 0)
+            case .replace:
+                NSSize(width: 500, height: 204)
+            }
+        }
+    }
+
     private let localization: MacPadLocalization
     private let findField = NSTextField()
     private let replaceField = NSTextField()
@@ -188,14 +202,14 @@ final class FindPanelController: NSWindowController {
             row.isHidden = !visible
         }
         configureKeyViewLoop(showReplace: visible)
-        resizeWindowToFit(showReplace: visible)
+        resizeWindowToFit(mode: visible ? .replace : .find)
     }
 
-    private func resizeWindowToFit(showReplace: Bool) {
+    private func resizeWindowToFit(mode: SizingMode) {
         guard let window, let contentView = window.contentView, let grid else {
             preconditionFailure("Find panel layout requires its window and grid.")
         }
-        let minimumSize = NSSize(width: 500, height: showReplace ? 204 : 0)
+        let minimumSize = mode.minimumContentSize
         window.contentMinSize = minimumSize
         contentView.layoutSubtreeIfNeeded()
         let fittingSize = grid.fittingSize
