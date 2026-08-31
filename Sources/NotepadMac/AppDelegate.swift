@@ -82,61 +82,6 @@ enum EditorWindowResolver {
     }
 }
 
-enum SessionRestoreOutcome: Equatable {
-    case noSession
-    case restored
-    case cancelled
-}
-
-enum SessionRestoreRecoveryDecision: Equatable {
-    case locate
-    case skip
-    case cancel
-}
-
-struct SessionRestoreFailure: Equatable {
-    let windowIndex: Int
-    let tabIndex: Int
-    let state: EditorSessionState
-    let errorDescription: String
-}
-
-@MainActor
-enum SessionRestoreAlertFactory {
-    static func makeAlert(
-        failure: SessionRestoreFailure,
-        localization: MacPadLocalization
-    ) -> NSAlert {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = localization.string(.sessionRestoreSingleFailure)
-        let fileName = failure.state.fileReference.map {
-            URL(fileURLWithPath: $0.path).lastPathComponent
-        } ?? localization.string(.untitled)
-        alert.informativeText = localization.sessionRestoreDetail(
-            fileName: fileName,
-            errorDescription: failure.errorDescription
-        )
-        let locateButton = alert.addButton(withTitle: localization.string(.locate))
-        locateButton.identifier = NSUserInterfaceItemIdentifier("sessionRestore.locate")
-        let skipButton = alert.addButton(withTitle: localization.string(.skip))
-        skipButton.identifier = NSUserInterfaceItemIdentifier("sessionRestore.skip")
-        let cancelButton = alert.addButton(withTitle: localization.string(.cancelRestore))
-        cancelButton.identifier = NSUserInterfaceItemIdentifier("sessionRestore.cancel")
-        return alert
-    }
-}
-
-private struct PreflightRestoredTab {
-    let originalIndex: Int
-    let controller: EditorWindowController
-}
-
-private struct PreflightRestoredWindow {
-    let session: EditorWindowSessionState
-    var tabs: [PreflightRestoredTab]
-}
-
 @MainActor
 enum EditorWindowRecency {
     static func movingWindowGroupToEnd(
@@ -168,12 +113,24 @@ enum EditorWindowRecency {
 }
 
 @MainActor
+enum ApplicationTermination {
+    static func reply(
+        confirmDiscardActions: [() -> Bool]
+    ) -> NSApplication.TerminateReply {
+        for confirmDiscard in confirmDiscardActions where !confirmDiscard() {
+            return .terminateCancel
+        }
+        return .terminateNow
+    }
+}
+
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSMenuDelegate {
     private static let preferencesLogger = Logger(
         subsystem: "local.macpad.app",
         category: "preferences"
     )
-    private let sessionDefaultsKey = "MacPad.SessionState.v1"
+    private let legacySessionDefaultsKey = "MacPad.SessionState.v1"
     private let menuBarDefaultsKey = "MacPad.ShowInMenuBar"
     private let defaults: UserDefaults
     private let localization: MacPadLocalization
@@ -181,13 +138,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     private let customerRoutes: CustomerRoutes
     private let fileAccess: SecurityScopedFileAccess
     private let recentDocumentStore: RecentDocumentStore
-    private let sessionLogger = Logger(subsystem: "local.macpad.app", category: "session")
     private let recentDocumentLogger = Logger(
         subsystem: "local.macpad.app",
         category: "recent-documents"
     )
     private var windows: [EditorWindowController] = []
-    private var isRestoringSession = false
     private var pendingOpenURLs: [URL] = []
     private var hasFinishedLaunching = false
     private weak var lastActiveWindowController: EditorWindowController?
@@ -225,6 +180,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         self.customerRoutes = customerRoutes
         self.fileAccess = fileAccess
         self.recentDocumentStore = recentDocumentStore
+        NSWindow.allowsAutomaticWindowTabbing = false
         super.init()
         preferredFont = Self.loadPreferredFont()
     }
@@ -253,11 +209,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         pendingOpenURLs.removeAll()
         hasFinishedLaunching = true
 
+        defaults.removeObject(forKey: legacySessionDefaultsKey)
         if !launchURLs.isEmpty {
             for url in launchURLs {
                 openDocument(url: url)
             }
-        } else if restorePreviousSession() == .noSession {
+        } else {
             openNewDocument(nil)
         }
         NSApp.activate(ignoringOtherApps: true)
@@ -278,19 +235,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        var confirmedControllers: [EditorWindowController] = []
-        for controller in windows {
-            if !controller.confirmDiscardIfNeeded() {
-                for confirmedController in confirmedControllers {
-                    confirmedController.keepInSessionRestore()
-                }
-                saveSessionNow()
-                return .terminateCancel
+        ApplicationTermination.reply(
+            confirmDiscardActions: windows.map { controller in
+                { controller.confirmDiscardIfNeeded() }
             }
-            confirmedControllers.append(controller)
-        }
-        saveSessionNow()
-        return .terminateNow
+        )
     }
 
     func application(_ sender: NSApplication, open urls: [URL]) {
@@ -311,7 +260,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     @objc func openNewDocument(_ sender: Any?) {
-        openNewWindow(sender)
+        present(makeWindowController(), asTab: keyWindowController != nil)
     }
 
     @objc func openNewWindow(_ sender: Any?) {
@@ -378,14 +327,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
                 target: self,
                 localization: localization
             )
-        }
-    }
-
-    @objc func clearSessionData(_ sender: Any?) {
-        cancelScheduledSessionSave()
-        defaults.removeObject(forKey: sessionDefaultsKey)
-        for controller in windows {
-            controller.discardFromSessionRestore()
         }
     }
 
@@ -465,10 +406,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         controller.onClose = { [weak self, weak controller] in
             guard let controller else { return }
             self?.windows.removeAll { $0 === controller }
-            self?.saveSessionNow()
-        }
-        controller.onStateChange = { [weak self] in
-            self?.scheduleSessionSave()
         }
         controller.onActivate = { [weak self, weak controller] in
             guard let controller else { return }
@@ -483,14 +420,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     private func present(_ controller: EditorWindowController, asTab: Bool) {
-        presentWithoutSessionSave(controller, asTab: asTab)
-        saveSessionNow()
-    }
-
-    private func presentWithoutSessionSave(
-        _ controller: EditorWindowController,
-        asTab: Bool
-    ) {
         let parentWindow = asTab ? keyWindowController?.window : nil
         windows.append(controller)
         controller.showWindow(nil)
@@ -523,19 +452,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     func aboutCredits() -> NSAttributedString {
-        let creator = "anvilfilbert"
         let websiteHost = "macpad.net"
-        let supportEmailAddress = "support@macpad.net"
-        let repository = "anvilfilbert/MacPad"
-        var lines = [
-            localization.aboutCreatedBy(creator: creator),
+        let supportPath = "macpad.net/support"
+        let lines = [
             localization.aboutWebsite(host: websiteHost),
-            localization.aboutSupport(emailAddress: supportEmailAddress),
+            localization.aboutSupport(destination: supportPath),
             localization.string(.aboutPrivacyPolicy)
         ]
-        if distributionChannel == .direct {
-            lines.append(localization.aboutSourceCode(repository: repository))
-        }
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
 
@@ -549,19 +472,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         )
         addLink(to: websiteHost, in: credits, url: customerRoutes.productURL)
         addLink(
-            to: supportEmailAddress,
+            to: supportPath,
             in: credits,
-            url: customerRoutes.supportEmailURL
+            url: customerRoutes.supportURL
         )
         addLink(
             to: localization.string(.aboutPrivacyPolicy),
             in: credits,
             url: customerRoutes.privacyURL
         )
-        if distributionChannel == .direct {
-            addLink(to: creator, in: credits, url: customerRoutes.creatorProfileURL)
-            addLink(to: repository, in: credits, url: customerRoutes.sourceCodeURL)
-        }
         return credits
     }
 
@@ -673,306 +592,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         }
     }
 
-    private func restorePreviousSession() -> SessionRestoreOutcome {
-        restorePreviousSession(
-            recoveryDecision: { failure in
-                self.showSessionRestoreRecovery(failure)
-            },
-            locateURL: {
-                self.locateSessionRestoreFile()
-            }
-        )
-    }
-
-    func restorePreviousSession(
-        recoveryDecision: (SessionRestoreFailure) -> SessionRestoreRecoveryDecision,
-        locateURL: () -> URL?
-    ) -> SessionRestoreOutcome {
-        guard let data = defaults.data(forKey: sessionDefaultsKey) else {
-            return .noSession
-        }
-
-        let session: AppSessionState
-        do {
-            session = try AppSessionState.decode(data: data, localization: localization)
-        } catch {
-            defaults.removeObject(forKey: sessionDefaultsKey)
-            sessionLogger.error(
-                "Discarded invalid session state: \(error.localizedDescription, privacy: .public)"
-            )
-            showSessionRestoreError(filePath: nil, error: error)
-            return .noSession
-        }
-        guard !session.windows.isEmpty else { return .noSession }
-
-        isRestoringSession = true
-
-        var preflightWindows = session.windows.map {
-            PreflightRestoredWindow(session: $0, tabs: [])
-        }
-        var failures: [SessionRestoreFailure] = []
-        for (windowIndex, windowSession) in session.windows.enumerated() {
-            for (tabIndex, tab) in windowSession.tabs.enumerated() {
-                let controller = makeUnconfiguredWindowController()
-                do {
-                    try controller.restoreSessionState(tab)
-                    preflightWindows[windowIndex].tabs.append(
-                        PreflightRestoredTab(
-                            originalIndex: tabIndex,
-                            controller: controller
-                        )
-                    )
-                } catch {
-                    failures.append(
-                        SessionRestoreFailure(
-                            windowIndex: windowIndex,
-                            tabIndex: tabIndex,
-                            state: tab,
-                            errorDescription: macPadLocalizedDescription(
-                                error,
-                                using: localization
-                            )
-                        )
-                    )
-                }
-            }
-        }
-
-        while let failure = failures.first {
-            switch recoveryDecision(failure) {
-            case .cancel:
-                isRestoringSession = false
-                return .cancelled
-            case .skip:
-                failures.removeFirst()
-            case .locate:
-                guard let url = locateURL() else { continue }
-                do {
-                    let reference = try fileAccess.makeReference(for: url)
-                    let locatedState = replacingFileReference(
-                        in: failure.state,
-                        with: reference
-                    )
-                    let controller = makeUnconfiguredWindowController()
-                    try controller.restoreSessionState(locatedState)
-                    preflightWindows[failure.windowIndex].tabs.append(
-                        PreflightRestoredTab(
-                            originalIndex: failure.tabIndex,
-                            controller: controller
-                        )
-                    )
-                    failures.removeFirst()
-                } catch {
-                    failures[0] = SessionRestoreFailure(
-                        windowIndex: failure.windowIndex,
-                        tabIndex: failure.tabIndex,
-                        state: failure.state,
-                        errorDescription: macPadLocalizedDescription(
-                            error,
-                            using: localization
-                        )
-                    )
-                }
-            }
-        }
-
-        for preflightWindow in preflightWindows {
-            let orderedTabs = preflightWindow.tabs.sorted {
-                $0.originalIndex < $1.originalIndex
-            }
-            for (index, tab) in orderedTabs.enumerated() {
-                configure(tab.controller)
-                presentWithoutSessionSave(tab.controller, asTab: index > 0)
-            }
-            if let firstWindow = orderedTabs.first?.controller.window {
-                restoreFrame(preflightWindow.session.frame, to: firstWindow)
-            }
-            let selectedController = orderedTabs.first {
-                $0.originalIndex == preflightWindow.session.selectedTabIndex
-            }?.controller ?? orderedTabs.first?.controller
-            selectedController?.window?.makeKeyAndOrderFront(nil)
-        }
-
-        isRestoringSession = false
-        saveSessionNow()
-        return .restored
-    }
-
-    private func showSessionRestoreRecovery(
-        _ failure: SessionRestoreFailure
-    ) -> SessionRestoreRecoveryDecision {
-        let alert = SessionRestoreAlertFactory.makeAlert(
-            failure: failure,
-            localization: localization
-        )
-        switch alert.runModal() {
-        case .alertFirstButtonReturn:
-            return .locate
-        case .alertSecondButtonReturn:
-            return .skip
-        default:
-            return .cancel
-        }
-    }
-
-    private func locateSessionRestoreFile() -> URL? {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.plainText, .text]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        guard panel.runModal() == .OK else { return nil }
-        return panel.url
-    }
-
-    private func replacingFileReference(
-        in state: EditorSessionState,
-        with reference: PersistedFileReference
-    ) -> EditorSessionState {
-        EditorSessionState(
-            id: state.id,
-            fileReference: reference,
-            selectedLocation: state.selectedLocation,
-            wordWrapEnabled: state.wordWrapEnabled,
-            statusBarVisible: state.statusBarVisible,
-            zoomPercent: state.zoomPercent,
-            lineEnding: state.lineEnding
-        )
-    }
-
-    private func scheduleSessionSave() {
-        guard !isRestoringSession else { return }
-        NSObject.cancelPreviousPerformRequests(
-            withTarget: self,
-            selector: #selector(persistScheduledSession),
-            object: nil
-        )
-        perform(#selector(persistScheduledSession), with: nil, afterDelay: 0.25)
-    }
-
-    private func saveSessionNow() {
-        cancelScheduledSessionSave()
-        writeSession()
-    }
-
-    private func cancelScheduledSessionSave() {
-        NSObject.cancelPreviousPerformRequests(
-            withTarget: self,
-            selector: #selector(persistScheduledSession),
-            object: nil
-        )
-    }
-
-    @objc private func persistScheduledSession() {
-        writeSession()
-    }
-
-    private func writeSession() {
-        guard !isRestoringSession else { return }
-
-        let windowSessions = currentWindowSessions()
-        guard !windowSessions.isEmpty else {
-            defaults.removeObject(forKey: sessionDefaultsKey)
-            return
-        }
-        if windowSessions.count > AppSessionState.maximumWindowCount {
-            sessionLogger.warning(
-                "Session window limit exceeded; total: \(windowSessions.count, privacy: .public), retained: \(AppSessionState.maximumWindowCount, privacy: .public)"
-            )
-        }
-
-        do {
-            let data = try JSONEncoder().encode(AppSessionState(windows: windowSessions))
-            defaults.set(data, forKey: sessionDefaultsKey)
-        } catch {
-            sessionLogger.error(
-                "Could not encode session state: \(error.localizedDescription, privacy: .public)"
-            )
-        }
-    }
-
-    private func currentWindowSessions() -> [EditorWindowSessionState] {
-        let controllerByWindow = Dictionary(
-            uniqueKeysWithValues: windows.compactMap { controller -> (ObjectIdentifier, EditorWindowController)? in
-                guard let window = controller.window else { return nil }
-                return (ObjectIdentifier(window), controller)
-            }
-        )
-        var seenWindows = Set<ObjectIdentifier>()
-        var sessions: [EditorWindowSessionState] = []
-
-        for controller in windows {
-            guard let window = controller.window else { continue }
-            let tabbedWindows = window.tabbedWindows ?? [window]
-            let orderedWindows = tabbedWindows.isEmpty ? [window] : tabbedWindows
-            let identifiers = orderedWindows.map(ObjectIdentifier.init)
-
-            if identifiers.contains(where: seenWindows.contains) {
-                continue
-            }
-
-            for identifier in identifiers {
-                seenWindows.insert(identifier)
-            }
-
-            let tabEntries: [(window: NSWindow, state: EditorSessionState)] = orderedWindows.compactMap { tabWindow in
-                guard let state = controllerByWindow[ObjectIdentifier(tabWindow)]?.sessionState else {
-                    return nil
-                }
-                return (tabWindow, state)
-            }
-            let tabs = tabEntries.map(\.state)
-            if tabs.count > AppSessionState.maximumTabsPerWindow {
-                sessionLogger.warning(
-                    "Session tab limit exceeded; total: \(tabs.count, privacy: .public), retained: \(AppSessionState.maximumTabsPerWindow, privacy: .public)"
-                )
-            }
-
-            if !tabs.isEmpty {
-                let selectedWindow = window.tabGroup?.selectedWindow ?? window
-                let selectedIndex = tabEntries.firstIndex { $0.window === selectedWindow } ?? 0
-                let frame = orderedWindows.first.map { windowFrameState($0.frame) }
-                let visualIndexByWindow = Dictionary(
-                    uniqueKeysWithValues: tabEntries.enumerated().map { index, entry in
-                        (ObjectIdentifier(entry.window), index)
-                    }
-                )
-                let recentlyUsedTabIndices = windows.compactMap { recentController -> Int? in
-                    guard let recentWindow = recentController.window else { return nil }
-                    return visualIndexByWindow[ObjectIdentifier(recentWindow)]
-                }
-                sessions.append(
-                    EditorWindowSessionState(
-                        tabs: tabs,
-                        selectedTabIndex: selectedIndex,
-                        frame: frame,
-                        recentlyUsedTabIndices: recentlyUsedTabIndices
-                    )
-                )
-            }
-        }
-
-        return sessions
-    }
-
-    private func showSessionRestoreError(filePath: String?, error: Error) {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = localization.string(.sessionRestoreSingleFailure)
-        alert.informativeText = localization.sessionRestoreDetail(
-            fileName: filePath ?? localization.string(.untitled),
-            errorDescription: macPadLocalizedDescription(error, using: localization)
-        )
-        alert.runModal()
-    }
-
-    private func showSessionRestoreErrors(_ failures: [String]) {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = localization.string(.sessionRestoreMultipleFailure)
-        alert.informativeText = failures.joined(separator: "\n")
-        alert.runModal()
-    }
-
     private func showOpenError(url: URL, error: Error) {
         let alert = NSAlert()
         alert.alertStyle = .critical
@@ -1068,25 +687,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         alert.runModal()
     }
 
-    private func windowFrameState(_ frame: NSRect) -> WindowFrameState {
-        WindowFrameState(
-            x: frame.origin.x,
-            y: frame.origin.y,
-            width: frame.size.width,
-            height: frame.size.height
-        )
-    }
-
-    private func restoreFrame(_ frameState: WindowFrameState?, to window: NSWindow) {
-        guard let frameState else { return }
-        let frame = NSRect(
-            x: frameState.x,
-            y: frameState.y,
-            width: frameState.width,
-            height: frameState.height
-        )
-        let targetScreen = NSScreen.screens.first { $0.frame.intersects(frame) } ?? NSScreen.main
-        let constrainedFrame = targetScreen.map { window.constrainFrameRect(frame, to: $0) } ?? frame
-        window.setFrame(constrainedFrame, display: false)
-    }
 }

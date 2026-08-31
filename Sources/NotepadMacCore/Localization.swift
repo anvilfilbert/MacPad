@@ -9,6 +9,7 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case showAll = "app.showAll"
     case quitMacPad = "app.quit"
     case fileMenu = "menu.file"
+    case newDocument = "file.newDocument"
     case newTab = "file.newTab"
     case newWindow = "file.newWindow"
     case open = "file.open"
@@ -19,7 +20,6 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case close = "file.close"
     case save = "file.save"
     case saveAs = "file.saveAs"
-    case clearSessionData = "file.clearSessionData"
     case print = "file.print"
     case editMenu = "menu.edit"
     case undo = "edit.undo"
@@ -74,9 +74,6 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case discardChanges = "action.discardChanges"
     case recover = "action.recover"
     case reloadFromDisk = "action.reloadFromDisk"
-    case locate = "action.locate"
-    case skip = "action.skip"
-    case cancelRestore = "action.cancelRestore"
     case untitled = "editor.untitled"
     case untitledFileName = "editor.untitledFileName"
     case windowTitle = "editor.windowTitle"
@@ -96,18 +93,12 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
     case menuBarCreationFailure = "menuBar.creationFailure"
     case menuBarButtonUnavailable = "menuBar.buttonUnavailable"
     case menuBarOpenNewWindow = "menuBar.openNewWindow"
-    case sessionRestoreSingleFailure = "session.restoreSingleFailure"
-    case sessionRestoreMultipleFailure = "session.restoreMultipleFailure"
-    case sessionRestoreDetail = "session.restoreDetail"
-    case sessionRestoreFailureLine = "session.restoreFailureLine"
     case openFailure = "open.failure"
     case linkOpenFailure = "link.openFailure"
     case fontSaveFailure = "font.saveFailure"
-    case aboutCreatedBy = "about.createdBy"
     case aboutWebsite = "about.website"
     case aboutSupport = "about.support"
     case aboutPrivacyPolicy = "about.privacyPolicy"
-    case aboutSourceCode = "about.sourceCode"
     case fileTooLarge = "error.fileTooLarge"
     case documentTooLarge = "error.documentTooLarge"
     case regularFilesOnly = "error.regularFilesOnly"
@@ -134,6 +125,7 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .showAll: "Show All"
         case .quitMacPad: "Quit MacPad"
         case .fileMenu: "File"
+        case .newDocument: "New Document"
         case .newTab: "New Tab"
         case .newWindow: "New Window"
         case .open: "Open…"
@@ -144,7 +136,6 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .close: "Close"
         case .save: "Save"
         case .saveAs: "Save As…"
-        case .clearSessionData: "Clear Session Data"
         case .print: "Print…"
         case .editMenu: "Edit"
         case .undo: "Undo"
@@ -199,9 +190,6 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .discardChanges: "Discard Changes"
         case .recover: "Recover"
         case .reloadFromDisk: "Reload from Disk"
-        case .locate: "Locate…"
-        case .skip: "Skip"
-        case .cancelRestore: "Cancel Restore"
         case .untitled: "Untitled"
         case .untitledFileName: "Untitled.txt"
         case .windowTitle: "%1$@ - MacPad"
@@ -221,18 +209,12 @@ public enum MacPadStringKey: String, CaseIterable, Hashable, Sendable {
         case .menuBarCreationFailure: "Could not add MacPad to the menu bar."
         case .menuBarButtonUnavailable: "macOS did not provide a menu-bar button."
         case .menuBarOpenNewWindow: "Open a new MacPad window"
-        case .sessionRestoreSingleFailure: "Could not restore a previous MacPad tab."
-        case .sessionRestoreMultipleFailure: "Some previous MacPad tabs could not be restored."
-        case .sessionRestoreDetail: "%1$@\n\n%2$@"
-        case .sessionRestoreFailureLine: "Could not restore %1$@: %2$@"
         case .openFailure: "Could not open %1$@."
         case .linkOpenFailure: "Could not open the link."
         case .fontSaveFailure: "Could not save the editor font."
-        case .aboutCreatedBy: "Created by %1$@"
         case .aboutWebsite: "Website: %1$@"
         case .aboutSupport: "Support: %1$@"
         case .aboutPrivacyPolicy: "Privacy Policy"
-        case .aboutSourceCode: "Source Code: %1$@"
         case .fileTooLarge: "File is too large to open safely: %1$@ is %2$lld bytes, maximum is %3$lld bytes."
         case .documentTooLarge: "Document is too large to save safely: %1$@ would be %2$lld bytes, maximum is %3$lld bytes."
         case .regularFilesOnly: "Only regular files can be opened safely: %1$@."
@@ -297,38 +279,16 @@ public struct MacPadLocalization: Sendable {
         )
     }
 
-    public func sessionRestoreDetail(
-        fileName: String,
-        errorDescription: String
-    ) -> String {
-        formatted(.sessionRestoreDetail, arguments: [fileName, errorDescription])
-    }
-
-    public func sessionRestoreFailureLine(
-        fileName: String,
-        errorDescription: String
-    ) -> String {
-        formatted(.sessionRestoreFailureLine, arguments: [fileName, errorDescription])
-    }
-
     public func openFailure(fileName: String) -> String {
         formatted(.openFailure, arguments: [fileName])
-    }
-
-    public func aboutCreatedBy(creator: String) -> String {
-        formatted(.aboutCreatedBy, arguments: [creator])
     }
 
     public func aboutWebsite(host: String) -> String {
         formatted(.aboutWebsite, arguments: [host])
     }
 
-    public func aboutSupport(emailAddress: String) -> String {
-        formatted(.aboutSupport, arguments: [emailAddress])
-    }
-
-    public func aboutSourceCode(repository: String) -> String {
-        formatted(.aboutSourceCode, arguments: [repository])
+    public func aboutSupport(destination: String) -> String {
+        formatted(.aboutSupport, arguments: [destination])
     }
 
     public func fileTooLarge(

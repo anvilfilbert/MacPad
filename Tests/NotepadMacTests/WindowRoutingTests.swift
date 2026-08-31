@@ -50,6 +50,7 @@ struct WindowRoutingTests {
             languageCode: "de",
             strings: [
                 MacPadStringKey.fileMenu.rawValue: "Ablage",
+                MacPadStringKey.newDocument.rawValue: "Neues Dokument",
                 MacPadStringKey.openRecent.rawValue: "Benutzte Dokumente",
                 MacPadStringKey.showInMenuBar.rawValue: "MacPad in der Menüleiste anzeigen"
             ]
@@ -76,6 +77,10 @@ struct WindowRoutingTests {
             )
             #expect(fileMenu.title == "Ablage")
             #expect(
+                menuItem(withIdentifier: "file.newDocument", in: menu)?.title
+                    == "Neues Dokument"
+            )
+            #expect(
                 menuItem(withIdentifier: "file.openRecent", in: menu)?.title
                     == "Benutzte Dokumente"
             )
@@ -96,7 +101,6 @@ struct WindowRoutingTests {
         let expectedActions: [String: Selector] = [
             "file.save": #selector(AppDelegate.save(_:)),
             "file.saveAs": #selector(AppDelegate.saveAs(_:)),
-            "file.clearSession": #selector(AppDelegate.clearSessionData(_:)),
             "view.menuBar": #selector(AppDelegate.toggleMenuBarVisibility(_:)),
             "help.checkUpdates": #selector(AppDelegate.checkForUpdates(_:))
         ]
@@ -106,6 +110,62 @@ struct WindowRoutingTests {
         for (identifier, action) in expectedActions {
             #expect(
                 try #require(menuItem(withIdentifier: identifier, in: menu)).action == action
+            )
+        }
+        #expect(menuItem(withIdentifier: "file.clearSession", in: menu) == nil)
+    }
+
+    @Test("Edit uses a localized Find submenu and keeps Go To outside it")
+    func editUsesLocalizedFindSubmenu() throws {
+        try withLocalization(
+            languageCode: "de",
+            strings: [MacPadStringKey.findTitle.rawValue: "Suchen"]
+        ) { localization in
+            let application = NSApplication.shared
+            let delegate = appDelegate(localization: localization)
+            let menu = MainMenuFactory.makeMenu(
+                target: delegate,
+                application: application,
+                localization: localization,
+                distributionChannel: .direct,
+                customerRoutes: .current(for: .direct)
+            )
+            let editMenu = try #require(
+                menuItem(withIdentifier: MacPadStringKey.editMenu.rawValue, in: menu)?.submenu
+            )
+            let findMenuItem = try #require(
+                editMenu.items.first { $0.identifier?.rawValue == "edit.findMenu" }
+            )
+            let findMenu = try #require(findMenuItem.submenu)
+
+            #expect(findMenu.title == "Suchen")
+            #expect(
+                findMenu.items.compactMap { $0.identifier?.rawValue }
+                    == [
+                        MacPadStringKey.find.rawValue,
+                        MacPadStringKey.findNext.rawValue,
+                        MacPadStringKey.findPrevious.rawValue,
+                        MacPadStringKey.replace.rawValue
+                    ]
+            )
+            #expect(
+                findMenu.items.map(\.action)
+                    == [
+                        #selector(AppDelegate.showFind(_:)),
+                        #selector(AppDelegate.findNext(_:)),
+                        #selector(AppDelegate.findPrevious(_:)),
+                        #selector(AppDelegate.showReplace(_:))
+                    ]
+            )
+            #expect(
+                editMenu.items.contains {
+                    $0.identifier?.rawValue == MacPadStringKey.goTo.rawValue
+                }
+            )
+            #expect(
+                !editMenu.items.contains {
+                    $0.identifier?.rawValue == MacPadStringKey.find.rawValue
+                }
             )
         }
     }
@@ -184,6 +244,84 @@ struct WindowRoutingTests {
         }
     }
 
+    @Test("Find-only panel fits its German large-text content")
+    func findOnlyPanelFitsGermanLargeTextContent() throws {
+        try withLocalization(
+            languageCode: "de",
+            strings: germanFindTranslations
+        ) { localization in
+            let controller = FindPanelController(
+                localization: localization,
+                onFindNext: { _, _ in },
+                onFindPrevious: { _, _ in },
+                onReplace: { _, _, _ in },
+                onReplaceAll: { _, _, _ in }
+            )
+            let window = try #require(controller.window)
+            let contentView = try #require(window.contentView)
+            let visibleIdentifiers = [
+                "find.termLabel",
+                "find.term",
+                "find.next",
+                "find.previous",
+                "find.matchCase",
+                "find.wrapAround"
+            ]
+            for identifier in visibleIdentifiers {
+                let visibleView = try #require(
+                    view(withIdentifier: identifier, in: contentView)
+                )
+                if let textField = visibleView as? NSTextField {
+                    textField.font = NSFont.systemFont(ofSize: 17)
+                }
+                if let button = visibleView as? NSButton {
+                    button.font = NSFont.systemFont(ofSize: 17)
+                }
+            }
+
+            controller.show(initialTerm: "MacPad", showReplace: false)
+            defer { controller.close() }
+            contentView.layoutSubtreeIfNeeded()
+
+            let grid = try #require(
+                view(withIdentifier: "find.grid", in: contentView) as? NSGridView
+            )
+            let findHeight = window.contentLayoutRect.height
+            let replaceField = try #require(
+                view(withIdentifier: "find.replacement", in: contentView)
+            )
+            let replaceButton = try #require(
+                view(withIdentifier: "find.replace", in: contentView)
+            )
+            #expect(window.title == "Suchen")
+            #expect(findHeight < 204)
+            #expect(grid.frame.minY <= 17)
+            #expect(replaceField.isHiddenOrHasHiddenAncestor)
+            #expect(replaceButton.isHiddenOrHasHiddenAncestor)
+            for identifier in visibleIdentifiers {
+                let visibleView = try #require(
+                    view(withIdentifier: identifier, in: contentView)
+                )
+                let frame = visibleView.convert(visibleView.bounds, to: contentView)
+                #expect(contentView.bounds.contains(frame))
+                #expect(visibleView.frame.width + 1 >= visibleView.intrinsicContentSize.width)
+            }
+
+            controller.show(initialTerm: "MacPad", showReplace: true)
+            contentView.layoutSubtreeIfNeeded()
+            #expect(window.contentLayoutRect.height >= 204)
+            #expect(window.contentLayoutRect.height > findHeight)
+            #expect(!replaceField.isHiddenOrHasHiddenAncestor)
+            #expect(!replaceButton.isHiddenOrHasHiddenAncestor)
+
+            controller.show(initialTerm: "MacPad", showReplace: false)
+            contentView.layoutSubtreeIfNeeded()
+            #expect(abs(window.contentLayoutRect.height - findHeight) < 1)
+            #expect(replaceField.isHiddenOrHasHiddenAncestor)
+            #expect(replaceButton.isHiddenOrHasHiddenAncestor)
+        }
+    }
+
     @Test("German editor values cross the injected localization boundary")
     func germanEditorValues() throws {
         try withLocalization(
@@ -257,6 +395,45 @@ struct WindowRoutingTests {
         #expect(controller.window?.canBecomeMain == false)
     }
 
+    @Test("Go To alert keeps balanced German large-text proportions and keyboard order")
+    func goToAlertUsesBalancedGermanLargeTextLayout() throws {
+        try withLocalization(
+            languageCode: "de",
+            strings: [
+                MacPadStringKey.goToLineTitle.rawValue: "Gehe zu Zeile",
+                MacPadStringKey.lineNumberLabel.rawValue: "Zeilennummer:",
+                MacPadStringKey.lineNumber.rawValue: "Zeilennummer",
+                MacPadStringKey.goToLine.rawValue: "Gehe zu",
+                MacPadStringKey.cancel.rawValue: "Abbrechen"
+            ]
+        ) { localization in
+            let presentation = GoToLineAlertFactory.makeAlert(
+                currentLine: 2,
+                localization: localization
+            )
+            let goToButton = try #require(presentation.alert.buttons.first)
+            let cancelButton = try #require(presentation.alert.buttons.last)
+            presentation.input.font = NSFont.systemFont(ofSize: 17)
+            goToButton.font = NSFont.systemFont(ofSize: 17)
+            cancelButton.font = NSFont.systemFont(ofSize: 17)
+            presentation.prepareForPresentation()
+            let window = presentation.alert.window
+
+            #expect(presentation.alert.messageText == "Gehe zu Zeile")
+            #expect(presentation.alert.informativeText == "Zeilennummer:")
+            #expect(presentation.input.stringValue == "2")
+            #expect(presentation.input.frame.width >= 320)
+            #expect(window.frame.width >= 350)
+            #expect(presentation.input.accessibilityLabel() == "Zeilennummer")
+            #expect(goToButton.identifier?.rawValue == "goTo.action")
+            #expect(goToButton.accessibilityLabel() == "Gehe zu")
+            #expect(cancelButton.identifier?.rawValue == "action.cancel")
+            #expect(window.initialFirstResponder === presentation.input)
+            #expect(goToButton.keyEquivalent == "\r")
+            #expect(cancelButton.keyEquivalent == "\u{1b}")
+        }
+    }
+
     @Test("an already open file resolves to its existing editor")
     func resolvesExistingFile() throws {
         let directory = FileManager.default.temporaryDirectory
@@ -326,15 +503,111 @@ struct WindowRoutingTests {
             distributionChannel: .direct,
             customerRoutes: .current(for: .direct)
         )
+        let newDocument = try #require(
+            menuItem(withIdentifier: "file.newDocument", in: menu)
+        )
         let newTab = try #require(menuItem(withIdentifier: "file.newTab", in: menu))
         let newWindow = try #require(menuItem(withIdentifier: "file.newWindow", in: menu))
 
+        #expect(newDocument.title == "New Document")
+        #expect(newDocument.keyEquivalent == "n")
+        #expect(newDocument.keyEquivalentModifierMask == [.command])
+        #expect(newDocument.action == #selector(AppDelegate.openNewDocument(_:)))
         #expect(newTab.keyEquivalent == "t")
         #expect(newTab.keyEquivalentModifierMask == [.command])
         #expect(newTab.action == #selector(AppDelegate.openNewTab(_:)))
-        #expect(newWindow.keyEquivalent == "n")
-        #expect(newWindow.keyEquivalentModifierMask == [.command])
+        #expect(newWindow.keyEquivalent.isEmpty)
         #expect(newWindow.action == #selector(AppDelegate.openNewWindow(_:)))
+        let fileMenu = try #require(
+            menuItem(withIdentifier: MacPadStringKey.fileMenu.rawValue, in: menu)?.submenu
+        )
+        #expect(
+            Array(fileMenu.items.prefix(5)).map { item in
+                item.isSeparatorItem ? "separator" : item.identifier?.rawValue ?? "missing"
+            } == [
+                "file.newDocument",
+                MacPadStringKey.newTab.rawValue,
+                MacPadStringKey.newWindow.rawValue,
+                "separator",
+                MacPadStringKey.open.rawValue
+            ]
+        )
+    }
+
+    @Test("New Document uses an active tab group while New Window stays separate")
+    func newDocumentUsesAdaptivePlacement() throws {
+        let delegate = appDelegate(localization: englishLocalization)
+        let application = NSApplication.shared
+        let existingWindows = Set(application.windows.map(ObjectIdentifier.init))
+        defer {
+            application.windows
+                .filter { !existingWindows.contains(ObjectIdentifier($0)) }
+                .forEach { $0.close() }
+        }
+
+        delegate.openNewDocument(nil)
+        let firstWindow = try #require(
+            editorWindows(excluding: existingWindows, in: application).first
+        )
+        let firstContentView = try #require(firstWindow.contentView)
+        let firstEditor = try #require(
+            view(withIdentifier: "editor.text", in: firstContentView)
+                as? NSTextView
+        )
+        firstEditor.string = "Existing document"
+
+        delegate.openNewDocument(nil)
+        let afterAdaptiveDocument = editorWindows(
+            excluding: existingWindows,
+            in: application
+        )
+        let secondWindow = try #require(
+            afterAdaptiveDocument.first { $0 !== firstWindow }
+        )
+        let activeGroup = firstWindow.tabbedWindows ?? [firstWindow]
+        #expect(delegate.editorWindowCount == 2)
+        #expect(activeGroup.contains { $0 === secondWindow })
+        #expect(firstEditor.string == "Existing document")
+
+        delegate.openNewTab(nil)
+        let afterExplicitTab = editorWindows(
+            excluding: existingWindows,
+            in: application
+        )
+        let thirdWindow = try #require(
+            afterExplicitTab.first {
+                $0 !== firstWindow && $0 !== secondWindow
+            }
+        )
+        #expect(delegate.editorWindowCount == 3)
+        #expect((firstWindow.tabbedWindows ?? [firstWindow]).contains { $0 === thirdWindow })
+
+        delegate.openNewWindow(nil)
+        let afterSeparateWindow = editorWindows(
+            excluding: existingWindows,
+            in: application
+        )
+        let fourthWindow = try #require(
+            afterSeparateWindow.first {
+                $0 !== firstWindow && $0 !== secondWindow && $0 !== thirdWindow
+            }
+        )
+        #expect(delegate.editorWindowCount == 4)
+        #expect(!(fourthWindow.tabbedWindows ?? [fourthWindow]).contains { $0 === firstWindow })
+        #expect(
+            afterSeparateWindow
+                .filter { $0 !== firstWindow }
+                .allSatisfy { window in
+                    guard let contentView = window.contentView,
+                          let editor = view(
+                            withIdentifier: "editor.text",
+                            in: contentView
+                          ) as? NSTextView else {
+                        return false
+                    }
+                    return editor.string.isEmpty
+                }
+        )
     }
 
     @Test("View menu exposes the optional menu-bar launcher")
@@ -352,6 +625,104 @@ struct WindowRoutingTests {
 
         #expect(item.action == #selector(AppDelegate.toggleMenuBarVisibility(_:)))
         #expect(item.state == .off)
+    }
+
+    @Test("Normal launch opens one blank document and preserves Open Recent")
+    func normalLaunchIgnoresLegacySession() throws {
+        try withTemporaryDirectory { directory in
+            let savedURL = directory.appendingPathComponent("Welcome.txt")
+            try Data("Saved owner fixture".utf8).write(to: savedURL)
+            let suiteName = "MacPadLaunchTests.\(UUID().uuidString)"
+            let defaults = try #require(UserDefaults(suiteName: suiteName))
+            defer { defaults.removePersistentDomain(forName: suiteName) }
+            let recentKey = "MacPad.RecentDocumentBookmarks.v1"
+            let recentStore = RecentDocumentStore(
+                defaults: defaults,
+                defaultsKey: recentKey,
+                maximumCount: 20
+            )
+            let savedReference = PersistedFileReference(
+                path: savedURL.path,
+                bookmarkData: nil
+            )
+            try recentStore.add(savedReference)
+            let legacySession = AppSessionState(tabs: [
+                EditorSessionState(
+                    id: "legacy-saved-tab",
+                    fileReference: savedReference,
+                    selectedLocation: 3,
+                    wordWrapEnabled: false,
+                    statusBarVisible: false,
+                    zoomPercent: 130,
+                    lineEnding: .unix
+                )
+            ])
+            defaults.set(
+                try JSONEncoder().encode(legacySession),
+                forKey: "MacPad.SessionState.v1"
+            )
+            let delegate = AppDelegate(
+                defaults: defaults,
+                localization: englishLocalization,
+                distributionChannel: .direct,
+                customerRoutes: .current(for: .direct),
+                fileAccess: directFileAccess,
+                recentDocumentStore: recentStore
+            )
+            let application = NSApplication.shared
+            let existingWindows = Set(application.windows.map(ObjectIdentifier.init))
+
+            delegate.applicationDidFinishLaunching(
+                Notification(
+                    name: NSApplication.didFinishLaunchingNotification,
+                    object: application
+                )
+            )
+
+            let launchedWindows = application.windows.filter {
+                !existingWindows.contains(ObjectIdentifier($0))
+            }
+            let launchedEditorWindows = launchedWindows.filter { window in
+                guard let contentView = window.contentView else { return false }
+                return view(withIdentifier: "editor.text", in: contentView) != nil
+            }
+            defer { launchedEditorWindows.forEach { $0.close() } }
+            let window = try #require(launchedEditorWindows.first)
+            let contentView = try #require(window.contentView)
+            let editor = try #require(
+                view(withIdentifier: "editor.text", in: contentView) as? NSTextView
+            )
+            #expect(delegate.editorWindowCount == 1)
+            #expect(launchedEditorWindows.count == 1)
+            #expect(window.representedURL == nil)
+            #expect(editor.string.isEmpty)
+            #expect(defaults.object(forKey: "MacPad.SessionState.v1") == nil)
+            #expect(try recentStore.references() == [savedReference])
+        }
+    }
+
+    @Test("quit cancellation stops before later dirty documents")
+    func quitCancellationStopsAtFirstRejection() {
+        var confirmationOrder: [String] = []
+        let reply = ApplicationTermination.reply(
+            confirmDiscardActions: [
+                {
+                    confirmationOrder.append("first")
+                    return true
+                },
+                {
+                    confirmationOrder.append("second")
+                    return false
+                },
+                {
+                    confirmationOrder.append("third")
+                    return true
+                }
+            ]
+        )
+
+        #expect(reply == .terminateCancel)
+        #expect(confirmationOrder == ["first", "second"])
     }
 
     @Test("menu-bar launcher is off by default and keeps the app running when enabled")
@@ -972,6 +1343,42 @@ struct WindowRoutingTests {
         #expect(accessory.selectedEncoding == .utf8)
     }
 
+    @Test("Save As encoding row keeps native horizontal inset without clipping")
+    func saveEncodingLayoutUsesNativeInsets() throws {
+        try withLocalization(
+            languageCode: "de",
+            strings: [
+                MacPadStringKey.encodingLabel.rawValue: "Zeichenkodierung:",
+                MacPadStringKey.textEncoding.rawValue: "Textkodierung"
+            ],
+            technicalTerms: [
+                "macpad.term.encoding.utf8": "UTF-8",
+                "macpad.term.encoding.utf8-bom": "UTF-8 BOM",
+                "macpad.term.encoding.utf16-le": "UTF-16 LE",
+                "macpad.term.encoding.utf16-be": "UTF-16 BE",
+                "macpad.term.encoding.windows-1252": "Windows-1252",
+                "macpad.term.encoding.iso-8859-1": "ISO-8859-1"
+            ]
+        ) { localization in
+            let accessory = SaveEncodingAccessory(
+                selectedEncoding: .utf8,
+                localization: localization
+            )
+            let label = try #require(
+                view(withIdentifier: "save.encodingLabel", in: accessory.view)
+                    as? NSTextField
+            )
+            label.font = NSFont.systemFont(ofSize: 17)
+            accessory.view.frame.size = accessory.view.fittingSize
+            accessory.view.layoutSubtreeIfNeeded()
+
+            #expect(label.frame.minX >= 32)
+            #expect(label.frame.width >= label.intrinsicContentSize.width)
+            #expect(accessory.picker.frame.minX >= label.frame.maxX + 6)
+            #expect(accessory.picker.frame.maxX <= accessory.view.bounds.maxX - 20)
+        }
+    }
+
     @Test("Save As sentence and technical terms use the same German bundle")
     func saveEncodingUsesGermanTechnicalTerms() throws {
         try withLocalization(
@@ -1140,40 +1547,42 @@ struct WindowRoutingTests {
 
         let credits = delegate.aboutCredits()
 
-        #expect(credits.string.contains("Created by anvilfilbert"))
         #expect(credits.string.contains("Website: macpad.net"))
-        #expect(credits.string.contains("Support: support@macpad.net"))
+        #expect(credits.string.contains("Support: macpad.net/support"))
         #expect(credits.string.contains("Privacy Policy"))
+        #expect(!credits.string.contains("Created by"))
+        #expect(!credits.string.contains("anvilfilbert"))
+        #expect(!credits.string.contains("@"))
         #expect(!credits.string.contains("Source Code"))
         #expect(!credits.string.contains("Public repo"))
         #expect(
             linkDestinations(in: credits) == Set([
                 "https://macpad.net",
-                "mailto:support@macpad.net",
+                "https://macpad.net/support",
                 "https://macpad.net/privacy"
             ])
         )
     }
 
     #if !MACPAD_APP_STORE
-    @Test("direct About adds permanent links and preserves source information")
-    func directAboutAddsPermanentLinksAndPreservesSourceInformation() {
+    @Test("direct About exposes the same permanent customer links without source information")
+    func directAboutExposesPermanentCustomerLinksWithoutSourceInformation() {
         let delegate = appDelegate(localization: englishLocalization)
 
         let credits = delegate.aboutCredits()
 
-        #expect(credits.string.contains("Created by anvilfilbert"))
         #expect(credits.string.contains("Website: macpad.net"))
-        #expect(credits.string.contains("Support: support@macpad.net"))
+        #expect(credits.string.contains("Support: macpad.net/support"))
         #expect(credits.string.contains("Privacy Policy"))
-        #expect(credits.string.contains("Source Code: anvilfilbert/MacPad"))
+        #expect(!credits.string.contains("Created by"))
+        #expect(!credits.string.contains("anvilfilbert"))
+        #expect(!credits.string.contains("@"))
+        #expect(!credits.string.contains("Source Code"))
         #expect(
             linkDestinations(in: credits) == Set([
-                "https://github.com/anvilfilbert",
                 "https://macpad.net",
-                "mailto:support@macpad.net",
-                "https://macpad.net/privacy",
-                "https://github.com/anvilfilbert/MacPad"
+                "https://macpad.net/support",
+                "https://macpad.net/privacy"
             ])
         )
     }
@@ -1186,18 +1595,18 @@ struct WindowRoutingTests {
         ) { localization in
             let credits = appDelegate(localization: localization).aboutCredits()
 
-            #expect(credits.string.contains("Erstellt von anvilfilbert"))
             #expect(credits.string.contains("Website: macpad.net"))
-            #expect(credits.string.contains("Support: support@macpad.net"))
+            #expect(credits.string.contains("Support: macpad.net/support"))
             #expect(credits.string.contains("Datenschutzerklärung"))
-            #expect(credits.string.contains("Quellcode: anvilfilbert/MacPad"))
+            #expect(!credits.string.contains("Erstellt von"))
+            #expect(!credits.string.contains("anvilfilbert"))
+            #expect(!credits.string.contains("@"))
+            #expect(!credits.string.contains("Quellcode"))
             #expect(
                 linkDestinations(in: credits) == Set([
-                    "https://github.com/anvilfilbert",
                     "https://macpad.net",
-                    "mailto:support@macpad.net",
-                    "https://macpad.net/privacy",
-                    "https://github.com/anvilfilbert/MacPad"
+                    "https://macpad.net/support",
+                    "https://macpad.net/privacy"
                 ])
             )
         }
@@ -1239,156 +1648,6 @@ struct WindowRoutingTests {
             let storedAfterClear = try recentStore.references()
             #expect(storedAfterClear.isEmpty)
         }
-    }
-
-    @Test("German restore recovery alert uses stable ordered identifiers")
-    func germanRestoreRecoveryAlert() throws {
-        try withLocalization(
-            languageCode: "de",
-            strings: [
-                MacPadStringKey.sessionRestoreSingleFailure.rawValue:
-                    "Vorheriger Tab konnte nicht wiederhergestellt werden.",
-                MacPadStringKey.sessionRestoreDetail.rawValue: "%1$@\n\n%2$@",
-                MacPadStringKey.locate.rawValue: "Datei suchen …",
-                MacPadStringKey.skip.rawValue: "Überspringen",
-                MacPadStringKey.cancelRestore.rawValue: "Wiederherstellung abbrechen"
-            ]
-        ) { localization in
-            let state = EditorSessionState(
-                id: "failed-tab",
-                fileReference: PersistedFileReference(
-                    path: "/private/tmp/fehlend.txt",
-                    bookmarkData: nil
-                ),
-                selectedLocation: 0,
-                wordWrapEnabled: true,
-                statusBarVisible: true,
-                zoomPercent: 100,
-                lineEnding: .windows
-            )
-            let failure = SessionRestoreFailure(
-                windowIndex: 1,
-                tabIndex: 2,
-                state: state,
-                errorDescription: "Zugriff fehlt"
-            )
-
-            let alert = SessionRestoreAlertFactory.makeAlert(
-                failure: failure,
-                localization: localization
-            )
-
-            #expect(alert.messageText == "Vorheriger Tab konnte nicht wiederhergestellt werden.")
-            #expect(alert.informativeText.contains("fehlend.txt"))
-            #expect(alert.informativeText.contains("Zugriff fehlt"))
-            #expect(alert.buttons.map(\.title) == [
-                "Datei suchen …",
-                "Überspringen",
-                "Wiederherstellung abbrechen"
-            ])
-            #expect(alert.buttons.map { $0.identifier?.rawValue } == [
-                "sessionRestore.locate",
-                "sessionRestore.skip",
-                "sessionRestore.cancel"
-            ])
-        }
-    }
-
-    @Test("Cancel Restore presents nothing and retains exact session bytes")
-    func cancelRestorePreservesOriginalSession() throws {
-        let suiteName = "MacPadRestoreCancelTests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let state = missingStoreSessionState(id: "cancelled-tab")
-        let originalData = try JSONEncoder().encode(AppSessionState(tabs: [state]))
-        defaults.set(originalData, forKey: "MacPad.SessionState.v1")
-        let delegate = storeAppDelegate(defaults: defaults)
-        var recoveryCount = 0
-
-        let outcome = delegate.restorePreviousSession(
-            recoveryDecision: { _ in
-                recoveryCount += 1
-                #expect(delegate.editorWindowCount == 0)
-                return .cancel
-            },
-            locateURL: {
-                Issue.record("Cancel Restore must not ask for a replacement URL.")
-                return nil
-            }
-        )
-
-        #expect(outcome == .cancelled)
-        #expect(recoveryCount == 1)
-        #expect(delegate.editorWindowCount == 0)
-        #expect(defaults.data(forKey: "MacPad.SessionState.v1") == originalData)
-    }
-
-    @Test("Locate restores the failed tab with refreshed access and metadata")
-    func locateRestoresFailedTab() throws {
-        try withTemporaryDirectory { directory in
-            let replacementURL = directory.appendingPathComponent("located.txt")
-            try Data("one\r\ntwo".utf8).write(to: replacementURL)
-            let suiteName = "MacPadRestoreLocateTests.\(UUID().uuidString)"
-            let defaults = try #require(UserDefaults(suiteName: suiteName))
-            defer { defaults.removePersistentDomain(forName: suiteName) }
-            let state = missingStoreSessionState(id: "located-tab")
-            let originalData = try JSONEncoder().encode(AppSessionState(tabs: [state]))
-            defaults.set(originalData, forKey: "MacPad.SessionState.v1")
-            let delegate = storeAppDelegate(defaults: defaults)
-
-            let outcome = delegate.restorePreviousSession(
-                recoveryDecision: { _ in
-                    #expect(delegate.editorWindowCount == 0)
-                    return .locate
-                },
-                locateURL: { replacementURL }
-            )
-
-            #expect(outcome == .restored)
-            #expect(delegate.editorWindowCount == 1)
-            let savedData = try #require(defaults.data(forKey: "MacPad.SessionState.v1"))
-            let restoredSession = try AppSessionState.decode(
-                data: savedData,
-                localization: englishLocalization
-            )
-            let restored = try #require(restoredSession.tabs.first)
-            #expect(restored.id == state.id)
-            #expect(restored.selectedLocation == state.selectedLocation)
-            #expect(restored.wordWrapEnabled == state.wordWrapEnabled)
-            #expect(restored.statusBarVisible == state.statusBarVisible)
-            #expect(restored.zoomPercent == state.zoomPercent)
-            #expect(restored.lineEnding == state.lineEnding)
-            #expect(restored.fileReference?.bookmarkData?.isEmpty == false)
-            #expect(
-                restored.fileReference?.path
-                    == replacementURL.resolvingSymlinksInPath().standardizedFileURL.path
-            )
-        }
-    }
-
-    @Test("Skip explicitly omits only the failed tab and completes restoration")
-    func skipFailedTab() throws {
-        let suiteName = "MacPadRestoreSkipTests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let state = missingStoreSessionState(id: "skipped-tab")
-        defaults.set(
-            try JSONEncoder().encode(AppSessionState(tabs: [state])),
-            forKey: "MacPad.SessionState.v1"
-        )
-        let delegate = storeAppDelegate(defaults: defaults)
-
-        let outcome = delegate.restorePreviousSession(
-            recoveryDecision: { _ in .skip },
-            locateURL: {
-                Issue.record("Skip must not ask for a replacement URL.")
-                return nil
-            }
-        )
-
-        #expect(outcome == .restored)
-        #expect(delegate.editorWindowCount == 0)
-        #expect(defaults.object(forKey: "MacPad.SessionState.v1") == nil)
     }
 
     @Test("editor controls expose accessibility metadata and initial focus")
@@ -1460,6 +1719,19 @@ struct WindowRoutingTests {
         allViews(in: view).first { $0.identifier?.rawValue == identifier }
     }
 
+    private func editorWindows(
+        excluding existingWindows: Set<ObjectIdentifier>,
+        in application: NSApplication
+    ) -> [NSWindow] {
+        application.windows.filter { window in
+            guard !existingWindows.contains(ObjectIdentifier(window)),
+                  let contentView = window.contentView else {
+                return false
+            }
+            return view(withIdentifier: "editor.text", in: contentView) != nil
+        }
+    }
+
     private func linkDestinations(in credits: NSAttributedString) -> Set<String> {
         var destinations: Set<String> = []
         credits.enumerateAttribute(
@@ -1500,22 +1772,17 @@ struct WindowRoutingTests {
 
     private var germanAboutTranslations: [String: String] {
         [
-            MacPadStringKey.aboutCreatedBy.rawValue: "Erstellt von %1$@",
             MacPadStringKey.aboutWebsite.rawValue: "Website: %1$@",
             MacPadStringKey.aboutSupport.rawValue: "Support: %1$@",
-            MacPadStringKey.aboutPrivacyPolicy.rawValue: "Datenschutzerklärung",
-            MacPadStringKey.aboutSourceCode.rawValue: "Quellcode: %1$@"
+            MacPadStringKey.aboutPrivacyPolicy.rawValue: "Datenschutzerklärung"
         ]
     }
 
     private var storeFixtureRoutes: CustomerRoutes {
         CustomerRoutes(
             productURL: URL(string: "https://product.example/macpad"),
-            creatorProfileURL: URL(string: "https://creator.example/macpad"),
-            sourceCodeURL: URL(string: "https://source.example/macpad"),
             helpURL: URL(string: "https://help.example/macpad"),
             supportURL: URL(string: "https://support.example/macpad"),
-            supportEmailURL: URL(string: "mailto:support@macpad.net"),
             privacyURL: URL(string: "https://privacy.example/macpad"),
             securityURL: URL(string: "https://security.example/macpad"),
             updateURL: URL(string: "https://updates.example/macpad"),

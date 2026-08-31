@@ -89,10 +89,6 @@ struct LocalizationTests {
                 "en": "Privacy Policy",
                 "de": "Datenschutzerklärung"
             ],
-            "about.sourceCode": [
-                "en": "Source Code: %1$@",
-                "de": "Quellcode: %1$@"
-            ],
             "find.accessibility.what": [
                 "en": "Find what",
                 "de": "Suchtext"
@@ -270,14 +266,10 @@ struct LocalizationTests {
         )
         #expect(localization.aboutWebsite(host: "macpad.net") == "Website: macpad.net")
         #expect(
-            localization.aboutSupport(emailAddress: "support@macpad.net")
-                == "Support: support@macpad.net"
+            localization.aboutSupport(destination: "macpad.net/support")
+                == "Support: macpad.net/support"
         )
         #expect(localization.string(.aboutPrivacyPolicy) == "Privacy Policy")
-        #expect(
-            localization.aboutSourceCode(repository: "anvilfilbert/MacPad")
-                == "Source Code: anvilfilbert/MacPad"
-        )
         #expect(localization.string(.findWhatAccessibilityLabel) == "Find what")
         #expect(localization.string(.replaceWithAccessibilityLabel) == "Replace with")
     }

@@ -13,6 +13,7 @@ final class FindPanelController: NSWindowController {
     private let matchCaseButton: NSButton
     private let wrapAroundButton: NSButton
     private var replaceRows: [NSGridRow] = []
+    private var grid: NSGridView?
     private let onFindNext: (String, FindOptions) -> Void
     private let onFindPrevious: (String, FindOptions) -> Void
     private let onReplace: (String, String, FindOptions) -> Void
@@ -70,7 +71,7 @@ final class FindPanelController: NSWindowController {
         )
         window.hidesOnDeactivate = false
         window.title = localization.string(.findTitle)
-        window.contentMinSize = NSSize(width: 500, height: 204)
+        window.contentMinSize = NSSize(width: 500, height: 0)
         window.autorecalculatesKeyViewLoop = false
         super.init(window: window)
         setupUI()
@@ -165,16 +166,9 @@ final class FindPanelController: NSWindowController {
             verticalRange: NSRange(location: 2, length: 1)
         )
         replaceRows = [grid.row(at: 3), grid.row(at: 4)]
+        self.grid = grid
         contentView.addSubview(grid)
 
-        setReplaceVisible(true)
-        let fittingSize = grid.fittingSize
-        window.setContentSize(
-            NSSize(
-                width: max(window.contentMinSize.width, fittingSize.width + 32),
-                height: max(window.contentMinSize.height, fittingSize.height + 32)
-            )
-        )
         grid.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             grid.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
@@ -194,6 +188,24 @@ final class FindPanelController: NSWindowController {
             row.isHidden = !visible
         }
         configureKeyViewLoop(showReplace: visible)
+        resizeWindowToFit(showReplace: visible)
+    }
+
+    private func resizeWindowToFit(showReplace: Bool) {
+        guard let window, let contentView = window.contentView, let grid else {
+            preconditionFailure("Find panel layout requires its window and grid.")
+        }
+        let minimumSize = NSSize(width: 500, height: showReplace ? 204 : 0)
+        window.contentMinSize = minimumSize
+        contentView.layoutSubtreeIfNeeded()
+        let fittingSize = grid.fittingSize
+        window.setContentSize(
+            NSSize(
+                width: max(minimumSize.width, fittingSize.width + 32),
+                height: max(minimumSize.height, fittingSize.height + 32)
+            )
+        )
+        contentView.layoutSubtreeIfNeeded()
     }
 
     private func configureKeyViewLoop(showReplace: Bool) {

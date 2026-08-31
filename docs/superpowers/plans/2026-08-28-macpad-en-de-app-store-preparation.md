@@ -449,7 +449,7 @@ git commit -m "build: package localized direct releases"
 
 **Interfaces:**
 - Produces: `PersistedFileReference(path:bookmarkData:)`.
-- Changes: `EditorSessionState` stores `fileReference` while decoding legacy `filePath` sessions safely.
+- Historical model change: `EditorSessionState` can decode legacy `filePath` values for isolated compatibility tests. The owner-approved 2026-08-31 launch path does not call this decoder and deletes the obsolete stored session value.
 
 - [ ] **Step 1: Write failing legacy and new-state tests**
 
@@ -486,9 +486,9 @@ public struct PersistedFileReference: Codable, Equatable, Sendable {
 
 Use custom `EditorSessionState` coding keys for `fileReference` and legacy `filePath`. Encode only `fileReference`; decode `fileReference` first, then construct a reference from legacy `filePath` with `bookmarkData: nil`.
 
-- [ ] **Step 4: Move document session state to the reference**
+- [ ] **Step 4: Keep persistent file references separate from launch state**
 
-`EditorDocument` keeps the resolved `URL` for current I/O and exposes explicit methods to attach or refresh its `PersistedFileReference`. It never stores document text in session state.
+`EditorDocument` keeps the resolved `URL` for current I/O and exposes explicit methods to attach or refresh its `PersistedFileReference`. Under the owner-approved 2026-08-31 launch contract, AppDelegate neither writes nor restores document sessions. It deletes the obsolete `MacPad.SessionState.v1` value on launch without changing `MacPad.RecentDocumentBookmarks.v1`.
 
 - [ ] **Step 5: Run GREEN tests and full session tests**
 
@@ -598,23 +598,23 @@ struct SecurityScopedFileAccess {
 }
 ```
 
-Own `SuccessfulFileTransition` in `EditorWindowController.swift`. Its callback is `((SuccessfulFileTransition) -> Void)?`. Capture `previousReference` before Save As begins; after the write and bookmark creation both succeed, attach `currentReference`, notify session state, then emit the transition for recent-document replacement. A failed write or bookmark creation emits no transition and no recent replacement.
+Own `SuccessfulFileTransition` in `EditorWindowController.swift`. Its callback is `((SuccessfulFileTransition) -> Void)?`. Capture `previousReference` before Save As begins; after the write and bookmark creation both succeed, attach `currentReference`, then emit the transition for recent-document replacement. A failed write or bookmark creation emits no transition and no recent replacement.
 
 Resolve bookmarks with `.withSecurityScope` and `.withoutUI`, then require a successful `startAccessingSecurityScopedResource()`. After a successful start, install one `defer` that performs exactly one stop; while that scope is active, recreate stale bookmark data before invoking the operation, invoke the operation, and return its value plus the refreshed reference. A failed start performs no refresh, operation, or stop and throws a localized access-denied error. If `requiresBookmark` is true and a restored reference has no bookmark, throw a localized `missingPersistentAccess(path:)` error. `accessGrantedURL` exists specifically for a live open/save-panel grant: it does not resolve a bookmark or start another scope; it invokes the operation first and creates the persistent reference afterward, before the panel-granted flow returns. This separate boundary is required because Foundation refuses to create a scoped bookmark for a Save As destination until that file exists.
 
 - [ ] **Step 6: Wire customer routes and file operations**
 
-Replace hard-coded URL selectors with access to the injected `CustomerRoutes`. The Store Help menu exposes only configured permanent routes and never exposes direct update UI. The Store About panel has no `Public repo` credit or GitHub profile/repository link. Keep the existing direct preparation behavior only under the direct compile condition. Then wire Open, Save, Save As, reload, and session restore through the security-scoped access boundary.
+Replace hard-coded URL selectors with access to the injected `CustomerRoutes`. Both About presentations expose only Website, Support, and Privacy on macpad.net, with no creator, source-code, visible email, or mailto content. Help and Support use the permanent support route. The Store channel never exposes direct update UI; the Direct channel may retain only its separate transition update route. Wire Open, Save, Save As, reload, and Open Recent through the security-scoped access boundary.
 
-The open panel creates a reference while the user-selected existing-file grant is live. Controller load, existing-file save, reload, and session restore operations execute through `SecurityScopedFileAccess.access`. A new Save As destination does not exist before the first write, so the save panel uses `accessGrantedURL`: write through the live grant first, then create and attach the bookmark before returning. Save As emits `SuccessfulFileTransition` only after the new reference is attached; the AppDelegate replaces the old recent bookmark with the new one. Stale refreshed data is attached before the state-change notification so the next session save persists it.
+The open panel creates a reference while the user-selected existing-file grant is live. Controller load, existing-file save, reload, and Open Recent operations execute through `SecurityScopedFileAccess.access`. A new Save As destination does not exist before the first write, so the save panel uses `accessGrantedURL`: write through the live grant first, then create and attach the bookmark before returning. Save As emits `SuccessfulFileTransition` only after the new reference is attached; the AppDelegate replaces the old recent bookmark with the new one.
 
 - [ ] **Step 7: Wire native Open Recent ordering to stored bookmarks**
 
 Continue using `NSDocumentController.recentDocumentURLs` for native ordering. Store bookmark records separately in `MacPad.RecentDocumentBookmarks.v1`; join by standardized path when building the menu. `representedObject` carries `PersistedFileReference`. Clearing the native menu also clears bookmark records.
 
-- [ ] **Step 8: Add recoverable lost-access results**
+- [ ] **Step 8: Discard obsolete launch sessions without touching recents**
 
-For a legacy or inaccessible restored reference, keep the failure in a structured restore result and show one localized alert with `Locate…`, `Skip`, and `Cancel Restore` actions. Preflight all restored controllers before presenting any of them. `Locate…` opens a panel, creates a new bookmark, reloads that tab, and persists the refreshed reference. `Skip` is the only path that intentionally omits a failed tab. `Cancel Restore` discards every unpresented preflight controller, leaves the original encoded session bytes unchanged, and performs no deferred session rewrite. Never silently discard the failed tab and never store its document contents.
+Normal launch creates exactly one blank document. Do not decode, restore, or write `MacPad.SessionState.v1`; delete any legacy value. Keep recent-document bookmarks independent so saved files remain available through Open Recent. Dirty documents still require the localized Save, Don't Save, or Cancel decision before quit, and explicit file opens continue to use the approved access boundary.
 
 - [ ] **Step 9: Verify focused and full tests**
 
@@ -820,7 +820,7 @@ Do not invent URLs or consume domain-availability research as approval. State: `
 
 - [ ] **Step 7: Document the legacy-user and private-repository readiness gates**
 
-Add a fail-closed migration matrix for the exact signed sequence: installed v1.3.1-or-earlier direct app → Developer ID-signed/notarized final transition build → production App Store build. The later owner-gated test must cover bundle identifier and preferences/container migration, saved and dirty documents, session restoration, recent files, security-scoped bookmarks, recovery, Help/Support/Privacy/Security routes, and update/migration guidance. Do not publish overwrite/removal instructions before the exact signed-build sequence is proven.
+Add a fail-closed migration matrix for the exact signed sequence: installed v1.3.1-or-earlier direct app → Developer ID-signed/notarized final transition build → production App Store build. The later owner-gated test must cover bundle identifier and preferences/container migration, saved and dirty documents, the one-blank-document relaunch contract, recent files, security-scoped bookmarks, recovery, Help/Support/Privacy/Security routes, and update/migration guidance. Do not publish overwrite/removal instructions before the exact signed-build sequence is proven.
 
 Record the current private-repository audit without changing external state: private Actions consumes the account allowance; current release publication and unauthenticated GitHub Releases cannot remain customer infrastructure; the unauthenticated `origin/main` fetch, CodeQL eligibility, environment protections, reusable workflows, and artifact retention require a real post-adaptation check; private GitHub artifact attestations require GitHub Enterprise Cloud and are internal provenance rather than customer trust. The repository-safe release record may preserve only the final direct release checksum, immutable commit/tag, release notes, and pass/fail status for signing, notarization, and stapling. Keep the Developer ID identity summary, Team/account identifiers, certificate details, notarization log, and other identifying evidence in an owner-approved private location outside every repository. If a valid historical public attestation bundle already exists before the workflow is removed, preserve it as optional private historical evidence; do not require or invent a final-transition attestation after the binding plan removes that workflow.
 
@@ -909,17 +909,17 @@ Register the built app with Launch Services, open System Settings → General �
 
 - [ ] **Step 2: Verify safe language relaunch behavior**
 
-With a saved open document and an edited dirty document, change the per-app language and relaunch. Verify the saved document/session restores. Verify the dirty document triggers the normal Save/Don't Save/Cancel owner choice before termination; choose Save and confirm content is preserved. Do not persist document text in preferences.
+With a saved open document and an edited dirty document, change the per-app language and relaunch. Verify the dirty document triggers the normal Save/Don't Save/Cancel owner choice before termination; choose Save and confirm content is preserved. After relaunch, verify exactly one blank document opens and the saved document remains available through Open Recent. Do not persist document text or document-session state in preferences.
 
 - [ ] **Step 3: Record the signed Store sandbox sequence as authorization-gated**
 
 All signing is prohibited in this task. Record the scenario as `SKIPPED-AUTHORIZATION`, with no candidate path or hash, until the owner separately authorizes a signed Store candidate. After that separate authorization, use a temporary external fixture directory and perform, in order:
 
 ```text
-Open → edit → Save → quit → relaunch → session restore → Open Recent → Save As → external modification → conflict alert → Reload → Print → menu-bar new document
+Open → edit → Save → quit → relaunch to one blank document → Open Recent → Save As → external modification → conflict alert → Reload → Print → menu-bar new document
 ```
 
-Confirm bookmark refresh and access remain balanced, no file is silently dropped, and lost legacy access offers `Locate…`.
+Confirm bookmark refresh and access remain balanced, no dirty text is silently discarded, and inaccessible Open Recent entries fail clearly.
 
 - [ ] **Step 4: Repeat in English and German**
 
@@ -1022,7 +1022,7 @@ The delivery must also include issue, branch, commit, and PR links; an exact cha
 
 - **Spec coverage:** Tasks 2–4 cover complete native localization and direct packaging; Tasks 5–8 cover sandbox access, Xcode configurations, entitlements, icons, archives, and CI; Tasks 9–10 cover authoritative bilingual Store materials and screenshots; Tasks 11–12 cover native language behavior, real sandbox smoke, final verification, PR, and owner gates.
 - **Placeholder scan:** No implementation step uses `TBD`, `TODO`, silent fallback, fake URL, invented Team ID, or invented production identifier. Explicit owner inputs are named as gates.
-- **Type consistency:** `PersistedFileReference` flows from session state into `SecurityScopedFileAccess`, `RecentDocumentStore`, controller state, and restoration. `DistributionChannel` and `CustomerRoutes` supply the single Store/direct policy used by menus, About, URL actions, artifact scanning, and bookmark requirements.
+- **Type consistency:** `PersistedFileReference` flows through `SecurityScopedFileAccess`, `RecentDocumentStore`, and controller file state without becoming launch-session state. `DistributionChannel` and `CustomerRoutes` supply the single Store/direct policy used by menus, About, URL actions, artifact scanning, and bookmark requirements.
 - **Scope check:** The work is large but cohesive: every task produces a reviewable MacPad distribution capability on the same branch without changing product behavior outside localization and sandbox-compatible file access.
 - **Test coverage:** Every behavior change has a RED/GREEN automated test or deterministic artifact validator before implementation. Native System Settings integration, real sandbox panels, VoiceOver, printing, and screenshot content remain explicit manual OS smoke checks with recorded evidence.
 - **Owner gates:** The plan completes safe repository-local work while stopping before all account, value-moving, credential, identifier, domain/URL, signing, upload, publication, SourceForge, CI-plan, and repository-visibility decisions. The binding cross-project sequence remains the authority for every later cutover action.

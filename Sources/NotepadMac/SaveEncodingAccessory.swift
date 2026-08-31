@@ -21,10 +21,11 @@ final class SaveEncodingAccessory {
         self.picker = picker
 
         let encodingLabel = NSTextField(labelWithString: localization.string(.encodingLabel))
+        encodingLabel.identifier = NSUserInterfaceItemIdentifier("save.encodingLabel")
         let stack = NSStackView(views: [encodingLabel, picker])
         stack.orientation = .horizontal
         stack.spacing = 8
-        stack.edgeInsets = NSEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
+        stack.edgeInsets = NSEdgeInsets(top: 8, left: 40, bottom: 8, right: 20)
         view = stack
     }
 

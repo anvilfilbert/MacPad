@@ -1,6 +1,6 @@
 # MacPad App Store Preparation
 
-**Audit date:** 2026-08-29
+**Audit date:** 2026-08-31
 
 **Scope:** MacPad desktop only
 
@@ -36,12 +36,12 @@ permanent assumptions.
 | --- | --- | --- |
 | Dependencies | Package.swift | The package declares only the local NotepadMacCore and NotepadMac targets and their tests. It declares no external package dependency. |
 | Imports | Sources | AppKit, Foundation, CryptoKit, Darwin, OSLog, UniformTypeIdentifiers, and the local NotepadMacCore module are used. No third-party module is imported. |
-| Customer links | Sources/NotepadMac/DistributionChannel.swift and Sources/NotepadMac/AppDelegate.swift | Both channels compile the approved product, support, support-email, and privacy destinations on macpad.net. The Direct channel additionally retains its temporary GitHub Help, source-code, creator-profile, and update routes. The App Store channel omits those direct-distribution routes. NSWorkspace opens a configured route in the user's default browser or mail client; MacPad does not implement a web view or network client. |
-| Preferences | Sources/NotepadMac/AppDelegate.swift and Sources/NotepadMac/EditorFontPreferences.swift | The exact keys are MacPad.SessionState.v1, MacPad.ShowInMenuBar, MacPad.RecentDocumentBookmarks.v1, and MacPad.EditorFont.v1. |
-| Session data | Sources/NotepadMacCore/SessionState.swift | Saved-document file references and bookmark data, selection, word-wrap, status-bar, zoom, line-ending, tab ordering, and window state may be stored locally. Document text is not stored in preferences. |
+| Customer links | Sources/NotepadMac/DistributionChannel.swift and Sources/NotepadMac/AppDelegate.swift | Both channels compile only the approved product, support, and privacy destinations on macpad.net for About. Help and Support also use the support page. Creator, source-code, visible email, and mailto presentation are absent. The Direct channel retains only its separate temporary GitHub update route. NSWorkspace opens a configured web route in the user's default browser; MacPad does not implement a web view or network client. |
+| Preferences | Sources/NotepadMac/AppDelegate.swift and Sources/NotepadMac/EditorFontPreferences.swift | Active repository-managed keys are MacPad.ShowInMenuBar, MacPad.RecentDocumentBookmarks.v1, and MacPad.EditorFont.v1. On launch, MacPad deletes the obsolete MacPad.SessionState.v1 value without clearing or changing recent-document bookmarks. |
+| Launch and recent documents | Sources/NotepadMac/AppDelegate.swift and Sources/NotepadMac/RecentDocumentStore.swift | A normal launch opens exactly one new blank document and does not write or restore document-session state. Saved files remain available through Open Recent. Explicit file opens and app-scoped bookmarks remain separate from the removed session behavior. |
 | File access | Sources/NotepadMacCore/EditorDocument.swift and Sources/NotepadMac/SecurityScopedFileAccess.swift | MacPad reads and writes user-selected files, coordinates writes, writes atomically, and uses app-scoped security bookmarks for persistent Store access. |
 | Hashing | Sources/NotepadMacCore/EditorDocument.swift | CryptoKit SHA-256 is used locally to compare file content and detect an external change. It is not a network or user-facing encryption feature. |
-| Diagnostics | Sources/NotepadMac/AppDelegate.swift | OSLog records local preferences, session, and recent-document errors. MacPad contains no remote logging or crash-reporting SDK. A local diagnostic message can contain a local file path. |
+| Diagnostics | Sources/NotepadMac/AppDelegate.swift | OSLog records local preference and recent-document errors. MacPad contains no remote logging or crash-reporting SDK. A local diagnostic message can contain a local file path. |
 | Absent integrations | Package.swift and Sources | No URLSession, WebKit, Network, CloudKit, StoreKit, analytics, advertising, account, telemetry, or third-party SDK is present. |
 
 ### Local content is not collected data
@@ -54,8 +54,7 @@ the time needed to service a real-time request. Apple also states that data
 processed only on the device is not collected for the App Privacy answers.
 
 Opening a configured Help, Support, Privacy, or Security route leaves MacPad
-and opens the destination in the default browser. The support email opens in
-the default mail client. The public website must describe its own processing
+and opens the destination in the default browser. The public website must describe its own processing
 separately. The compiled macpad.net destinations remain a hard release gate
 until Shared Services verifies that the correct anonymous MacPad pages are
 live in English and German.
@@ -122,8 +121,8 @@ and ISO-8859-1. It preserves Windows, Unix, classic Mac, and mixed line
 endings. If another app changes an open file, MacPad warns before
 overwriting it and offers safe next steps.
 
-Saved-document sessions, window layout, tabs, and editor settings can be
-restored without storing document text in preferences. MacPad has no
+Each normal launch opens one new blank document. Saved documents do not
+reopen automatically and remain available through Open Recent. MacPad has no
 account, ads, analytics, or cloud sync. Document contents stay on your Mac
 and are never transmitted by MacPad.
 
@@ -139,8 +138,8 @@ Length: 81 UTF-8 bytes.
 
 First Mac App Store release. MacPad provides fast native plain-text editing,
 optional menu-bar access, English and German, tabs, encoding and line-ending
-preservation, safe external-change handling, and session restoration for
-saved documents.
+preservation, safe external-change handling, and Open Recent access to saved
+documents.
 
 This is launch release copy for the future approved website, review package,
 or release history. It is not an App Store Connect What's New field. Apple
@@ -191,9 +190,9 @@ ISO-8859-1. Windows-, Unix-, klassische Mac- und gemischte Zeilenenden
 bleiben erhalten. Ändert eine andere App eine geöffnete Datei, warnt MacPad
 vor dem Überschreiben und bietet sichere nächste Schritte an.
 
-Sitzungen mit gesicherten Dokumenten, Fensteranordnung, Tabs und
-Editor-Einstellungen können wiederhergestellt werden, ohne Dokumenttext in
-den Einstellungen zu speichern. MacPad hat kein Konto, keine Werbung, keine
+Bei jedem normalen Start öffnet MacPad genau ein neues leeres Dokument.
+Gesicherte Dokumente werden nicht automatisch erneut geöffnet und bleiben
+über „Zuletzt verwendet“ erreichbar. MacPad hat kein Konto, keine Werbung, keine
 Analyse und keine Cloud-Synchronisierung. Dokumentinhalte bleiben auf
 deinem Mac und werden von MacPad nicht übertragen.
 
@@ -210,8 +209,8 @@ Länge: 86 UTF-8-Bytes.
 Erste Veröffentlichung im Mac App Store. MacPad bietet schnelle, native
 Klartextbearbeitung, optionalen Zugriff über die Menüleiste, Englisch und
 Deutsch, Tabs, die Erhaltung von Kodierungen und Zeilenenden, sicheren
-Umgang mit externen Änderungen und die Wiederherstellung gespeicherter
-Dokument-Sitzungen.
+Umgang mit externen Änderungen und „Zuletzt verwendet“ für gesicherte
+Dokumente.
 
 Dieser Text ist ein Entwurf für die künftig freigegebene Website, das
 Prüfpaket oder den Versionsverlauf zum Start. Er ist kein Feld „Neu in
@@ -230,7 +229,6 @@ The owner approved these repository-local destinations:
 
 - product and Website: `https://macpad.net`;
 - customer support: `https://macpad.net/support`;
-- support email: `support@macpad.net` through `mailto:support@macpad.net`; and
 - privacy policy: `https://macpad.net/privacy`.
 
 The URLs are compiled preparation, not production verification. macpad.net
@@ -267,10 +265,9 @@ account and contains no advertising, analytics, tracking, cloud sync, or
 third-party SDKs.
 
 Documents and document contents are processed only on your Mac and are not
-transmitted by MacPad. MacPad stores local preferences and metadata for
-saved documents and sessions when they are needed for settings, recent
-files, and session restoration. It does not store document text in
-preferences.
+transmitted by MacPad. MacPad stores local preferences and recent-document
+access metadata. It does not store document text or document-session state
+in preferences.
 
 File access occurs only for files you choose through macOS. The App Store
 build uses app-scoped security bookmarks to restore permitted access.
@@ -297,9 +294,8 @@ Cloud-Synchronisierung oder Drittanbieter-SDKs.
 
 Dokumente und Dokumentinhalte werden nur auf deinem Mac verarbeitet und
 von MacPad nicht übertragen. MacPad speichert lokale Einstellungen und
-Metadaten zu gesicherten Dokumenten und Sitzungen, wenn sie für
-Einstellungen, zuletzt verwendete Dateien und die Sitzungswiederherstellung
-nötig sind. Dokumenttext wird nicht in den Einstellungen gespeichert.
+Zugriffsmetadaten für zuletzt verwendete Dokumente. Dokumenttext und
+Dokument-Sitzungen werden nicht in den Einstellungen gespeichert.
 
 Der Dateizugriff erfolgt nur auf Dateien, die du über macOS auswählst. Die
 App-Store-Version verwendet app-bezogene Sicherheitslesezeichen, um
@@ -351,8 +347,10 @@ Sicherheits-Meldeweg].
 
 **MacPad Help**
 
-1. Choose File > New, press Command-N, or enable the optional menu-bar item
-   and use it to open a new empty window.
+1. Choose File > New Document or press Command-N to create a blank document
+   in the active tab group, or a window when no editor exists. New Tab uses
+   Command-T; New Window always creates a separate window. The optional
+   menu-bar item also opens a new empty window.
 2. Use File > Open for an existing plain-text file. Open Recent lists files
    previously selected in MacPad.
 3. Use Save or Save As to write the document. Save As lets you choose a
@@ -362,8 +360,8 @@ Sicherheits-Meldeweg].
    font, zoom, word wrap, and the status bar are available from the menus.
 5. If another app changes an open file, read MacPad's warning before
    reloading or overwriting anything.
-6. MacPad can restore saved-document sessions and editor state. It does not
-   store document text in preferences.
+6. A normal relaunch opens one blank document. Reopen a saved document from
+   Open Recent; MacPad does not restore or store document sessions.
 7. Print uses the standard macOS print panel.
 
 MacPad has no account or cloud synchronization. Choose the file location
@@ -373,8 +371,10 @@ that fits your own backup and synchronization needs.
 
 **MacPad-Hilfe**
 
-1. Wähle Ablage > Neu, drücke Command-N oder aktiviere optional das
-   Menüleisten-Symbol, um ein neues leeres Fenster zu öffnen.
+1. Wähle Ablage > Neues Dokument oder drücke Command-N, um ein leeres
+   Dokument im aktiven Tab-Bereich zu erstellen; ohne Editor entsteht ein
+   Fenster. Neuer Tab verwendet Command-T, Neues Fenster bleibt getrennt.
+   Das optionale Menüleisten-Symbol öffnet ebenfalls ein leeres Fenster.
 2. Öffne eine vorhandene Klartextdatei über Ablage > Öffnen. Zuletzt
    verwendet zeigt Dateien, die zuvor in MacPad ausgewählt wurden.
 3. Sichere das Dokument über Sichern oder Sichern unter. Unter Sichern
@@ -385,9 +385,9 @@ that fits your own backup and synchronization needs.
    Schrift, Zoom, Zeilenumbruch und Statusleiste findest du in den Menüs.
 5. Wenn eine andere App eine geöffnete Datei ändert, lies die Warnung von
    MacPad, bevor du etwas neu lädst oder überschreibst.
-6. MacPad kann Sitzungen mit gesicherten Dokumenten und den Editor-Zustand
-   wiederherstellen. Dokumenttext wird nicht in den Einstellungen
-   gespeichert.
+6. Nach einem normalen Neustart öffnet MacPad ein leeres Dokument. Öffne
+   gesicherte Dokumente über „Zuletzt verwendet“; MacPad speichert oder
+   rekonstruiert keine Dokument-Sitzungen.
 7. Drucken verwendet den Standard-Druckdialog von macOS.
 
 MacPad hat kein Konto und keine Cloud-Synchronisierung. Wähle einen
@@ -407,7 +407,7 @@ The final Developer ID-signed and notarized transition release will point
 to this migration page. Only after the Mac App Store listing is verified
 live will this page expose the Store link. Exact replacement or removal
 steps will be published only after the complete signed direct-to-Store
-sequence preserves documents, preferences, sessions, recent files, and
+sequence preserves documents, preferences, recent files, and
 permitted file access.
 
 ### Migrationsseite — Deutsch
@@ -425,7 +425,7 @@ wird auf diese Migrationsseite verweisen. Erst nachdem der Eintrag im Mac
 App Store als live verifiziert wurde, zeigt diese Seite den Store-Link an.
 Genaue Austausch- oder Entfernungsschritte werden erst veröffentlicht,
 nachdem die vollständige signierte Abfolge von der Direktversion zur
-Store-Version Dokumente, Einstellungen, Sitzungen, zuletzt verwendete
+Store-Version Dokumente, Einstellungen, zuletzt verwendete
 Dateien und erlaubten Dateizugriff bewahrt.
 
 ## App Review notes and test instructions
@@ -442,9 +442,9 @@ selects. Printing uses the standard macOS print panel.
 ### English review steps
 
 1. Launch on macOS 14 or later and type in a new document.
-2. Save through the standard panel, quit, relaunch, and confirm that the
-   saved-document session restores.
-3. Use Open Recent.
+2. Save through the standard panel, quit, relaunch, and confirm that exactly
+   one new blank document opens rather than the saved document.
+3. Use Open Recent to reopen the saved document.
 4. Use Save As and inspect the encoding control. Confirm that the status bar
    shows the current line-ending mode and that saving preserves it.
 5. Change the saved file in another app, return to MacPad, and verify the
@@ -471,8 +471,9 @@ wird der Standard-Druckdialog von macOS verwendet.
 1. Starte die App unter macOS 14 oder neuer und schreibe in ein neues
    Dokument.
 2. Sichere es über den Standarddialog, beende die App, starte sie neu und
-   prüfe die Wiederherstellung der Sitzung mit dem gesicherten Dokument.
-3. Verwende Zuletzt verwendet.
+   prüfe, dass genau ein neues leeres Dokument statt des gesicherten
+   Dokuments geöffnet wird.
+3. Öffne das gesicherte Dokument über „Zuletzt verwendet“.
 4. Öffne Sichern unter und prüfe die Einstellung für die Kodierung.
    Bestätige, dass die Statusleiste den aktuellen Zeilenenden-Modus zeigt
    und dass er beim Sichern erhalten bleibt.
@@ -559,9 +560,9 @@ cell is therefore fail-closed.
 | Sandbox container | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Container behavior and any migration are verified on a clean supported Mac |
 | Saved documents | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Open, edit, save, quit, and relaunch preserve the file |
 | Dirty documents | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Save, Don't Save, and Cancel choices remain explicit; no content is silently discarded |
-| Session restoration | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Windows, tabs, selected saved documents, and editor state restore correctly |
+| Clean relaunch contract | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Relaunch opens exactly one blank document, does not restore legacy session data, and leaves recent-document access intact |
 | Recent files | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Native recents and repository-managed references remain usable or fail clearly |
-| Security-scoped bookmarks | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Bookmark refresh is balanced; inaccessible files offer the approved Locate path |
+| Security-scoped bookmarks | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Bookmark refresh remains balanced for explicit opens, saves, and Open Recent; inaccessible files fail clearly |
 | Conflict and recovery behavior | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | External changes, reload, and recovery choices do not overwrite content silently |
 | Help, Support, Privacy, and Security | COMPILED / NOT LIVE-VERIFIED | COMPILED / NOT LIVE-VERIFIED | Every configured domain route opens the correct anonymous MacPad page in English and German; unconfigured Help and Security routes remain absent |
 | Migration and update guidance | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | The transition build points only to the verified migration page; that page exposes the Store link after live-listing verification |

@@ -24,6 +24,41 @@ struct SuccessfulFileTransition: Equatable, Sendable {
     let currentReference: PersistedFileReference
 }
 
+struct GoToLineAlertPresentation {
+    let alert: NSAlert
+    let input: NSTextField
+
+    @MainActor
+    func prepareForPresentation() {
+        alert.layout()
+        alert.window.initialFirstResponder = input
+    }
+}
+
+@MainActor
+enum GoToLineAlertFactory {
+    static func makeAlert(
+        currentLine: Int,
+        localization: MacPadLocalization
+    ) -> GoToLineAlertPresentation {
+        let alert = NSAlert()
+        alert.messageText = localization.string(.goToLineTitle)
+        alert.informativeText = localization.string(.lineNumberLabel)
+        let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+        input.stringValue = "\(currentLine)"
+        input.identifier = NSUserInterfaceItemIdentifier("goTo.lineNumber")
+        input.setAccessibilityLabel(localization.string(.lineNumber))
+        alert.accessoryView = input
+        let goToButton = alert.addButton(withTitle: localization.string(.goToLine))
+        goToButton.identifier = NSUserInterfaceItemIdentifier("goTo.action")
+        goToButton.setAccessibilityLabel(localization.string(.goToLine))
+        let cancelButton = alert.addButton(withTitle: localization.string(.cancel))
+        cancelButton.identifier = NSUserInterfaceItemIdentifier("action.cancel")
+        cancelButton.keyEquivalent = "\u{1b}"
+        return GoToLineAlertPresentation(alert: alert, input: input)
+    }
+}
+
 final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTextViewDelegate {
     static var defaultEditorFont: NSFont {
         NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
@@ -226,22 +261,16 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
 
     @objc func goToLine(_ sender: Any?) {
         refreshLineIndexNow()
-        let alert = NSAlert()
-        alert.messageText = localization.string(.goToLineTitle)
-        alert.informativeText = localization.string(.lineNumberLabel)
-        let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
-        input.stringValue = "\(lineIndex.cursorPosition(selectedLocation: textView.selectedRange().location).line)"
-        input.identifier = NSUserInterfaceItemIdentifier("goTo.lineNumber")
-        input.setAccessibilityLabel(localization.string(.lineNumber))
-        alert.accessoryView = input
-        let goToButton = alert.addButton(withTitle: localization.string(.goToLine))
-        goToButton.identifier = NSUserInterfaceItemIdentifier("goTo.action")
-        goToButton.setAccessibilityLabel(localization.string(.goToLine))
-        let cancelButton = alert.addButton(withTitle: localization.string(.cancel))
-        cancelButton.identifier = NSUserInterfaceItemIdentifier("action.cancel")
+        let presentation = GoToLineAlertFactory.makeAlert(
+            currentLine: lineIndex.cursorPosition(
+                selectedLocation: textView.selectedRange().location
+            ).line,
+            localization: localization
+        )
+        presentation.prepareForPresentation()
 
-        guard alert.runModal() == .alertFirstButtonReturn,
-              let lineNumber = Int(input.stringValue),
+        guard presentation.alert.runModal() == .alertFirstButtonReturn,
+              let lineNumber = Int(presentation.input.stringValue),
               lineNumber > 0 else { return }
         selectLine(lineNumber)
     }
