@@ -138,6 +138,7 @@ struct WindowRoutingTests {
             )
             let findMenu = try #require(findMenuItem.submenu)
 
+            #expect(findMenuItem.title == "Suchen")
             #expect(findMenu.title == "Suchen")
             #expect(
                 findMenu.items.compactMap { $0.identifier?.rawValue }
@@ -167,6 +168,29 @@ struct WindowRoutingTests {
                     $0.identifier?.rawValue == MacPadStringKey.find.rawValue
                 }
             )
+        }
+    }
+
+    @Test("Find submenu parent uses the selected English title")
+    func findSubmenuParentUsesEnglishTitle() throws {
+        try withLocalization(
+            languageCode: "en",
+            strings: [MacPadStringKey.findTitle.rawValue: "Find"]
+        ) { localization in
+            let application = NSApplication.shared
+            let delegate = appDelegate(localization: localization)
+            let menu = MainMenuFactory.makeMenu(
+                target: delegate,
+                application: application,
+                localization: localization,
+                distributionChannel: .direct,
+                customerRoutes: .current(for: .direct)
+            )
+            let findMenuItem = try #require(
+                menuItem(withIdentifier: "edit.findMenu", in: menu)
+            )
+
+            #expect(findMenuItem.title == "Find")
         }
     }
 

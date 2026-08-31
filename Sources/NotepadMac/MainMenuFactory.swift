@@ -235,7 +235,11 @@ enum MainMenuFactory {
 
     private static func rootItem(for submenu: NSMenu, identifier: String) -> NSMenuItem {
         submenu.identifier = NSUserInterfaceItemIdentifier(identifier)
-        let item = NSMenuItem()
+        let item = NSMenuItem(
+            title: submenu.title,
+            action: nil,
+            keyEquivalent: ""
+        )
         item.identifier = NSUserInterfaceItemIdentifier(identifier)
         item.submenu = submenu
         return item
