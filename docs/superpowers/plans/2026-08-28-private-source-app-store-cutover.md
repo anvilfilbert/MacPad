@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Move MacPad and MacPad Mobile to an App Store-first commercial release while keeping customer support intact, retiring SourceForge safely, and making both source repositories private only after all public dependencies have moved to the product domain.
+**Goal:** Move MacPad and MacPad Mobile to an App Store-first free, non-commercial hobby release while keeping customer support intact, retiring SourceForge safely, and making both source repositories private only after all public dependencies have moved to the product domain.
 
 **Architecture:** Treat distribution as a gated cross-project cutover. The public website owns stable customer URLs; Store builds own installation and updates; private GitHub repositories own engineering only. A final MacPad direct-transition release bridges installed legacy copies before public GitHub and SourceForge disappear. Every external or irreversible action remains an explicit product-owner gate.
 
@@ -13,7 +13,8 @@
 ## Global Constraints
 
 - Execute the tasks and gates in order. Do not privatize a repository or retire SourceForge early.
-- Do not purchase a domain, enroll an Apple account, accept agreements, set prices, upload, submit, publish, change repository visibility, remove public files, or delete a project without a separate explicit owner approval for that action.
+- Apply the binding design's portfolio launch policy to both apps. Do not add advertising, subscriptions, in-app purchases, donations, paid support, a paid bundle, or another monetization path in cutover work.
+- Do not purchase a domain, enroll an Apple account, accept agreements, enter free-price/tax-category values, choose storefront availability, declare DSA status, upload, submit, publish, change repository visibility, remove public files, or delete a project without a separate explicit owner approval for that action.
 - Work in the named repository for each task and never mix MacPad and MacPad Mobile commits.
 - Preserve unrelated changes and active worktrees. Finish or coordinate the in-flight Mobile widget and Mac localization work before touching overlapping files.
 - English is the source language and German is the only additional launch language.
@@ -67,7 +68,7 @@ Record the branch, HEAD, worktree status, and owner for the MacPad localization 
 
 - [ ] **Step 3: Create the missing Mobile preparation plan**
 
-The `MacPad Mobile` task must use the writing-plans workflow to create `../PhonePad/docs/superpowers/plans/2026-08-28-macpad-mobile-en-de-app-store-preparation.md`. It must cover complete English/German app and Store localization, native per-app language selection, App Store signing and metadata preparation, the approved pricing draft, and the public-domain/private-source decisions in the design. Commit the plan in the Mobile repository before Task 4 implementation begins.
+The `MacPad Mobile` task must use the writing-plans workflow to create `../PhonePad/docs/superpowers/plans/2026-08-28-macpad-mobile-en-de-app-store-preparation.md`. It must cover complete English/German app and Store localization, native per-app language selection, App Store signing and metadata preparation, the binding free/non-monetized portfolio launch policy, and the public-domain/private-source decisions in the design. Commit the plan in the Mobile repository before Task 4 implementation begins.
 
 - [ ] **Step 4: Inventory repository and website links**
 
@@ -88,7 +89,7 @@ Record, with timestamps, both repositories’ visibility, default branch, open i
 
 - [ ] **Step 6: Record the owner-gate ledger**
 
-Create an unchecked ledger for domain purchase, Apple enrollment, agreements, production bundle identifiers, pricing, territories, uploads, submissions, publication, SourceForge retirement, repository visibility changes, and permanent deletion. Each gate records the owner decision date and evidence only after the decision occurs.
+Create an unchecked ledger for domain purchase, Apple enrollment and required agreement state, production bundle identifiers, free-price/tax-category entry, storefront availability, DSA declarations, uploads, submissions, publication, SourceForge retirement, repository visibility changes, and permanent deletion. Each gate records the owner decision date and evidence only after the decision occurs.
 
 - [ ] **Step 7: Verify the inventory is complete**
 
@@ -325,20 +326,20 @@ Review the exact Mobile commit range, push its focused branch, let required unit
 - Modify only the credential-free MacPad Xcode configuration, entitlement, privacy-manifest, metadata, and screenshot files enumerated by its existing Store-preparation plan.
 
 **Interfaces:**
-- Consumes: owner Apple account, approved identifiers, signing access, prices, territories, privacy answers, screenshots, and final public URLs.
+- Consumes: owner Apple account, approved identifiers, signing access, confirmed free-price/tax-category entries, owner-chosen storefront availability, DSA declarations, privacy answers, screenshots, and final public URLs.
 - Produces: reviewed production listings and production builds for both apps.
 
 - [ ] **Step 1: Complete the Apple account owner gate**
 
-Guide the owner through enrollment and identity, tax, banking, and agreement steps without requesting credentials or storing account data. Record only non-sensitive completion evidence.
+Guide the owner through Developer Program enrollment, identity, and required agreement-status checks without requesting credentials or storing account data. Record only non-sensitive completion evidence. Do not add the Paid Apps Agreement or revenue-oriented tax/banking setup as launch requirements for the binding free, non-monetized model.
 
 - [ ] **Step 2: Approve immutable product decisions**
 
-Present the final bundle identifiers, display names, SKUs, categories, age ratings, pricing, bundle strategy, territories, privacy answers, and support/privacy URLs. Stop until the owner approves them.
+Present the final bundle identifiers, display names, SKUs, categories, age ratings, free-price/tax-category entries, storefront availability, DSA declarations, privacy answers, and support/privacy URLs. Storefront availability has no repository recommendation; stop until the owner chooses it and approves the remaining values.
 
 - [ ] **Step 3: Create App Store Connect records after approval**
 
-The owner or an explicitly authorized operator creates both app records. Do not submit, publish, or set externally visible pricing merely because the records exist.
+The owner or an explicitly authorized operator creates both app records. Do not submit, publish, or enter the live free-price/tax-category or storefront values merely because the records exist.
 
 - [ ] **Step 4: Produce and validate signed candidates**
 
@@ -358,7 +359,7 @@ Upload only after explicit approval. Complete TestFlight/internal or equivalent 
 
 - [ ] **Step 8: Submit and publish only at separate owner gates**
 
-Submission for review and production publication are two separate external actions. Show the exact build, metadata, price, territories, release mode, and validation evidence before each approval.
+Submission for review and production publication are two separate external actions. Show the exact build, metadata, confirmed free price and tax category, owner-chosen storefront availability, DSA status, release mode, and validation evidence before each approval.
 
 ### Task 6: Verify the live MacPad Store cutover before retiring SourceForge
 
@@ -372,7 +373,7 @@ Submission for review and production publication are two separate external actio
 
 - [ ] **Step 1: Verify production listings anonymously**
 
-From signed-out web sessions and normal customer Apple accounts, verify the MacPad Store page, English/German metadata, price, territories, support URL, privacy URL, screenshots, and download availability.
+From signed-out web sessions and normal customer Apple accounts, verify the MacPad Store page, English/German metadata, free price, owner-chosen storefront availability, support URL, privacy URL, screenshots, and download availability.
 
 - [ ] **Step 2: Verify clean installs and upgrades**
 

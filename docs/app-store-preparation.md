@@ -14,8 +14,8 @@ work only.
 | State | Current evidence |
 | --- | --- |
 | Repository-local preparation implemented | Yes: this document and the qualified README link |
-| Launch model | Owner-approved free, privately maintained, non-commercial hobby release with no ads, subscriptions, in-app purchases, donations, paid support, or paid bundle |
-| Apple Developer Program | Active membership is required for App Store distribution; repository evidence cannot establish it, and the owner treats the fee as a hobby expense |
+| Launch model | The binding cross-project design's free, non-commercial hobby policy applies to MacPad Desktop |
+| Apple Developer Program | Required by the binding cross-project design; repository evidence cannot establish active membership |
 | Credential-free build and test evidence | Must be recorded for the exact candidate; it does not establish signing or distribution |
 | Merged | No: implementation branch only; merge not performed |
 | Production-signed or notarized | No |
@@ -510,10 +510,10 @@ requires the named owner gate.
 | Export compliance | Local SHA-256 file hashing; no network communication or user-facing encryption feature | Complete Apple's live legal determination before adding ITSAppUsesNonExemptEncryption or making an export claim |
 | Content rights | Repository artwork plus Apache-2.0 code and license evidence are available | Owner reviews the evidence and attests the rights |
 | EU DSA | No status inferred | Owner determines and declares trader status; Apple says it cannot make that determination |
-| Store price | Free at launch | Owner confirms the free price and required tax category in App Store Connect; no paid price or bundle is proposed |
-| Monetization | None: no ads, subscriptions, in-app purchases, donations, paid support, or paid bundle | Paid-app agreements and revenue-oriented tax/banking setup are not launch requirements; any future monetization is a new owner decision and product review |
-| Storefront availability | Recommend all Apple storefronts where the owner can meet the applicable legal, support, privacy, and compliance obligations | Owner makes the final live storefront selection; EU availability does not replace the separate DSA self-assessment |
-| Apple Developer Program | Required for App Store distribution; membership status is not established by repository evidence | Owner enrolls or renews separately and treats the membership fee as a hobby expense |
+| Portfolio launch policy | Binding cross-project design | Verify the final app and Store record conform; do not redefine monetization in this Desktop package |
+| Store price | Free under the binding policy | Owner confirms the free price and required tax category in App Store Connect |
+| Storefront availability | No selection | Owner chooses storefront availability later; EU availability does not replace the separate DSA self-assessment |
+| Apple Developer Program | Required under the binding policy | Owner enrolls or renews separately; repository evidence cannot establish active membership |
 | Store record | MacPad and bilingual copy are drafts | Owner confirms name availability, primary language, immutable SKU, seller and copyright text, and App Review contact |
 | Accessibility | The app has VoiceOver labels and identifiers, but no Store label is claimed here | Test all common tasks before the owner enters any Accessibility Nutrition Label |
 | Public routes | Unresolved | Owner approves the final HTTPS contract after anonymous English and German verification |
@@ -641,11 +641,10 @@ submission because Apple can change requirements.
 
 ## Binding repository references
 
-For MacPad Desktop pricing and monetization, the owner-approved free hobby
-model in this document and the MacPad-specific plan supersedes earlier paid
-or commercial draft language in the cross-project records. Those records
-remain unchanged and authoritative for the shared cutover sequence and for
-MacPad Mobile decisions outside this document's scope.
+The cross-project design is the canonical source for the portfolio launch
+policy and cutover sequence. This Desktop package applies that policy to
+localized metadata and review preparation; it does not redefine portfolio
+monetization or storefront strategy.
 
 - [Private Source and App Store Distribution Cutover Design](superpowers/specs/2026-08-28-private-source-app-store-cutover-design.md)
 - [Private Source and App Store Distribution Cutover Plan](superpowers/plans/2026-08-28-private-source-app-store-cutover.md)
@@ -660,14 +659,10 @@ checks below pass for the exact diff:
 - Package.swift and the source audit still match the evidence above;
 - local.macpad.app remains the project placeholder;
 - no PrivacyInfo.xcprivacy is added;
-- the launch model remains free with no advertising, subscription, in-app
-  purchase, donation, paid support, paid bundle, paid price proposal,
-  break-even target, or commercial launch assertion;
-- Paid Apps Agreement and revenue-oriented tax/banking setup are not listed
-  as launch requirements, while Apple Developer Program membership remains
-  an owner-controlled hobby expense;
-- the repository recommendation is a free Store price and final owner
-  selection of eligible storefronts after legal and compliance review;
+- the binding portfolio launch policy is referenced without a downstream
+  override or competing monetization definition;
+- the Store price is free under the binding policy and storefront
+  availability remains `No selection` until the owner chooses it;
 - EU DSA trader status remains an owner legal self-assessment and is not
   inferred from the hobby-project model;
 - the two descriptions begin with the required positioning and put

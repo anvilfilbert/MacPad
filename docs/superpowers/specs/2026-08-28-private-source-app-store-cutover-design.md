@@ -10,7 +10,28 @@ MacPad and MacPad Mobile will launch with the Apple App Store as their official 
 
 The public product surface will be the owner-controlled domain, not either source repository. It must remain usable without a GitHub, SourceForge, or Apple developer account.
 
-This approval authorizes planning and preparation only. It does not authorize changing repository visibility, deleting SourceForge content, purchasing a domain, enrolling in the Apple Developer Program, accepting Apple agreements, uploading builds, setting prices, submitting for review, or publishing an app.
+This approval authorizes planning and preparation only. It does not authorize changing repository visibility, deleting SourceForge content, purchasing a domain, enrolling in the Apple Developer Program, accepting Apple agreements, entering Store values, declaring legal status, uploading builds, submitting for review, or publishing an app.
+
+## Portfolio Launch Policy
+
+MacPad and MacPad Mobile will both launch free as privately maintained,
+non-commercial hobby projects. This is the canonical portfolio policy for
+Store-preparation and cutover work:
+
+- neither app has advertising, subscriptions, in-app purchases, donations,
+  paid support, or a paid bundle;
+- both Store prices are free;
+- storefront availability is deliberately unset until the owner chooses it;
+- active Apple Developer Program membership remains required and is an
+  owner-funded hobby expense;
+- the Paid Apps Agreement and revenue-oriented tax/banking setup are not
+  launch requirements for this free, non-monetized model; and
+- final EU DSA trader declarations remain owner legal self-assessments and
+  must not be inferred from the hobby-project model.
+
+Any future monetization or paid bundle would be a new owner decision and a
+new product, legal, metadata, and implementation review. It is not part of
+this cutover.
 
 ## Target Operating Model
 
@@ -93,7 +114,7 @@ The gates are strict and must run in this order:
 4. **Apple identity and signing gate:** complete Developer Program enrollment, production identifiers, and credential-safe signing preparation.
 5. **Legacy-transition gate:** Developer ID sign, notarize, publish, and verify the final MacPad direct-transition release. An ad-hoc signed build is not an acceptable public transition release.
 6. **Apple Store preparation gate:** complete App Store Connect records, metadata, screenshots, privacy answers, TestFlight/internal testing, and review preparation.
-7. **Owner submission gate:** the owner approves prices, territories, agreements, upload, review submission, and publication separately.
+7. **Owner submission gate:** the owner separately confirms the free Store prices and required tax categories, chooses storefront availability, completes the DSA self-assessments and required Apple agreement state, and approves upload, review submission, and publication.
 8. **Production availability gates:** verify each Store listing and production build separately with normal customer accounts. Verified MacPad availability unlocks SourceForge retirement; MacPad Mobile availability is not a SourceForge dependency.
 9. **SourceForge retirement gate:** after the MacPad production gate passes, retire the project using the staged procedure above even if MacPad Mobile is still awaiting review.
 10. **Repository privacy gates:** make each source repository private only after its own app’s production gate passes, update CI first, and verify authenticated development workflows plus anonymous public pages.
@@ -121,13 +142,14 @@ The implementation plan requires recording non-sensitive delivery dates and rece
 | MacPad Mobile task | Widget completion; English/German and Store preparation; replace public-repository links with domain URLs | Change visibility, upload/submit/publish |
 | Domain task | Recommend a domain; define and implement the public URL contract; English/German public pages and Store/legacy destinations | Purchase/register a domain or publish externally |
 | Cross-project coordination task | Maintain this decision and execution plan; verify dependencies and handoffs | Perform owner-gated external actions |
-| Product owner | Domain purchase, Apple enrollment and agreements, final identifiers, pricing, territories, submissions, publication, SourceForge retirement/deletion, and repository visibility approvals | None; each irreversible/external action remains an explicit gate |
+| Product owner | Domain purchase, Apple enrollment and required agreements, final identifiers, free-price/tax-category entry, storefront availability, DSA declarations, submissions, publication, SourceForge retirement/deletion, and repository visibility approvals | None; each irreversible/external action remains an explicit gate |
 
 ## Definition of Done
 
 The cutover is complete only when:
 
 - both production apps are live and downloadable from the App Store;
+- both Store listings are free and neither app exposes a monetization path outside the portfolio launch policy;
 - English and German listings and customer-visible app interfaces have passed review;
 - every public Help, Support, Privacy, Security, release-note, and migration URL works anonymously;
 - neither app nor the public website sends customers to a private repository or SourceForge;
