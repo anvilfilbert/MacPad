@@ -28,6 +28,9 @@ jobs:
       - name: Check public repository contents
         run: ./scripts/verify-public-repo.sh
 
+      - name: Test Xcode timeout watchdog
+        run: ./scripts/test-run-with-timeout.sh
+
       - name: Verify release notes for app version
         run: |
           VERSION="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)"

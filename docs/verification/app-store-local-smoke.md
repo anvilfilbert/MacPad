@@ -83,8 +83,10 @@ pass is claimed. Exact-head GitHub CI must supply the final aggregate result.
 The current catalog validator passed 114 `Localizable`, 10 `TechnicalTerms`,
 and 1 `InfoPlist` key for English and German. The public-repository scan, shell
 syntax checks, and per-file diff checks passed. A new bounded command runner
-passed both a normal command probe and a one-second timeout probe, returning
-exit 124 for the timeout after terminating the probe's process group.
+passed normal-command, timeout, external-interruption, and early-group-leader
+exit probes. The timeout paths return exit 124, an interrupted supervisor
+returns its conventional signal status, and every recorded leader and child PID
+is gone before the runner returns.
 
 The local unsigned Store preflight passed its icon, entitlement, repository,
 and localization checks, then its first Direct `xcodebuild` waited without
