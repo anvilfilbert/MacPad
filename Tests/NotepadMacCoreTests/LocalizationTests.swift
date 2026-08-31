@@ -40,6 +40,20 @@ struct LocalizationTests {
         #expect(catalog.value(for: "CFBundleTypeName", locale: "de") == "Klartext")
     }
 
+    @Test("German untitled terms match document and Save As behavior")
+    func germanUntitledTerms() throws {
+        let catalog = try loadCatalog(named: "Localizable.xcstrings")
+
+        #expect(
+            catalog.value(for: MacPadStringKey.untitled.rawValue, locale: "de")
+                == "Unbenannt"
+        )
+        #expect(
+            catalog.value(for: MacPadStringKey.untitledFileName.rawValue, locale: "de")
+                == "Unbenannt.txt"
+        )
+    }
+
     @Test("Technical terminology catalog is exhaustive in English and German")
     func technicalTermsCatalogContract() throws {
         let catalog = try loadCatalog(named: "TechnicalTerms.xcstrings")

@@ -351,7 +351,8 @@ struct WindowRoutingTests {
         try withLocalization(
             languageCode: "de",
             strings: [
-                MacPadStringKey.untitled.rawValue: "Ohne Titel",
+                MacPadStringKey.untitled.rawValue: "Unbenannt",
+                MacPadStringKey.untitledFileName.rawValue: "Unbenannt.txt",
                 MacPadStringKey.windowTitle.rawValue: "%1$@ - MacPad",
                 MacPadStringKey.documentText.rawValue: "Dokumenttext",
                 MacPadStringKey.documentStatus.rawValue: "Dokumentstatus",
@@ -373,7 +374,8 @@ struct WindowRoutingTests {
                 view(withIdentifier: "editor.status", in: contentView) as? NSTextField
             )
 
-            #expect(controller.window?.title == "Ohne Titel - MacPad")
+            #expect(controller.window?.title == "Unbenannt - MacPad")
+            #expect(localization.string(.untitledFileName) == "Unbenannt.txt")
             #expect(editor.accessibilityLabel() == "Dokumenttext")
             #expect(status.accessibilityLabel() == "Dokumentstatus")
             #expect(

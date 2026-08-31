@@ -22,7 +22,7 @@ struct EditorDocumentTests {
         try LocalizationFixture.with(
             languageCode: "de",
             strings: [
-                MacPadStringKey.untitled.rawValue: "Ohne Titel",
+                MacPadStringKey.untitled.rawValue: "Unbenannt",
                 MacPadStringKey.fileTooLarge.rawValue:
                     "Die Datei ist zu groß, um sie sicher zu öffnen: %1$@ hat %2$lld Byte, maximal zulässig sind %3$lld Byte.",
                 MacPadStringKey.documentTooLarge.rawValue:
@@ -48,7 +48,7 @@ struct EditorDocumentTests {
             ]
         ) { localization in
             let document = EditorDocument()
-            #expect(document.displayName(using: localization) == "Ohne Titel")
+            #expect(document.displayName(using: localization) == "Unbenannt")
             #expect(
                 TextFileEncoding.allCases.map { $0.statusLabel(using: localization) }
                     == [
