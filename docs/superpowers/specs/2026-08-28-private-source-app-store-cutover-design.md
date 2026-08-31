@@ -1,6 +1,7 @@
 # Private Source and App Store Distribution Cutover Design
 
-**Status:** Approved by the product owner on 2026-08-28.
+**Status:** Original cutover design approved by the product owner on 2026-08-28;
+Portfolio Launch Policy revised and approved by the product owner on 2026-08-31.
 
 **Applies to:** MacPad, MacPad Mobile, the public MacPad website/domain, GitHub source repositories, SourceForge, and the Apple App Store release workflow.
 
