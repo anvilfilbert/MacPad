@@ -22,10 +22,12 @@ final class SaveEncodingAccessory {
 
         let encodingLabel = NSTextField(labelWithString: localization.string(.encodingLabel))
         encodingLabel.identifier = NSUserInterfaceItemIdentifier("save.encodingLabel")
+        encodingLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+        picker.setContentCompressionResistancePriority(.required, for: .horizontal)
         let stack = NSStackView(views: [encodingLabel, picker])
         stack.orientation = .horizontal
-        stack.spacing = 8
-        stack.edgeInsets = NSEdgeInsets(top: 8, left: 40, bottom: 8, right: 20)
+        stack.spacing = 12
+        stack.edgeInsets = NSEdgeInsets(top: 8, left: 40, bottom: 8, right: 24)
         view = stack
     }
 
