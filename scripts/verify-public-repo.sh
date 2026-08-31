@@ -14,7 +14,6 @@ if git grep -I -l -E \
   exit 1
 fi
 
-# The owner-approved customer support address is public product metadata.
 EMAIL_PATTERN='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
 email_grep_status=0
 email_matches="$(git grep -I -h -o -E "$EMAIL_PATTERN" \
@@ -35,21 +34,8 @@ case "$email_grep_status" in
 esac
 
 if [[ -n "$email_matches" ]]; then
-  unexpected_email_status=0
-  printf '%s\n' "$email_matches" \
-    | /usr/bin/grep -Fxv 'support@macpad.net' >/dev/null || unexpected_email_status=$?
-  case "$unexpected_email_status" in
-    0)
-      echo "Potential unapproved email address found in tracked files." >&2
-      exit 1
-      ;;
-    1)
-      ;;
-    *)
-      echo "Approved support-email comparison failed with status $unexpected_email_status." >&2
-      exit "$unexpected_email_status"
-      ;;
-  esac
+  echo "Potential email address found in tracked files." >&2
+  exit 1
 fi
 
 echo "Public repository content check passed."

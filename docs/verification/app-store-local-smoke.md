@@ -2,16 +2,29 @@
 
 ## Status and scope
 
-- Evidence window: 2026-08-29 02:37-02:46 CEST (Europe/Zurich).
-- Source commit: `b6198f8510e78e8814edf4b9357e85137aadcb2d`.
-- Associated remote branch: `origin/codex/localization-app-store-prep`.
-- Verification checkout: detached at the source commit and clean before this evidence file was created.
-- Scope: repository-local automated checks and read-only host-capability preflight only.
-- Acceptance status: **Task 11 is not accepted.** No manual native-language, relaunch, real Store sandbox, VoiceOver, printing, menu-bar, or clipping scenario was completed.
+- This record keeps chronological evidence separate for the 2026-08-29 worker
+  attempt, the 2026-08-31 owner foreground baseline, and the active
+  owner-contract correction based on
+  `c8dacb0d37fd7d26ef707b2898ee2e3207a4476f`.
+- The 2026-08-29 automated evidence used exact source commit
+  `b6198f8510e78e8814edf4b9357e85137aadcb2d` in a clean detached checkout.
+- The 2026-08-31 owner baseline used the isolated, locally ad-hoc-signed c8dacb0
+  candidate identified below. It did not replace `/Applications/MacPad.app`.
+- The active correction has repository-local automated evidence but no new
+  launched acceptance candidate or foreground acceptance result yet.
+- Acceptance status: **Task 11 is not accepted.** Native English/German
+  relaunch, real Store sandbox, VoiceOver, menu-bar, large-text/clipping, and
+  six genuine Store screenshot gates remain incomplete for the corrected head.
 
-This record does not claim that MacPad is signed, notarized, submitted, approved, distributed, or verified in production. No app was launched, no system permission was changed, and no Apple account or distribution service was accessed.
+This record does not claim that MacPad is Developer ID or App Store signed,
+notarized, submitted, approved, distributed, or verified in production. No
+system permission was changed and no Apple account or distribution service was
+accessed.
 
-The signed candidate path and signed candidate hash are unavailable because all signing, including ad-hoc signing, was outside the authorized scope. The exact source commit above is the only candidate identity recorded here.
+During the 2026-08-29 worker attempt no app was launched and all signing,
+including ad-hoc signing, was outside that attempt's authorization. The later
+owner-approved c8dacb0 candidate is separate evidence with its exact path,
+identity, hash, and signature scope recorded below.
 
 ## Result definitions
 
@@ -25,7 +38,64 @@ The signed candidate path and signed candidate hash are unavailable because all 
 
 Automated command results use their process exit codes. A passing automated check is evidence only for the behavior that check directly exercises; it is not a manual smoke-test pass.
 
-## Automated evidence
+## Owner foreground baseline — 2026-08-31
+
+This newer baseline supplements, but does not rewrite, the 2026-08-29 worker
+record below. The owner launched the isolated DirectRelease acceptance app at
+`/private/tmp/MacPad-c8dacb0-OwnerAcceptance.app` from exact source commit
+`c8dacb0d37fd7d26ef707b2898ee2e3207a4476f`. Its version/build is `1.3.1 (15)`,
+its bundle identifier is `local.macpad.app.acceptance.c8dacb0`, its executable
+SHA-256 is `205a30a757e762a1fa2b6fbf2d7ade87c7759f3e200dd157d348729511db8ee4`,
+and its signature is local ad-hoc only. The installed `/Applications/MacPad.app`
+was not replaced or modified.
+
+| Scenario | Result | Exact owner evidence and scope |
+| --- | --- | --- |
+| English menus and remaining About presentation | `PASS-WITH-REJECTED-FINDINGS` | The owner inspected every menu and About in English. Native app identity/version/build plus Website, Support, and Privacy presentation passed visually. Creator/GitHub attribution, visible support email/mailto, and Source Code were rejected and must be absent from the next candidate. This does not prove every alert or control. |
+| Saved-document relaunch contract | `PASS` | Relaunch opened one new blank document rather than reopening the saved file, and Open Recent contained `Welcome.txt`. This is the owner-approved contract that supersedes saved-session restoration. |
+| Website and Privacy dispatch | `PASS` | About Website dispatched exactly to `https://macpad.net`; About Privacy Policy dispatched exactly to `https://macpad.net/privacy`. Live page content remains a Shared Services release gate. |
+| Help/Support dispatch | `FAIL` | Help opened `https://github.com/anvilfilbert/MacPad/wiki` instead of `https://macpad.net/support`. The next candidate must remove this customer-facing GitHub dependency. About Support dispatch was not separately credited. |
+| Print interaction | `PASS` | File > Print opened the native macOS print panel with preview and controls; the owner cancelled without printing. This proves panel interaction only, not printed output or Store-sandbox behavior. |
+| Save As encoding layout | `FAIL` | The Encoding row was pressed against the left edge. Screenshot: `/private/tmp/MacPad-c8dacb0-QA/save-as-encoding-spacing.png`. Encoding selection and saving behavior were not rejected by this layout finding. |
+| Find and Replace | `MIXED` | Find-only was too tall with unused lower space (`/private/tmp/MacPad-c8dacb0-QA/find-replace/find-window.png`). Replace proportions and readable alignment passed (`replace-window.png`). The flat Edit menu was observed in `edit-menu.png`; the owner later approved a grouped Find submenu for the next candidate. |
+| Go To | `MIXED` | Entering line 2 moved the cursor to line 2. The native alert was too narrow and compressed (`/private/tmp/MacPad-c8dacb0-QA/go-to/go-to-layout.png`). Navigation behavior passed; presentation failed. |
+| Dirty quit: Don't Save | `PASS` | Don't Save quit the app and the discarded untitled document did not restore. |
+| Dirty quit: Cancel | `PASS` | Cancel aborted quit, kept the document open, and preserved its text unchanged. |
+| Dirty quit: Save | `PASS` | Save wrote `/private/tmp/MacPad-c8dacb0-Work/Quit-Save.txt`, then quit. The file is 13 bytes with exact contents `unsaved check` plus newline and SHA-256 `236de01b7693469f410905fcf1f608f146631a04ff518d12c35422fffa7d2ecc`. No MacPad process remained afterward. |
+
+All passes in this table are narrow baseline evidence for c8dacb0. The active
+session/About/menu/layout delta requires a new exact-head candidate recheck;
+none of these observations is merge, Store, release, or live-site approval.
+
+## Active owner-contract automated evidence — 2026-08-31
+
+The active correction was verified in the named isolated branch worktree based
+on c8dacb0. Before the final review delta, a fresh full Swift run passed 155
+tests in 11 suites with zero failures. The review then added a termination-policy
+test proving that a cancellation on the second dirty document stops before a
+third document is prompted; that focused test passed independently.
+
+A post-review aggregate rerun rebuilt successfully but the local Swift test
+helper did not launch the test bundle or emit results during a three-minute
+bounded wait, so it was interrupted with exit 130. No 156-test aggregate local
+pass is claimed. Exact-head GitHub CI must supply the final aggregate result.
+
+The current catalog validator passed 114 `Localizable`, 10 `TechnicalTerms`,
+and 1 `InfoPlist` key for English and German. The public-repository scan, shell
+syntax checks, and per-file diff checks passed. A new bounded command runner
+passed both a normal command probe and a one-second timeout probe, returning
+exit 124 for the timeout after terminating the probe's process group.
+
+The local unsigned Store preflight passed its icon, entitlement, repository,
+and localization checks, then its first Direct `xcodebuild` waited without
+reaching project parsing or producing build progress for more than five
+minutes. It was manually interrupted; `CODE_SIGNING_ALLOWED=NO` was set and no
+signing occurred. Each preflight and archive `xcodebuild` invocation is now
+fail-closed at 300 seconds and emits its captured log on failure. The complete
+local unsigned preflight is not claimed; exact-head CI remains required for the
+Direct package and unsigned Store paths.
+
+## Historical automated evidence — 2026-08-29
 
 The Swift command blocks below share this public-safe scratch-path preamble, initialized once in the same shell:
 
@@ -174,7 +244,7 @@ Automated language injection, accessibility identifiers, security-scoped bookmar
 - a language change safely terminates and relaunches the real app;
 - VoiceOver announces correct localized labels;
 - the signed Store candidate runs in the real App Sandbox;
-- Open, Save, Save As, session restore, Open Recent, conflict reload, and bookmark renewal work across a signed sandbox lifecycle;
+- Open, Save, Save As, one-blank-document relaunch, Open Recent, conflict reload, and bookmark renewal work across a signed sandbox lifecycle;
 - printing succeeds with the runtime print entitlement;
 - menu-bar-only document creation works in the signed runtime;
 - English or German UI text is visually unclipped;
@@ -182,13 +252,13 @@ Automated language injection, accessibility identifiers, security-scoped bookmar
 
 Those observations require the manual scenarios below on an authorized signed candidate and a capable interactive macOS host.
 
-## Manual acceptance matrix
+## Manual acceptance matrix — 2026-08-29 worker attempt
 
 | Scenario | Result | Evidence or blocker |
 | --- | --- | --- |
 | Native per-app language recognition | `BLOCKED-HOST` | There are 0 active displays. Screen-capture and accessibility preflight both returned `false`, so System Settings and Launch Services UI could not be observed. |
 | Safe language-change relaunch with saved and dirty documents | `BLOCKED-HOST` | No interactive display was available, and changing host permissions was not authorized. No app was launched. |
-| Real Store sandbox sequence: Open, edit, Save, quit, relaunch, session restore, Open Recent, Save As, external modification, conflict alert, Reload, Print, menu-bar new document | `SKIPPED-AUTHORIZATION` | The scenario requires a signed entitled Store candidate. All signing, including ad-hoc signing, was explicitly prohibited. Candidate path and hash are therefore unavailable. |
+| Real Store sandbox sequence: Open, edit, Save, quit, relaunch to one blank document, Open Recent, Save As, external modification, conflict alert, Reload, Print, menu-bar new document | `SKIPPED-AUTHORIZATION` | The scenario requires a signed entitled Store candidate. All signing, including ad-hoc signing, was explicitly prohibited in that earlier worker attempt. Candidate path and hash were therefore unavailable. |
 | English/German menus, Find/Replace, alerts, About, status, encoding, document type, tooltip, keyboard navigation, VoiceOver, and clipping | `BLOCKED-HOST` | The host has no active display and did not have screen-capture or accessibility trust. No bilingual visual or VoiceOver observation was possible. |
 | Reproduce a defect, add RED coverage, implement one fix, rerun affected smoke segment | `NOT TRIGGERED` | No authorized manual scenario reached a product defect. No defect fix or implementation edit was made. |
 
@@ -204,10 +274,22 @@ Those observations require the manual scenarios below on an authorized signed ca
 
 ## Remaining gates
 
-- Task 10 remains incomplete: its six real English/German screenshots are absent, and the validator correctly fails closed. Screenshot capture is host-blocked under the recorded display and permission state.
-- An owner must separately authorize any signing workflow before a signed Store candidate path and hash can exist.
-- A capable interactive macOS host must expose a display and the required user-granted accessibility capability before native language, relaunch, bilingual UI, VoiceOver, clipping, Print, and menu-bar scenarios can be observed.
-- The complete signed Store sandbox sequence must pass before Task 11 can be accepted.
+- Task 10 remains incomplete: its six real English/German screenshots are
+  absent, and the validator correctly fails closed.
+- The owner foreground observations above apply only to c8dacb0. The corrected
+  exact-head candidate must be rechecked for English/German selection and
+  relaunch, one-blank-document launch, Open Recent, all dirty-quit choices,
+  Save As spacing, Find/Replace reuse, the grouped Find menu, Go To layout,
+  New Document/Tab/Window placement, About/Help routes, large text, VoiceOver,
+  Print, menu-bar reopen behavior, and screenshot capture.
+- A capable interactive macOS session with any required user-granted
+  Accessibility or Screen Recording permission is required for those checks.
+- The complete signed Store sandbox sequence requires separate authorization
+  and must pass before Task 11 can be accepted.
 - Apple-account, notarization, App Store Connect, pricing, upload, review, publication, distribution, and production verification remain outside this record and unresolved.
 
-Until those gates are satisfied, the verified surfaces are limited to the exact-commit remote totals above, the successful local catalog and localization-test checks, and the recorded local host-capability values. Local full-suite and unsigned-preflight passes are not claimed; manual Store acceptance was not performed; merged, distributed, and production-verified states are not claimed.
+Until those gates are satisfied, the verified surfaces are limited to the
+explicitly scoped automated and owner observations above. The active delta has
+no aggregate local-suite or complete unsigned-preflight pass and no foreground
+candidate acceptance; merged, distributed, and production-verified states are
+not claimed.

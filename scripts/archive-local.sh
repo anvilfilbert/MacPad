@@ -10,6 +10,9 @@ ARCHIVE_PATH="$TEMP_ROOT/MacPad.xcarchive"
 VERIFICATION_DIRECTORY="$TEMP_ROOT/Verification"
 ARCHIVED_APP="$ARCHIVE_PATH/Products/Applications/MacPad.app"
 VERIFICATION_APP="$VERIFICATION_DIRECTORY/MacPad.app"
+ARCHIVE_LOG="$TEMP_ROOT/Archive.log"
+XCODEBUILD_TIMEOUT_SECONDS=300
+TIMEOUT_RUNNER="$ROOT_DIR/scripts/run-with-timeout.sh"
 
 cleanup() {
   case "$TEMP_ROOT" in
@@ -28,6 +31,25 @@ trap 'exit 1' HUP INT TERM
 fail() {
   echo "Unsigned archive verification failed: $1" >&2
   exit 1
+}
+
+run_xcodebuild() {
+  local status=0
+
+  "$TIMEOUT_RUNNER" \
+    "$XCODEBUILD_TIMEOUT_SECONDS" \
+    "$ARCHIVE_LOG" \
+    "App Store unsigned archive" \
+    xcodebuild \
+    "$@" || status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    /bin/cat "$ARCHIVE_LOG" >&2
+    if [[ "$status" -eq 124 ]]; then
+      fail "native archive timed out after $XCODEBUILD_TIMEOUT_SECONDS seconds"
+    fi
+    fail "native archive failed with exit status $status"
+  fi
 }
 
 require_nonempty_file() {
@@ -63,7 +85,6 @@ scan_file() {
   local route_status=0
   local filter_status=0
   local email_status=0
-  local unexpected_email_status=0
   local privacy_status=0
 
   if ! strings_output="$(mktemp "$TEMP_ROOT/scanned-strings.XXXXXX")"; then
@@ -107,18 +128,7 @@ scan_file() {
     "$icon_filtered_strings_output" >"$email_matches_output" || email_status=$?
   case "$email_status" in
     0)
-      LC_ALL=C /usr/bin/grep -Fxv 'support@macpad.net' \
-        "$email_matches_output" >/dev/null || unexpected_email_status=$?
-      case "$unexpected_email_status" in
-        0)
-          fail "unapproved email found in Store artifact file: $file_path"
-          ;;
-        1)
-          ;;
-        *)
-          fail "approved support-email comparison failed with grep status $unexpected_email_status for Store artifact file: $file_path"
-          ;;
-      esac
+      fail "email address found in Store artifact file: $file_path"
       ;;
     1)
       ;;
@@ -142,7 +152,7 @@ scan_file() {
 
 mkdir -p "$DERIVED_DATA" "$SOURCE_PACKAGES" "$VERIFICATION_DIRECTORY"
 
-xcodebuild \
+run_xcodebuild \
   -project "$ROOT_DIR/MacPad.xcodeproj" \
   -scheme MacPad-AppStore \
   -configuration AppStore \

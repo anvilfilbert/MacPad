@@ -8,6 +8,8 @@ SOURCE_ICON="$ROOT_DIR/Resources/MacPadLogo.png"
 ASSET_CATALOG="$ROOT_DIR/Resources/Assets.xcassets"
 APP_ICON_SET="$ASSET_CATALOG/AppIcon.appiconset"
 ENTITLEMENTS="$ROOT_DIR/Resources/AppStore.entitlements"
+XCODEBUILD_TIMEOUT_SECONDS=300
+TIMEOUT_RUNNER="$ROOT_DIR/scripts/run-with-timeout.sh"
 
 cleanup() {
   case "$TEMP_ROOT" in
@@ -26,6 +28,28 @@ trap 'exit 1' HUP INT TERM
 fail() {
   echo "App Store preflight failed: $1" >&2
   exit 1
+}
+
+run_xcodebuild() {
+  local output_path="$1"
+  local description="$2"
+  shift 2
+  local status=0
+
+  "$TIMEOUT_RUNNER" \
+    "$XCODEBUILD_TIMEOUT_SECONDS" \
+    "$output_path" \
+    "$description" \
+    xcodebuild \
+    "$@" || status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    /bin/cat "$output_path" >&2
+    if [[ "$status" -eq 124 ]]; then
+      fail "$description timed out after $XCODEBUILD_TIMEOUT_SECONDS seconds"
+    fi
+    fail "$description failed with exit status $status"
+  fi
 }
 
 plist_value() {
@@ -171,7 +195,7 @@ build_native_channel() {
 
   mkdir -p "$derived_data" "$source_packages"
 
-  if ! xcodebuild \
+  run_xcodebuild "$build_log" "$channel_name native build" \
     -project "$ROOT_DIR/MacPad.xcodeproj" \
     -scheme "$scheme_name" \
     -configuration "$configuration_name" \
@@ -181,13 +205,9 @@ build_native_channel() {
     CODE_SIGNING_ALLOWED=NO \
     SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
     SWIFT_SUPPRESS_WARNINGS=NO \
-    build \
-    >"$build_log" 2>&1; then
-    /bin/cat "$build_log" >&2
-    fail "$channel_name native build failed"
-  fi
+    build
 
-  if ! xcodebuild \
+  run_xcodebuild "$settings_path" "$channel_name build-settings resolution" \
     -project "$ROOT_DIR/MacPad.xcodeproj" \
     -scheme "$scheme_name" \
     -configuration "$configuration_name" \
@@ -197,11 +217,7 @@ build_native_channel() {
     CODE_SIGNING_ALLOWED=NO \
     SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
     SWIFT_SUPPRESS_WARNINGS=NO \
-    -showBuildSettings \
-    >"$settings_path" 2>&1; then
-    /bin/cat "$settings_path" >&2
-    fail "$channel_name build-settings resolution failed"
-  fi
+    -showBuildSettings
 
   local app_path="$derived_data/Build/Products/$configuration_name/MacPad.app"
   [[ -d "$app_path" ]] || fail "$channel_name build did not produce $app_path"
@@ -301,15 +317,19 @@ validate_channel_builds() {
   /usr/bin/strings -a "$direct_executable" | /usr/bin/grep -F 'github.com/anvilfilbert/MacPad' >/dev/null || fail "Direct executable does not retain the GitHub transition route"
   /usr/bin/strings -a "$direct_executable" | /usr/bin/grep -F '/releases/latest' >/dev/null || fail "Direct executable does not retain the update transition route"
   /usr/bin/strings -a "$direct_executable" | /usr/bin/grep -F 'https://macpad.net/support' >/dev/null || fail "Direct executable is missing the approved support route"
-  /usr/bin/strings -a "$direct_executable" | /usr/bin/grep -F 'mailto:support@macpad.net' >/dev/null || fail "Direct executable is missing the approved support email"
   /usr/bin/strings -a "$direct_executable" | /usr/bin/grep -F 'https://macpad.net/privacy' >/dev/null || fail "Direct executable is missing the approved privacy route"
+  if /usr/bin/strings -a "$direct_executable" | /usr/bin/grep -E 'mailto:|support[@]macpad\.net|Created by|Source Code:|Erstellt von|Quellcode:' >/dev/null; then
+    fail "Direct executable exposes rejected About attribution, source, or email content"
+  fi
 
   [[ -d "$store_app" ]] || fail "Store build app is missing: $store_app"
   local store_executable="$store_app/Contents/MacOS/MacPad"
   [[ -s "$store_executable" ]] || fail "Store build executable is missing or empty: $store_executable"
   /usr/bin/strings -a "$store_executable" | /usr/bin/grep -F 'https://macpad.net/support' >/dev/null || fail "Store executable is missing the approved support route"
-  /usr/bin/strings -a "$store_executable" | /usr/bin/grep -F 'mailto:support@macpad.net' >/dev/null || fail "Store executable is missing the approved support email"
   /usr/bin/strings -a "$store_executable" | /usr/bin/grep -F 'https://macpad.net/privacy' >/dev/null || fail "Store executable is missing the approved privacy route"
+  if /usr/bin/strings -a "$store_executable" | /usr/bin/grep -E 'mailto:|support[@]macpad\.net|Created by|Source Code:|Erstellt von|Quellcode:' >/dev/null; then
+    fail "Store executable exposes rejected About attribution, source, or email content"
+  fi
   validate_localization_products "$direct_app" DirectRelease
   validate_localization_products "$store_app" AppStore
 }
