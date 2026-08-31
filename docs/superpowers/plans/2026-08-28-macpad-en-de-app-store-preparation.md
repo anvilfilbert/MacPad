@@ -27,7 +27,8 @@
 - Do not change repository visibility, SourceForge state, DNS/domain state, release publication, or CI billing/plan state in this work. Each source repository becomes private only after its own verified production Store gate; permanent SourceForge deletion remains separately owner-gated.
 - Keep `local.macpad.app` as the repository placeholder until the owner approves a production identifier.
 - Never add a Team ID, certificate, provisioning profile, signing secret, App Store Connect record, upload step, notarization credential, or final Store URL.
-- Draft price only: MacPad USD 2.99; future bundle USD 3.99. Do not set pricing or territories externally.
+- Launch MacPad Desktop free as a non-commercial hobby project, with no ads, subscriptions, in-app purchases, donations, paid support, or paid bundle. Apple Developer Program membership remains required and is an owner-paid hobby expense. Do not enter the free price or storefront availability externally in this work.
+- For MacPad Desktop pricing and monetization, this newer owner decision supersedes earlier paid or commercial draft language in the binding cross-project documents. Do not modify or reinterpret MacPad Mobile pricing or monetization in this task; the shared cutover sequence remains binding.
 - Preserve unrelated untracked workspace files and directories without editing, committing, or deleting them.
 - Use focused commits, no force pushes, and the protected-branch pull-request workflow.
 
@@ -801,7 +802,9 @@ Document:
 - Export compliance: local SHA-256 hashing exists; no network or encryption feature is implemented; owner must complete Apple's live determination before adding `ITSAppUsesNonExemptEncryption`.
 - Content rights: repository artwork and Apache-2.0 code/license evidence; owner must attest.
 - EU DSA trader status: owner decision required; do not infer status.
-- Draft price: USD 2.99; future bundle USD 3.99; territories require owner selection.
+- Launch price: free; no paid price or bundle is proposed, and any future monetization requires a new owner decision and product review.
+- Storefront recommendation: use all Apple storefronts where the owner can meet applicable legal, support, privacy, and compliance obligations; the owner makes the final selection.
+- Apple Developer Program membership remains required for App Store distribution and is an owner-paid hobby expense. The Paid Apps Agreement and revenue-oriented tax/banking setup are not launch requirements for this free, non-monetized release.
 - Launch distribution: the App Store is the official installation and update channel; the direct build is limited to one legacy-user transition release and repository-local verification.
 - Cutover dependency: no repository visibility or SourceForge change occurs until the permanent bilingual public routes, exact signed migration test, verified live Store listing, and separate owner approval required by the cross-project plan.
 
@@ -1014,7 +1017,7 @@ Apple-account blocked
 Unverified
 ```
 
-Explicitly stop before production bundle-ID selection, domain purchase or DNS/publication, Developer Program enrollment, Team/certificate/profile configuration, App Store Connect record creation, Paid Apps Agreement, tax/banking, final public URL adoption, Developer ID signing/notarization, direct transition publication, upload, TestFlight, App Review, Store publication, SourceForge mutation, CI plan purchase, or repository visibility change.
+Explicitly stop before production bundle-ID selection, domain purchase or DNS/publication, Developer Program enrollment or renewal, Team/certificate/profile configuration, App Store Connect record creation, live free-price or storefront entry, final DSA declaration, final public URL adoption, Developer ID signing/notarization, direct transition publication, upload, TestFlight, App Review, Store publication, SourceForge mutation, CI plan purchase, or repository visibility change.
 
 The delivery must also include issue, branch, commit, and PR links; an exact changed-file inventory; test/build totals; archive and screenshot locations; localization completeness; proposed identifiers; unresolved verification; and the user's next owner-gated actions in dependency order.
 

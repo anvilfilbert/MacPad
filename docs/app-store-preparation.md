@@ -14,6 +14,8 @@ work only.
 | State | Current evidence |
 | --- | --- |
 | Repository-local preparation implemented | Yes: this document and the qualified README link |
+| Launch model | Owner-approved free, privately maintained, non-commercial hobby release with no ads, subscriptions, in-app purchases, donations, paid support, or paid bundle |
+| Apple Developer Program | Active membership is required for App Store distribution; repository evidence cannot establish it, and the owner treats the fee as a hobby expense |
 | Credential-free build and test evidence | Must be recorded for the exact candidate; it does not establish signing or distribution |
 | Merged | No: implementation branch only; merge not performed |
 | Production-signed or notarized | No |
@@ -22,9 +24,9 @@ work only.
 | Distributed through the Mac App Store | No |
 | Verified live with a customer account | No |
 
-No Apple account, certificate, team, signing, notarization, upload, pricing,
-territory, publication, DNS, SourceForge, or repository-visibility action is
-authorized by this document.
+No Apple account, certificate, team, signing, notarization, upload, live
+free-price or storefront entry, publication, DNS, SourceForge, or
+repository-visibility action is authorized by this document.
 
 ## Source and privacy audit
 
@@ -122,9 +124,11 @@ endings. If another app changes an open file, MacPad warns before
 overwriting it and offers safe next steps.
 
 Each normal launch opens one new blank document. Saved documents do not
-reopen automatically and remain available through Open Recent. MacPad has no
-account, ads, analytics, or cloud sync. Document contents stay on your Mac
-and are never transmitted by MacPad.
+reopen automatically and remain available through Open Recent. MacPad is
+free and developed as a private, non-commercial hobby project. It has no
+account, ads, subscriptions, in-app purchases, donations, analytics, or
+cloud sync. Document contents stay on your Mac and are never transmitted by
+MacPad.
 
 Requires macOS 14 or later. English and German included.
 
@@ -192,9 +196,11 @@ vor dem Überschreiben und bietet sichere nächste Schritte an.
 
 Bei jedem normalen Start öffnet MacPad genau ein neues leeres Dokument.
 Gesicherte Dokumente werden nicht automatisch erneut geöffnet und bleiben
-über „Zuletzt verwendet“ erreichbar. MacPad hat kein Konto, keine Werbung, keine
-Analyse und keine Cloud-Synchronisierung. Dokumentinhalte bleiben auf
-deinem Mac und werden von MacPad nicht übertragen.
+über „Zuletzt verwendet“ erreichbar. MacPad ist kostenlos und wird als
+privates, nicht kommerzielles Hobbyprojekt entwickelt. Die App hat kein
+Konto und enthält keine Werbung, Abonnements, In-App-Käufe, Spenden, Analyse
+oder Cloud-Synchronisierung. Dokumentinhalte bleiben auf deinem Mac und
+werden von MacPad nicht übertragen.
 
 Benötigt macOS 14 oder neuer. Englisch und Deutsch enthalten.
 
@@ -432,12 +438,14 @@ Dateien und erlaubten Dateizugriff bewahrt.
 
 ### English notes
 
-MacPad is a native, account-free macOS plain-text editor. No login, demo
-account, network service, in-app purchase, or special hardware is required.
-The App Store build intentionally omits direct-update and source-repository
-routes. MacPad requests file access only through standard Open and Save
-panels and uses app-scoped security bookmarks for files the reviewer
-selects. Printing uses the standard macOS print panel.
+MacPad is a free macOS plain-text editor developed and maintained as a
+private, non-commercial hobby project. No login, demo account, network
+service, advertising, subscription, in-app purchase, donation, paid support,
+paid bundle, or special hardware is present or required. The App Store build
+intentionally omits direct-update and source-repository routes. MacPad
+requests file access only through standard Open and Save panels and uses
+app-scoped security bookmarks for files the reviewer selects. Printing uses
+the standard macOS print panel.
 
 ### English review steps
 
@@ -457,14 +465,15 @@ selects. Printing uses the standard macOS print panel.
 
 ### Deutsche Hinweise
 
-MacPad ist ein nativer Klartext-Editor für macOS und funktioniert ohne
-Konto. Es sind keine Anmeldung, kein Demokonto, kein Netzwerkdienst, kein
-In-App-Kauf und keine besondere Hardware erforderlich. Die
-App-Store-Version enthält absichtlich weder direkte Aktualisierung noch
-Verweise auf das Quellcode-Repository. MacPad fordert Dateizugriff nur über
-die Standarddialoge zum Öffnen und Sichern an und verwendet app-bezogene
-Sicherheitslesezeichen für Dateien, die der Prüfer auswählt. Zum Drucken
-wird der Standard-Druckdialog von macOS verwendet.
+MacPad ist ein kostenloser Klartext-Editor für macOS und wird als nicht
+kommerzielles Hobbyprojekt gepflegt. Die App enthält weder Anmeldung,
+Demokonto, Netzwerkdienst, Werbung, Abonnement, In-App-Kauf, Spende,
+bezahlten Support noch ein kostenpflichtiges Bundle; besondere Hardware ist
+nicht erforderlich. Die App-Store-Version enthält absichtlich weder direkte
+Aktualisierung noch Verweise auf das Quellcode-Repository. MacPad fordert
+Dateizugriff nur über die Standarddialoge zum Öffnen und Sichern an und
+verwendet app-bezogene Sicherheitslesezeichen für Dateien, die der Prüfer
+auswählt. Zum Drucken wird der Standard-Druckdialog von macOS verwendet.
 
 ### Deutsche Prüfschritte
 
@@ -501,9 +510,10 @@ requires the named owner gate.
 | Export compliance | Local SHA-256 file hashing; no network communication or user-facing encryption feature | Complete Apple's live legal determination before adding ITSAppUsesNonExemptEncryption or making an export claim |
 | Content rights | Repository artwork plus Apache-2.0 code and license evidence are available | Owner reviews the evidence and attests the rights |
 | EU DSA | No status inferred | Owner determines and declares trader status; Apple says it cannot make that determination |
-| Price | Draft USD 2.99; possible future bundle USD 3.99 | Owner approves the exact Store price and any future bundle separately |
-| Territories | No selection | Owner chooses storefront availability |
-| Paid-app administration | Not performed | Account Holder handles the Paid Apps Agreement, tax, and banking requirements |
+| Store price | Free at launch | Owner confirms the free price and required tax category in App Store Connect; no paid price or bundle is proposed |
+| Monetization | None: no ads, subscriptions, in-app purchases, donations, paid support, or paid bundle | Paid-app agreements and revenue-oriented tax/banking setup are not launch requirements; any future monetization is a new owner decision and product review |
+| Storefront availability | Recommend all Apple storefronts where the owner can meet the applicable legal, support, privacy, and compliance obligations | Owner makes the final live storefront selection; EU availability does not replace the separate DSA self-assessment |
+| Apple Developer Program | Required for App Store distribution; membership status is not established by repository evidence | Owner enrolls or renews separately and treats the membership fee as a hobby expense |
 | Store record | MacPad and bilingual copy are drafts | Owner confirms name availability, primary language, immutable SKU, seller and copyright text, and App Review contact |
 | Accessibility | The app has VoiceOver labels and identifiers, but no Store label is claimed here | Test all common tasks before the owner enters any Accessibility Nutrition Label |
 | Public routes | Unresolved | Owner approves the final HTTPS contract after anonymous English and German verification |
@@ -622,14 +632,20 @@ submission because Apple can change requirements.
 - [Export compliance overview](https://developer.apple.com/help/app-store-connect/manage-app-information/overview-of-export-compliance/) — developer responsibility for the live determination.
 - [ITSAppUsesNonExemptEncryption](https://developer.apple.com/documentation/BundleResources/Information-Property-List/ITSAppUsesNonExemptEncryption) — Info.plist declaration semantics.
 - [EU DSA trader requirements](https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements/) — required self-assessment and public contact consequences.
-- [Set a price](https://developer.apple.com/help/app-store-connect/manage-app-pricing/set-a-price) — Paid Apps Agreement and pre-review pricing.
-- [Sign and update agreements](https://developer.apple.com/help/app-store-connect/manage-agreements/sign-and-update-agreements/) — Account Holder agreement gate.
-- [Provide tax information](https://developer.apple.com/help/app-store-connect/manage-tax-information/provide-tax-information) and [enter banking information](https://developer.apple.com/help/app-store-connect/manage-banking-information/enter-banking-information) — paid-app administration.
+- [App pricing and availability](https://developer.apple.com/help/app-store-connect/reference/pricing-and-availability/app-pricing-and-availability) — free-price, tax-category, and storefront fields required before submission; a paid agreement applies only when the price is not free.
+- [Sign and update agreements](https://developer.apple.com/help/app-store-connect/manage-agreements/sign-and-update-agreements/) — free apps are distributed under the Apple Developer Program License Agreement; selling apps or offering in-app purchases requires a separate paid agreement.
+- [Apple Developer Program](https://developer.apple.com/programs/) — membership enables App Store distribution, including free apps.
 - [Manage availability](https://developer.apple.com/help/app-store-connect/manage-your-apps-availability/manage-availability-for-your-app-on-the-app-store) — storefront selection.
 - [Accessibility Nutrition Labels](https://developer.apple.com/help/app-store-connect/manage-app-accessibility/overview-of-accessibility-nutrition-labels/) — current voluntary start and common-task evaluation standard.
 - [Register an App ID](https://developer.apple.com/help/account/identifiers/register-an-app-id) — explicit App ID and Xcode identifier relationship.
 
 ## Binding repository references
+
+For MacPad Desktop pricing and monetization, the owner-approved free hobby
+model in this document and the MacPad-specific plan supersedes earlier paid
+or commercial draft language in the cross-project records. Those records
+remain unchanged and authoritative for the shared cutover sequence and for
+MacPad Mobile decisions outside this document's scope.
 
 - [Private Source and App Store Distribution Cutover Design](superpowers/specs/2026-08-28-private-source-app-store-cutover-design.md)
 - [Private Source and App Store Distribution Cutover Plan](superpowers/plans/2026-08-28-private-source-app-store-cutover.md)
@@ -640,10 +656,20 @@ submission because Apple can change requirements.
 This preparation package is ready for review only when all repository-local
 checks below pass for the exact diff:
 
-- only docs/app-store-preparation.md and the qualified README link change;
+- only MacPad Desktop Store-preparation and verification documentation changes;
 - Package.swift and the source audit still match the evidence above;
 - local.macpad.app remains the project placeholder;
 - no PrivacyInfo.xcprivacy is added;
+- the launch model remains free with no advertising, subscription, in-app
+  purchase, donation, paid support, paid bundle, paid price proposal,
+  break-even target, or commercial launch assertion;
+- Paid Apps Agreement and revenue-oriented tax/banking setup are not listed
+  as launch requirements, while Apple Developer Program membership remains
+  an owner-controlled hobby expense;
+- the repository recommendation is a free Store price and final owner
+  selection of eligible storefronts after legal and compliance review;
+- EU DSA trader status remains an owner legal self-assessment and is not
+  inferred from the hobby-project model;
 - the two descriptions begin with the required positioning and put
   optional menu-bar access first;
 - each subtitle is at most 30 characters, each promotional text is at most

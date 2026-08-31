@@ -288,7 +288,12 @@ Those observations require the manual scenarios below on an authorized signed ca
   Accessibility or Screen Recording permission is required for those checks.
 - The complete signed Store sandbox sequence requires separate authorization
   and must pass before Task 11 can be accepted.
-- Apple-account, notarization, App Store Connect, pricing, upload, review, publication, distribution, and production verification remain outside this record and unresolved.
+- Apple-account and Developer Program membership, notarization, App Store
+  Connect free-price and storefront entry, final DSA self-assessment, upload,
+  review, publication, distribution, and production verification remain
+  outside this record and unresolved. Paid-app agreements and
+  revenue-oriented tax/banking setup are not launch gates for the approved
+  free, non-monetized hobby release.
 
 Until those gates are satisfied, the verified surfaces are limited to the
 explicitly scoped automated and owner observations above. The active delta has
