@@ -14,7 +14,7 @@
   `3f737b99b180f43b0a2018c51e85900cca6c0d2f` and has partial owner foreground
   evidence recorded below.
 - Acceptance status: **Task 11 is not accepted.** The remaining exact-runtime
-  increased-text/focus, two menu-bar screenshots, and signed Store sandbox
+  Full Keyboard Access, two menu-bar screenshots, and signed Store sandbox
   gates remain incomplete.
 
 This record does not claim that MacPad is Developer ID or App Store signed,
@@ -92,6 +92,7 @@ screenshot acceptance, signed Store sandbox behavior, or production behavior.
 | Grouped German Find menu | `PASS` | Edit exposed the localized `Suchen` submenu with `Suchen …`, `Weitersuchen`, `Rückwärts suchen`, and `Ersetzen …`. |
 | Find and Replace reuse | `PASS` | The owner exercised Find to Replace to Find reuse. Both German dialog modes were visually balanced and resized correctly during reuse. This proves the observed normal-text reuse and layout, not increased-text or complete focus order. |
 | Go To Line | `PASS` | Going to line 2 moved the document status to `Z. 2, Sp. 1`. |
+| German 150% editor zoom and clipping | `PASS` | Editor zoom was raised to 150% on `local.macpad.app.acceptance.3f737b9`. Visual and Accessibility inspection passed for the narrow main window and status bar, localized Edit > Suchen submenu, Find-only, Replace, Go To, Save As including the corrected `Codierung:` spacing, and About. All inspected labels and buttons were fully visible and non-overlapping, with stable identifiers and localized labels still present. This clears the increased-editor-text/clipping gate for those exact surfaces; it does not claim macOS Full Keyboard Access traversal or system-wide text scaling. |
 | Dirty Save-before-quit | `PASS` | The German dirty prompt showed `Sichern`, `Nicht sichern`, and `Abbrechen`. The owner chose `Sichern` and saved only the synthetic `/private/tmp/MacPad-3f737b9-OwnerSession/Quit-Save.txt`; MacPad quit after saving. Independent proof verified 22 exact bytes, `eins\r\nzwei\r\ndrei\r\nvier`, with SHA-256 `fca194a1d1a13cee3ccc3816a66b90615f80e496cdbac711536a3ba6b0ddecea`. Relaunch then opened one blank German document. This pass exercises the Save path; it does not re-exercise the other two prompt actions. |
 | German VoiceOver traversal | `PASS` | The owner listened through the editor and status, Save As, Find-only, Replace, Go To Line, and the About Website, Support, and Privacy controls, then explicitly reported `Desktop VoiceOver PASS`. This proves the genuine German spoken traversal for those controls. It does not prove that any About or Help URL was opened. |
 | Physical menu-bar reopen | `PASS` | MacPad's menu-bar option was enabled, the clean last window was closed without quitting, and the owner physically clicked the MacPad menu-bar icon. Exactly one empty `Unbenannt` window opened. This proves the physical menu-bar action and reopen behavior for this candidate. |
@@ -316,9 +317,8 @@ Those observations require the manual scenarios below on an authorized signed ca
   conflict screenshots are validated in the isolated owner-session directory,
   but the two system-menu-bar screenshots are absent. The repository's
   six-file validator therefore remains correctly fail-closed.
-- The exact-runtime candidate still requires German increased-text/clipping and
-  complete keyboard focus-order review and the two genuine menu-bar
-  screenshots.
+- The exact-runtime candidate still requires complete macOS Full Keyboard
+  Access traversal and the two genuine menu-bar screenshots.
 - A capable interactive macOS session with any required user-granted
   Accessibility or Screen Recording permission is required for the remaining
   UI checks. The current Computer Use capture path cannot include macOS system
