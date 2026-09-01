@@ -3,18 +3,19 @@
 ## Status and scope
 
 - This record keeps chronological evidence separate for the 2026-08-29 worker
-  attempt, the 2026-08-31 owner foreground baseline, and the active
-  owner-contract correction based on
-  `c8dacb0d37fd7d26ef707b2898ee2e3207a4476f`.
+  attempt, the 2026-08-31 owner foreground baseline, the owner-contract
+  correction based on `c8dacb0d37fd7d26ef707b2898ee2e3207a4476f`,
+  and the exact-head owner acceptance candidate identified below.
 - The 2026-08-29 automated evidence used exact source commit
   `b6198f8510e78e8814edf4b9357e85137aadcb2d` in a clean detached checkout.
 - The 2026-08-31 owner baseline used the isolated, locally ad-hoc-signed c8dacb0
   candidate identified below. It did not replace `/Applications/MacPad.app`.
-- The active correction has repository-local automated evidence but no new
-  launched acceptance candidate or foreground acceptance result yet.
-- Acceptance status: **Task 11 is not accepted.** Native English/German
-  relaunch, real Store sandbox, VoiceOver, menu-bar, large-text/clipping, and
-  six genuine Store screenshot gates remain incomplete for the corrected head.
+- The exact-head acceptance candidate was built from
+  `3f737b99b180f43b0a2018c51e85900cca6c0d2f` and has partial owner foreground
+  evidence recorded below.
+- Acceptance status: **Task 11 is not accepted.** The remaining exact-head
+  visual, saving, window-placement, layout/focus, route-dispatch, screenshot,
+  and signed Store sandbox gates remain incomplete.
 
 This record does not claim that MacPad is Developer ID or App Store signed,
 notarized, submitted, approved, distributed, or verified in production. No
@@ -66,6 +67,30 @@ was not replaced or modified.
 All passes in this table are narrow baseline evidence for c8dacb0. The active
 session/About/menu/layout delta requires a new exact-head candidate recheck;
 none of these observations is merge, Store, release, or live-site approval.
+
+## Exact-head owner foreground evidence — 2026-09-01
+
+The owner used the disposable DirectRelease acceptance app at
+`/private/tmp/MacPad-3f737b9-OwnerAcceptance.app`, built from exact source
+commit `3f737b99b180f43b0a2018c51e85900cca6c0d2f`. Its version/build is
+`1.3.1 (15)`, its bundle identifier is
+`local.macpad.app.acceptance.3f737b9`, and its signature is local ad-hoc with
+Hardened Runtime and no Team identifier. The executable SHA-256 is
+`6945092846b2d8b52bfb6572e0c6c99b03a40f4a510c73656f901199f40cc927`.
+It was not installed over `/Applications/MacPad.app`.
+
+This table records only the observations explicitly confirmed by the owner. It
+does not infer unreported URL dispatch, saving, layout, focus-order, screenshot,
+signed Store sandbox, or production behavior.
+
+| Scenario | Result | Exact owner evidence and scope |
+| --- | --- | --- |
+| German VoiceOver traversal | `PASS` | The owner listened through the editor and status, Save As, Find-only, Replace, Go To Line, and the About Website, Support, and Privacy controls, then explicitly reported `Desktop VoiceOver PASS`. This proves the genuine German spoken traversal for those controls. It does not prove that any About or Help URL was opened. |
+| Physical menu-bar reopen | `PASS` | MacPad's menu-bar option was enabled, the clean last window was closed without quitting, and the owner physically clicked the MacPad menu-bar icon. Exactly one empty `Unbenannt` window opened. This proves the physical menu-bar action and reopen behavior for this candidate. |
+| German Print open and cancel | `PASS` | The native German Print state opened with `Drucken`; document commands were disabled while the modal state was active. The owner cancelled without printing. This proves exact-candidate Print-panel interaction, not printed output or signed Store-sandbox entitlement behavior. |
+
+No merge, release, distribution signing, installation, upload, publication, or
+production action was performed while collecting this evidence.
 
 ## Active owner-contract automated evidence — 2026-08-31
 
@@ -278,12 +303,12 @@ Those observations require the manual scenarios below on an authorized signed ca
 
 - Task 10 remains incomplete: its six real English/German screenshots are
   absent, and the validator correctly fails closed.
-- The owner foreground observations above apply only to c8dacb0. The corrected
-  exact-head candidate must be rechecked for English/German selection and
-  relaunch, one-blank-document launch, Open Recent, all dirty-quit choices,
-  Save As spacing, Find/Replace reuse, the grouped Find menu, Go To layout,
-  New Document/Tab/Window placement, About/Help routes, large text, VoiceOver,
-  Print, menu-bar reopen behavior, and screenshot capture.
+- The exact-head candidate still requires visual confirmation of `Unbenannt`
+  and the `Unbenannt.txt` Save As default, dirty Save-before-quit with byte
+  preservation, New Document/Tab/Window placement, explicit
+  Find-to-Replace-to-Find reuse, German increased-text/clipping and complete
+  keyboard focus-order review, exact Website/Support/Privacy and Help > Support
+  URL dispatch, and the six genuine screenshots.
 - A capable interactive macOS session with any required user-granted
   Accessibility or Screen Recording permission is required for those checks.
 - The complete signed Store sandbox sequence requires separate authorization
@@ -294,8 +319,9 @@ Those observations require the manual scenarios below on an authorized signed ca
   outside this record and unresolved. The binding cross-project design is
   the authority for the portfolio launch policy and owner gates.
 
-Until those gates are satisfied, the verified surfaces are limited to the
-explicitly scoped automated and owner observations above. The active delta has
-no aggregate local-suite or complete unsigned-preflight pass and no foreground
-candidate acceptance; merged, distributed, and production-verified states are
-not claimed.
+At exact head `3f737b99b180f43b0a2018c51e85900cca6c0d2f`, the local Swift suite passed
+158 tests in 11 suites, English/German catalog validation passed, and exact-head
+Swift CI and CodeQL passed the Direct package and unsigned Store-preflight
+scope. Until the remaining gates are satisfied, the verified foreground
+surfaces remain limited to the explicitly scoped owner observations above.
+Merged, distributed, and production-verified states are not claimed.
