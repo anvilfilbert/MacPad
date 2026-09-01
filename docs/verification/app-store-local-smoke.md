@@ -13,9 +13,9 @@
 - The exact-head acceptance candidate was built from
   `3f737b99b180f43b0a2018c51e85900cca6c0d2f` and has partial owner foreground
   evidence recorded below.
-- Acceptance status: **Task 11 is not accepted.** The remaining exact-head
-  visual, saving, window-placement, layout/focus, route-dispatch, screenshot,
-  and signed Store sandbox gates remain incomplete.
+- Acceptance status: **Task 11 is not accepted.** The remaining exact-runtime
+  increased-text/focus, route-dispatch, screenshot, and signed Store sandbox
+  gates remain incomplete.
 
 This record does not claim that MacPad is Developer ID or App Store signed,
 notarized, submitted, approved, distributed, or verified in production. No
@@ -68,7 +68,7 @@ All passes in this table are narrow baseline evidence for c8dacb0. The active
 session/About/menu/layout delta requires a new exact-head candidate recheck;
 none of these observations is merge, Store, release, or live-site approval.
 
-## Exact-head owner foreground evidence — 2026-09-01
+## Exact-runtime owner foreground evidence — 2026-09-01
 
 The owner used the disposable DirectRelease acceptance app at
 `/private/tmp/MacPad-3f737b9-OwnerAcceptance.app`, built from exact source
@@ -80,11 +80,19 @@ Hardened Runtime and no Team identifier. The executable SHA-256 is
 It was not installed over `/Applications/MacPad.app`.
 
 This table records only the observations explicitly confirmed by the owner. It
-does not infer unreported URL dispatch, saving, layout, focus-order, screenshot,
-signed Store sandbox, or production behavior.
+does not infer increased-text or complete keyboard focus-order acceptance,
+external URL dispatch, screenshot acceptance, signed Store sandbox behavior,
+or production behavior.
 
 | Scenario | Result | Exact owner evidence and scope |
 | --- | --- | --- |
+| German identity and Save As presentation | `PASS` | The owner saw `Unbenannt - MacPad`. Save As proposed `Unbenannt.txt`, and the German `Codierung:` row with UTF-8 was visibly balanced. This proves the normal-text visual presentation and default filename, not increased-text or complete focus-order acceptance. |
+| Clean relaunch and Open Recent | `PASS` | The owner opened the synthetic `/private/tmp/MacPad-3f737b9-OwnerSession/fixtures/de/Welcome.txt`, quit, and relaunched. Exactly one blank `Unbenannt` document opened, while `Welcome.txt` remained available in Open Recent. |
+| New Document, New Tab, and New Window placement | `PASS` | New Document created a second tab, Command-T created a third tab, and New Window created a separate blank window. The clean extra documents were then closed. |
+| Grouped German Find menu | `PASS` | Edit exposed the localized `Suchen` submenu with `Suchen …`, `Weitersuchen`, `Rückwärts suchen`, and `Ersetzen …`. |
+| Find and Replace reuse | `PASS` | The owner exercised Find to Replace to Find reuse. Both German dialog modes were visually balanced and resized correctly during reuse. This proves the observed normal-text reuse and layout, not increased-text or complete focus order. |
+| Go To Line | `PASS` | Going to line 2 moved the document status to `Z. 2, Sp. 1`. |
+| Dirty Save-before-quit | `PASS` | The German dirty prompt showed `Sichern`, `Nicht sichern`, and `Abbrechen`. The owner chose `Sichern` and saved only the synthetic `/private/tmp/MacPad-3f737b9-OwnerSession/Quit-Save.txt`; MacPad quit after saving. Independent proof verified 22 exact bytes, `eins\r\nzwei\r\ndrei\r\nvier`, with SHA-256 `fca194a1d1a13cee3ccc3816a66b90615f80e496cdbac711536a3ba6b0ddecea`. Relaunch then opened one blank German document. This pass exercises the Save path; it does not re-exercise the other two prompt actions. |
 | German VoiceOver traversal | `PASS` | The owner listened through the editor and status, Save As, Find-only, Replace, Go To Line, and the About Website, Support, and Privacy controls, then explicitly reported `Desktop VoiceOver PASS`. This proves the genuine German spoken traversal for those controls. It does not prove that any About or Help URL was opened. |
 | Physical menu-bar reopen | `PASS` | MacPad's menu-bar option was enabled, the clean last window was closed without quitting, and the owner physically clicked the MacPad menu-bar icon. Exactly one empty `Unbenannt` window opened. This proves the physical menu-bar action and reopen behavior for this candidate. |
 | German Print open and cancel | `PASS` | The native German Print state opened with `Drucken`; document commands were disabled while the modal state was active. The owner cancelled without printing. This proves exact-candidate Print-panel interaction, not printed output or signed Store-sandbox entitlement behavior. |
@@ -303,12 +311,9 @@ Those observations require the manual scenarios below on an authorized signed ca
 
 - Task 10 remains incomplete: its six real English/German screenshots are
   absent, and the validator correctly fails closed.
-- The exact-head candidate still requires visual confirmation of `Unbenannt`
-  and the `Unbenannt.txt` Save As default, dirty Save-before-quit with byte
-  preservation, New Document/Tab/Window placement, explicit
-  Find-to-Replace-to-Find reuse, German increased-text/clipping and complete
-  keyboard focus-order review, exact Website/Support/Privacy and Help > Support
-  URL dispatch, and the six genuine screenshots.
+- The exact-runtime candidate still requires German increased-text/clipping and
+  complete keyboard focus-order review, exact Website/Support/Privacy and
+  Help > Support URL dispatch, and the six genuine screenshots.
 - A capable interactive macOS session with any required user-granted
   Accessibility or Screen Recording permission is required for those checks.
 - The complete signed Store sandbox sequence requires separate authorization
@@ -319,7 +324,7 @@ Those observations require the manual scenarios below on an authorized signed ca
   outside this record and unresolved. The binding cross-project design is
   the authority for the portfolio launch policy and owner gates.
 
-At exact head `3f737b99b180f43b0a2018c51e85900cca6c0d2f`, the local Swift suite passed
+At runtime commit `3f737b99b180f43b0a2018c51e85900cca6c0d2f`, the local Swift suite passed
 158 tests in 11 suites, English/German catalog validation passed, and exact-head
 Swift CI and CodeQL passed the Direct package and unsigned Store-preflight
 scope. Until the remaining gates are satisfied, the verified foreground
