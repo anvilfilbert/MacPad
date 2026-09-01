@@ -14,8 +14,8 @@
   `3f737b99b180f43b0a2018c51e85900cca6c0d2f` and has partial owner foreground
   evidence recorded below.
 - Acceptance status: **Task 11 is not accepted.** The remaining exact-runtime
-  increased-text/focus, route-dispatch, two menu-bar screenshots, and signed
-  Store sandbox gates remain incomplete.
+  increased-text/focus, two menu-bar screenshots, and signed Store sandbox
+  gates remain incomplete.
 
 This record does not claim that MacPad is Developer ID or App Store signed,
 notarized, submitted, approved, distributed, or verified in production. No
@@ -82,8 +82,7 @@ It was not installed over `/Applications/MacPad.app`.
 
 This table records only the observations explicitly confirmed by the owner. It
 does not infer increased-text or complete keyboard focus-order acceptance,
-external URL dispatch, screenshot acceptance, signed Store sandbox behavior,
-or production behavior.
+screenshot acceptance, signed Store sandbox behavior, or production behavior.
 
 | Scenario | Result | Exact owner evidence and scope |
 | --- | --- | --- |
@@ -97,6 +96,7 @@ or production behavior.
 | German VoiceOver traversal | `PASS` | The owner listened through the editor and status, Save As, Find-only, Replace, Go To Line, and the About Website, Support, and Privacy controls, then explicitly reported `Desktop VoiceOver PASS`. This proves the genuine German spoken traversal for those controls. It does not prove that any About or Help URL was opened. |
 | Physical menu-bar reopen | `PASS` | MacPad's menu-bar option was enabled, the clean last window was closed without quitting, and the owner physically clicked the MacPad menu-bar icon. Exactly one empty `Unbenannt` window opened. This proves the physical menu-bar action and reopen behavior for this candidate. |
 | German Print open and cancel | `PASS` | The native German Print state opened with `Drucken`; document commands were disabled while the modal state was active. The owner cancelled without printing. This proves exact-candidate Print-panel interaction, not printed output or signed Store-sandbox entitlement behavior. |
+| Customer-route dispatch | `PASS` | In the English About panel, Accessibility exposed Website `macpad.net`, Support `macpad.net/support`, and Privacy `macpad.net/privacy`; each was genuinely clicked. Safari observed Website request `https://macpad.net`, Support ending at `https://macpad.net/login`, and Privacy remaining at `https://macpad.net/privacy`. Help > MacPad Help was also genuinely clicked and ended at `https://macpad.net/login`, consistent with the current origin's `/support` redirect. This proves MacPad dispatched its configured Website, Support, Privacy, and Help routes. It does not accept the live site: the root currently serves Learn2Trade, Support redirects to login, and Privacy returns 404, so correct anonymous MacPad pages remain a hard Shared Services release blocker. No form input or transmission occurred, and no browser autofill or account data is recorded here. |
 | Bilingual Store screenshot capture | `PARTIAL` | Computer Use supplied four genuine exact-candidate captures: `screenshots/{en,de}/02-editor-tabs.png` and `03-safe-conflict.png` under `/private/tmp/MacPad-3f737b9-OwnerSession`. Each is a 1440x900 opaque RGB PNG with embedded `sRGB IEC61966-2.1`; native Vision OCR and visual review confirmed the expected EN/DE editor-tab and external-change scenes and found no personal data. SHA-256 values are EN 02 `c94fbea72076ccd3806cebdafad9cac7fda5f20ad18df0bb202192ecd6497bef`, EN 03 `52a0a6d8ac73feca71b21d0c6aca54a92e8e1a4eed5e375d6d02621e62183f67`, DE 02 `f4de29cedd7ff4f072431fa9630e97b5e235bb7e1b1e979ca5ceb5ca712481de`, and DE 03 `68d9212b8cfce273ef46efaf4e66d3e195fe724a1f28f82ffaa7d3437f2cedd8`. The genuine captures were center-padded without scaling or app-content alteration. Computer Use intentionally cropped macOS system chrome and could not access SystemUIServer, so EN/DE `01-menu-bar.png` were not captured or fabricated. No six-file validator pass or final screenshot acceptance is claimed. |
 
 No merge, release, distribution signing, installation, upload, publication, or
@@ -316,8 +316,8 @@ Those observations require the manual scenarios below on an authorized signed ca
   but the two system-menu-bar screenshots are absent. The repository's
   six-file validator therefore remains correctly fail-closed.
 - The exact-runtime candidate still requires German increased-text/clipping and
-  complete keyboard focus-order review, exact Website/Support/Privacy and
-  Help > Support URL dispatch, and the two genuine menu-bar screenshots.
+  complete keyboard focus-order review and the two genuine menu-bar
+  screenshots.
 - A capable interactive macOS session with any required user-granted
   Accessibility or Screen Recording permission is required for the remaining
   UI checks. The current Computer Use capture path cannot include macOS system
