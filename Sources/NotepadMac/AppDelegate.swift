@@ -136,6 +136,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     private let localization: MacPadLocalization
     private let distributionChannel: DistributionChannel
     private let customerRoutes: CustomerRoutes
+    private let aboutIdentity: AboutApplicationIdentity
     private let fileAccess: SecurityScopedFileAccess
     private let recentDocumentStore: RecentDocumentStore
     private let recentDocumentLogger = Logger(
@@ -148,12 +149,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     private weak var lastActiveWindowController: EditorWindowController?
     private var preferredFont = EditorWindowController.defaultEditorFont
     private(set) var menuBarStatusItem: NSStatusItem?
+    private var aboutPanelController: AboutPanelController?
 
     override init() {
         defaults = .standard
         localization = MacPadLocalization(bundle: .main)
         distributionChannel = .current
         customerRoutes = .current(for: .current)
+        aboutIdentity = AboutApplicationIdentity(bundle: .main)
         fileAccess = SecurityScopedFileAccess(
             requiresBookmark: DistributionChannel.current.requiresPersistentSecurityScope
         )
@@ -171,6 +174,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         localization: MacPadLocalization,
         distributionChannel: DistributionChannel,
         customerRoutes: CustomerRoutes,
+        aboutIdentity: AboutApplicationIdentity,
         fileAccess: SecurityScopedFileAccess,
         recentDocumentStore: RecentDocumentStore
     ) {
@@ -178,6 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         self.localization = localization
         self.distributionChannel = distributionChannel
         self.customerRoutes = customerRoutes
+        self.aboutIdentity = aboutIdentity
         self.fileAccess = fileAccess
         self.recentDocumentStore = recentDocumentStore
         NSWindow.allowsAutomaticWindowTabbing = false
@@ -254,9 +259,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     @objc func showAbout(_ sender: Any?) {
-        NSApp.orderFrontStandardAboutPanel(options: [
-            .credits: aboutCredits()
-        ])
+        if aboutPanelController == nil {
+            aboutPanelController = AboutPanelController(
+                identity: aboutIdentity,
+                icon: NSApp.applicationIconImage,
+                title: localization.string(.aboutMacPad),
+                links: aboutLinks(),
+                target: self
+            )
+        }
+        aboutPanelController?.showWindow(sender)
+        aboutPanelController?.window?.makeKeyAndOrderFront(sender)
     }
 
     @objc func openNewDocument(_ sender: Any?) {
@@ -451,54 +464,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         )
     }
 
-    func aboutCredits() -> NSAttributedString {
+    func aboutLinks() -> [AboutLinkPresentation] {
         let websiteHost = "macpad.net"
         let supportPath = "macpad.net/support"
-        let lines = [
-            localization.aboutWebsite(host: websiteHost),
-            localization.aboutSupport(destination: supportPath),
-            localization.string(.aboutPrivacyPolicy)
-        ]
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-
-        let credits = NSMutableAttributedString(
-            string: lines.joined(separator: "\n"),
-            attributes: [
-                .font: NSFont.systemFont(ofSize: 11),
-                .foregroundColor: NSColor.secondaryLabelColor,
-                .paragraphStyle: paragraph
-            ]
-        )
-        addLink(to: websiteHost, in: credits, url: customerRoutes.productURL)
-        addLink(
-            to: supportPath,
-            in: credits,
-            url: customerRoutes.supportURL
-        )
-        addLink(
-            to: localization.string(.aboutPrivacyPolicy),
-            in: credits,
-            url: customerRoutes.privacyURL
-        )
-        return credits
-    }
-
-    private func addLink(
-        to substring: String,
-        in credits: NSMutableAttributedString,
-        url: URL?
-    ) {
-        let range = (credits.string as NSString).range(of: substring)
-        guard range.location != NSNotFound, let url else { return }
-        credits.addAttributes(
-            [
-                .link: url,
-                .foregroundColor: NSColor.linkColor,
-                .underlineStyle: NSUnderlineStyle.single.rawValue
-            ],
-            range: range
-        )
+        var links: [AboutLinkPresentation] = []
+        if customerRoutes.productURL != nil {
+            links.append(
+                AboutLinkPresentation(
+                    identifier: MacPadStringKey.aboutWebsite.rawValue,
+                    title: localization.aboutWebsite(host: websiteHost),
+                    action: #selector(openWebsite(_:))
+                )
+            )
+        }
+        if customerRoutes.supportURL != nil {
+            links.append(
+                AboutLinkPresentation(
+                    identifier: MacPadStringKey.aboutSupport.rawValue,
+                    title: localization.aboutSupport(destination: supportPath),
+                    action: #selector(reportIssue(_:))
+                )
+            )
+        }
+        if customerRoutes.privacyURL != nil {
+            links.append(
+                AboutLinkPresentation(
+                    identifier: MacPadStringKey.aboutPrivacyPolicy.rawValue,
+                    title: localization.string(.aboutPrivacyPolicy),
+                    action: #selector(openPrivacy(_:))
+                )
+            )
+        }
+        return links
     }
 
     @objc func save(_ sender: Any?) { keyWindowController?.save(sender) }
@@ -519,6 +516,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     @objc func openHelp(_ sender: Any?) {
         openCustomerURL(customerRoutes.helpURL, routeName: "Help")
+    }
+
+    @objc func openWebsite(_ sender: Any?) {
+        openCustomerURL(customerRoutes.productURL, routeName: "website")
     }
 
     @objc func reportIssue(_ sender: Any?) {

@@ -692,6 +692,7 @@ struct WindowRoutingTests {
                 localization: englishLocalization,
                 distributionChannel: .direct,
                 customerRoutes: .current(for: .direct),
+                aboutIdentity: testAboutIdentity,
                 fileAccess: directFileAccess,
                 recentDocumentStore: recentStore
             )
@@ -761,6 +762,7 @@ struct WindowRoutingTests {
             localization: englishLocalization,
             distributionChannel: .direct,
             customerRoutes: .current(for: .direct),
+            aboutIdentity: testAboutIdentity,
             fileAccess: directFileAccess,
             recentDocumentStore: testRecentDocumentStore(defaults: defaults)
         )
@@ -781,6 +783,7 @@ struct WindowRoutingTests {
                 localization: englishLocalization,
                 distributionChannel: .direct,
                 customerRoutes: .current(for: .direct),
+                aboutIdentity: testAboutIdentity,
                 fileAccess: directFileAccess,
                 recentDocumentStore: testRecentDocumentStore(defaults: defaults)
             ).isMenuBarEnabled
@@ -807,6 +810,7 @@ struct WindowRoutingTests {
             localization: englishLocalization,
             distributionChannel: .direct,
             customerRoutes: .current(for: .direct),
+            aboutIdentity: testAboutIdentity,
             fileAccess: directFileAccess,
             recentDocumentStore: testRecentDocumentStore(defaults: defaults)
         )
@@ -837,6 +841,7 @@ struct WindowRoutingTests {
             localization: englishLocalization,
             distributionChannel: .direct,
             customerRoutes: .current(for: .direct),
+            aboutIdentity: testAboutIdentity,
             fileAccess: directFileAccess,
             recentDocumentStore: testRecentDocumentStore(defaults: defaults)
         )
@@ -1497,6 +1502,7 @@ struct WindowRoutingTests {
             localization: englishLocalization,
             distributionChannel: .appStore,
             customerRoutes: routes,
+            aboutIdentity: testAboutIdentity,
             fileAccess: SecurityScopedFileAccess(requiresBookmark: true),
             recentDocumentStore: testRecentDocumentStore(defaults: .standard)
         )
@@ -1530,6 +1536,7 @@ struct WindowRoutingTests {
             localization: englishLocalization,
             distributionChannel: .appStore,
             customerRoutes: routes,
+            aboutIdentity: testAboutIdentity,
             fileAccess: SecurityScopedFileAccess(requiresBookmark: true),
             recentDocumentStore: testRecentDocumentStore(defaults: .standard)
         )
@@ -1567,27 +1574,86 @@ struct WindowRoutingTests {
             localization: englishLocalization,
             distributionChannel: .appStore,
             customerRoutes: .current(for: .appStore),
+            aboutIdentity: testAboutIdentity,
             fileAccess: SecurityScopedFileAccess(requiresBookmark: true),
             recentDocumentStore: testRecentDocumentStore(defaults: .standard)
         )
 
-        let credits = delegate.aboutCredits()
+        let links = delegate.aboutLinks()
 
-        #expect(credits.string.contains("Website: macpad.net"))
-        #expect(credits.string.contains("Support: macpad.net/support"))
-        #expect(credits.string.contains("Privacy Policy"))
-        #expect(!credits.string.contains("Created by"))
-        #expect(!credits.string.contains("anvilfilbert"))
-        #expect(!credits.string.contains("@"))
-        #expect(!credits.string.contains("Source Code"))
-        #expect(!credits.string.contains("Public repo"))
         #expect(
-            linkDestinations(in: credits) == Set([
-                "https://macpad.net",
-                "https://macpad.net/support",
-                "https://macpad.net/privacy"
-            ])
+            links.map(\.identifier.rawValue) == [
+                "about.website",
+                "about.support",
+                "about.privacyPolicy"
+            ]
         )
+        #expect(
+            links.map(\.title) == [
+                "Website: macpad.net",
+                "Support: macpad.net/support",
+                "Privacy Policy"
+            ]
+        )
+        #expect(
+            links.map(\.action) == [
+                #selector(AppDelegate.openWebsite(_:)),
+                #selector(AppDelegate.reportIssue(_:)),
+                #selector(AppDelegate.openPrivacy(_:))
+            ]
+        )
+    }
+
+    @Test("About links form a keyboard focus loop")
+    func aboutLinksFormKeyboardFocusLoop() throws {
+        try withAboutWindow { aboutWindow, contentView in
+            let website = try #require(view(withIdentifier: "about.website", in: contentView))
+            let support = try #require(view(withIdentifier: "about.support", in: contentView))
+            let privacy = try #require(view(withIdentifier: "about.privacyPolicy", in: contentView))
+
+            #expect(website.acceptsFirstResponder)
+            #expect(support.acceptsFirstResponder)
+            #expect(privacy.acceptsFirstResponder)
+            #expect(aboutWindow.initialFirstResponder === website)
+            #expect(website.nextKeyView === support)
+            #expect(support.nextKeyView === privacy)
+            #expect(privacy.nextKeyView === website)
+            #expect(website.previousKeyView === privacy)
+            #expect(support.previousKeyView === website)
+            #expect(privacy.previousKeyView === support)
+        }
+    }
+
+    @Test("About link controls expose the link accessibility role")
+    func aboutLinkControlsExposeAccessibilityRole() throws {
+        try withAboutWindow { _, contentView in
+            let website = try #require(view(withIdentifier: "about.website", in: contentView))
+            let support = try #require(view(withIdentifier: "about.support", in: contentView))
+            let privacy = try #require(view(withIdentifier: "about.privacyPolicy", in: contentView))
+
+            #expect(website.accessibilityRole() == .link)
+            #expect(support.accessibilityRole() == .link)
+            #expect(privacy.accessibilityRole() == .link)
+            #expect(website.accessibilityLabel() == "Website: macpad.net")
+            #expect(support.accessibilityLabel() == "Support: macpad.net/support")
+            #expect(privacy.accessibilityLabel() == "Privacy Policy")
+        }
+    }
+
+    @Test("About retains the native app name version and build presentation")
+    func aboutRetainsNativeIdentityPresentation() throws {
+        try withAboutWindow { aboutWindow, contentView in
+            let appName = try #require(
+                view(withIdentifier: "about.appName", in: contentView) as? NSTextField
+            )
+            let version = try #require(
+                view(withIdentifier: "about.version", in: contentView) as? NSTextField
+            )
+
+            #expect(aboutWindow.title == "About MacPad")
+            #expect(appName.stringValue == "MacPad")
+            #expect(version.stringValue == "Version 1.3.1 (15)")
+        }
     }
 
     #if !MACPAD_APP_STORE
@@ -1595,21 +1661,28 @@ struct WindowRoutingTests {
     func directAboutExposesPermanentCustomerLinksWithoutSourceInformation() {
         let delegate = appDelegate(localization: englishLocalization)
 
-        let credits = delegate.aboutCredits()
+        let links = delegate.aboutLinks()
 
-        #expect(credits.string.contains("Website: macpad.net"))
-        #expect(credits.string.contains("Support: macpad.net/support"))
-        #expect(credits.string.contains("Privacy Policy"))
-        #expect(!credits.string.contains("Created by"))
-        #expect(!credits.string.contains("anvilfilbert"))
-        #expect(!credits.string.contains("@"))
-        #expect(!credits.string.contains("Source Code"))
         #expect(
-            linkDestinations(in: credits) == Set([
-                "https://macpad.net",
-                "https://macpad.net/support",
-                "https://macpad.net/privacy"
-            ])
+            links.map(\.identifier.rawValue) == [
+                "about.website",
+                "about.support",
+                "about.privacyPolicy"
+            ]
+        )
+        #expect(
+            links.map(\.title) == [
+                "Website: macpad.net",
+                "Support: macpad.net/support",
+                "Privacy Policy"
+            ]
+        )
+        #expect(
+            links.map(\.action) == [
+                #selector(AppDelegate.openWebsite(_:)),
+                #selector(AppDelegate.reportIssue(_:)),
+                #selector(AppDelegate.openPrivacy(_:))
+            ]
         )
     }
 
@@ -1619,21 +1692,21 @@ struct WindowRoutingTests {
             languageCode: "de",
             strings: germanAboutTranslations
         ) { localization in
-            let credits = appDelegate(localization: localization).aboutCredits()
+            let links = appDelegate(localization: localization).aboutLinks()
 
-            #expect(credits.string.contains("Website: macpad.net"))
-            #expect(credits.string.contains("Support: macpad.net/support"))
-            #expect(credits.string.contains("Datenschutzerklärung"))
-            #expect(!credits.string.contains("Erstellt von"))
-            #expect(!credits.string.contains("anvilfilbert"))
-            #expect(!credits.string.contains("@"))
-            #expect(!credits.string.contains("Quellcode"))
             #expect(
-                linkDestinations(in: credits) == Set([
-                    "https://macpad.net",
-                    "https://macpad.net/support",
-                    "https://macpad.net/privacy"
-                ])
+                links.map(\.title) == [
+                    "Website: macpad.net",
+                    "Support: macpad.net/support",
+                    "Datenschutzerklärung"
+                ]
+            )
+            #expect(
+                links.map(\.action) == [
+                    #selector(AppDelegate.openWebsite(_:)),
+                    #selector(AppDelegate.reportIssue(_:)),
+                    #selector(AppDelegate.openPrivacy(_:))
+                ]
             )
         }
     }
@@ -1659,6 +1732,7 @@ struct WindowRoutingTests {
                 localization: englishLocalization,
                 distributionChannel: .direct,
                 customerRoutes: .current(for: .direct),
+                aboutIdentity: testAboutIdentity,
                 fileAccess: directFileAccess,
                 recentDocumentStore: recentStore
             )
@@ -1745,6 +1819,24 @@ struct WindowRoutingTests {
         allViews(in: view).first { $0.identifier?.rawValue == identifier }
     }
 
+    private func withAboutWindow<Result>(
+        _ body: (NSWindow, NSView) throws -> Result
+    ) throws -> Result {
+        let application = NSApplication.shared
+        let existingWindows = Set(application.windows.map(ObjectIdentifier.init))
+        let delegate = appDelegate(localization: englishLocalization)
+        delegate.showAbout(nil)
+        let aboutWindow = try #require(
+            application.windows.first {
+                !existingWindows.contains(ObjectIdentifier($0))
+                    && $0.identifier?.rawValue == "about.panel"
+            }
+        )
+        defer { aboutWindow.close() }
+        let contentView = try #require(aboutWindow.contentView)
+        return try body(aboutWindow, contentView)
+    }
+
     private func editorWindows(
         excluding existingWindows: Set<ObjectIdentifier>,
         in application: NSApplication
@@ -1758,25 +1850,16 @@ struct WindowRoutingTests {
         }
     }
 
-    private func linkDestinations(in credits: NSAttributedString) -> Set<String> {
-        var destinations: Set<String> = []
-        credits.enumerateAttribute(
-            NSAttributedString.Key.link,
-            in: NSRange(location: 0, length: credits.length)
-        ) { value, _, _ in
-            if let url = value as? URL {
-                destinations.insert(url.absoluteString)
-            }
-        }
-        return destinations
-    }
-
     private var englishLocalization: MacPadLocalization {
         MacPadLocalization(bundle: .main)
     }
 
     private var directFileAccess: SecurityScopedFileAccess {
         SecurityScopedFileAccess(requiresBookmark: false)
+    }
+
+    private var testAboutIdentity: AboutApplicationIdentity {
+        AboutApplicationIdentity(name: "MacPad", version: "1.3.1", build: "15")
     }
 
     private var germanFindTranslations: [String: String] {
@@ -1822,6 +1905,7 @@ struct WindowRoutingTests {
             localization: localization,
             distributionChannel: .direct,
             customerRoutes: .current(for: .direct),
+            aboutIdentity: testAboutIdentity,
             fileAccess: directFileAccess,
             recentDocumentStore: testRecentDocumentStore(defaults: .standard)
         )
@@ -1833,6 +1917,7 @@ struct WindowRoutingTests {
             localization: englishLocalization,
             distributionChannel: .appStore,
             customerRoutes: .current(for: .appStore),
+            aboutIdentity: testAboutIdentity,
             fileAccess: SecurityScopedFileAccess(requiresBookmark: true),
             recentDocumentStore: testRecentDocumentStore(defaults: defaults)
         )
