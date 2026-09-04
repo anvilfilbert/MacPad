@@ -29,9 +29,10 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     var onActivate: (() -> Void)?
     var onFontChange: ((NSFont) -> Void)?
     var onSuccessfulSave: ((URL) -> Void)?
+    var onOpenDroppedFiles: (([URL]) -> Void)?
 
     private let scrollView = NSScrollView()
-    private let textView = NSTextView()
+    private let textView = EditorTextView()
     private let statusBar = NSTextField(labelWithString: "")
     private let editorDocument = EditorDocument()
     private var lastFindTerm = ""
@@ -341,6 +342,9 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         textView.enabledTextCheckingTypes = NSTextCheckingResult.CheckingType.spelling.rawValue
         textView.identifier = NSUserInterfaceItemIdentifier("editor.text")
         textView.setAccessibilityLabel("Document text")
+        textView.onOpenDroppedFiles = { [weak self] urls in
+            self?.onOpenDroppedFiles?(urls)
+        }
 
         scrollView.documentView = textView
         stack.addArrangedSubview(scrollView)
