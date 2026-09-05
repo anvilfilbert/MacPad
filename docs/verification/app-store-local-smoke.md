@@ -10,17 +10,52 @@
   `b6198f8510e78e8814edf4b9357e85137aadcb2d` in a clean detached checkout.
 - The 2026-08-31 owner baseline used the isolated, locally ad-hoc-signed c8dacb0
   candidate identified below. It did not replace `/Applications/MacPad.app`.
-- The exact-head acceptance candidate was built from
-  `3f737b99b180f43b0a2018c51e85900cca6c0d2f` and has partial owner foreground
-  evidence recorded below.
-- Acceptance status: **Task 11 is not accepted.** The remaining exact-runtime
-  Full Keyboard Access, two menu-bar screenshots, and signed Store sandbox
-  gates remain incomplete.
+- The current screenshot candidate was built from
+  `7cf22e9abbafc45860a5efaa726450f459028e0d`; earlier evidence below retains its
+  original build attribution.
+- Task 10 is accepted: all six genuine EN/DE screenshots are present and pass
+  the repository validator. The About Full Keyboard Access correction also has
+  exact-head owner acceptance. **Task 11 remains incomplete only for the separate
+  signed Store sandbox/migration and external release gates.**
 
 This record does not claim that MacPad is Developer ID or App Store signed,
 notarized, submitted, approved, distributed, or verified in production. No
 system permission was changed and no Apple account or distribution service was
 accessed.
+
+## Current screenshot and keyboard acceptance — 2026-09-05
+
+The owner supplied all six captures from a locally built, ad-hoc-signed
+DirectRelease candidate at `7cf22e9abbafc45860a5efaa726450f459028e0d`, version
+1.3.1 (15), arm64. Its disposable identifier is
+`local.macpad.app.acceptance.capture7cf22e9` and executable SHA-256 is
+`13c569fc818d79508b692fbff5acced7ff7739ca2a5fa7f73d1f58b30cc834cd`.
+The installed app was not replaced. English and German screenshot sessions used
+per-launch language arguments; this is not new native Settings-row acceptance.
+
+`StoreAssets/Screenshots/{en,de}` contains the menu-bar icon plus blank window,
+two named editor tabs, and the genuine file-conflict warning. The owner used
+disposable sample files; no document safety test was inferred solely from pixels.
+
+The original captures remain preserved outside the repository. With explicit
+owner approval, native CoreGraphics converted copies to sRGB, composited alpha
+over black, and center-padded to 1440x900 at integer coordinates. No cropping,
+scaling, generative editing, text replacement, or UI reconstruction was applied.
+The saved content region was compared pixel-for-pixel with the same native-size
+color conversion and alpha flattening of each original; all six matched.
+`StoreAssets/capture-provenance.json` records original/output hashes and offsets.
+
+`./scripts/validate-store-screenshots.sh` passed 6/6: exact dimensions, opacity,
+embedded sRGB, names, native Vision OCR, and privacy checks. Visual review of all
+six confirmed the required localized scenes. These are genuine evidence assets,
+not a claim of Apple approval or final marketing composition.
+
+The owner previously accepted the corrected About forward/reverse key loop at
+the same runtime head, with Full Keyboard Access restored off afterward:
+[PR #34 owner evidence](https://github.com/anvilfilbert/MacPad/pull/34#issuecomment-5548871418).
+The older failure below is historical, not an open request to repeat this test.
+The bilingual website is now deployed and verified by Shared Services; historical
+Learn2Trade/login/404 observations below are no longer current blockers.
 
 During the 2026-08-29 worker attempt no app was launched and all signing,
 including ad-hoc signing, was outside that attempt's authorization. The later
@@ -314,16 +349,10 @@ Those observations require the manual scenarios below on an authorized signed ca
 
 ## Remaining gates
 
-- Task 10 remains incomplete: four genuine English/German editor-tab and
-  conflict screenshots are validated in the isolated owner-session directory,
-  but the two system-menu-bar screenshots are absent. The repository's
-  six-file validator therefore remains correctly fail-closed.
-- The exact-runtime candidate still requires complete macOS Full Keyboard
-  Access traversal and the two genuine menu-bar screenshots.
-- A capable interactive macOS session with any required user-granted
-  Accessibility or Screen Recording permission is required for the remaining
-  UI checks. The current Computer Use capture path cannot include macOS system
-  chrome or access SystemUIServer, so it cannot produce the two menu-bar files.
+- Screenshot and About Full Keyboard Access gates are complete as recorded
+  above. Historical host-blocked attempts are not current acceptance blockers.
+- Final exact-head checks and merge review must cover the screenshot/document
+  delta; no runtime implementation changed during capture preparation.
 - The complete signed Store sandbox sequence requires separate authorization
   and must pass before Task 11 can be accepted.
 - Apple-account and Developer Program membership, notarization, App Store
