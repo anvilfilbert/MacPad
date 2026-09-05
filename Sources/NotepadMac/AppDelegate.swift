@@ -430,6 +430,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         controller.onSuccessfulSave = { [weak self] transition in
             self?.recordSuccessfulFileTransition(transition)
         }
+        controller.onOpenDroppedFiles = { [weak self] urls in
+            guard let self else { return }
+            for url in urls {
+                self.openDocument(url: url)
+            }
+        }
     }
 
     private func present(_ controller: EditorWindowController, asTab: Bool) {
