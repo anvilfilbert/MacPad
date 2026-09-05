@@ -10,6 +10,11 @@
     <string>MacPad</string>
     <key>CFBundleIdentifier</key>
     <string>local.macpad.app</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>de</string>
+    </array>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleInfoDictionaryVersion</key>
@@ -22,6 +27,8 @@
     <string>1.3.1</string>
     <key>CFBundleVersion</key>
     <string>15</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.utilities</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSHighResolutionCapable</key>

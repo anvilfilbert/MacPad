@@ -1,5 +1,18 @@
 import Foundation
 
+private enum SessionStateLocalization {
+    static let userInfoKey = CodingUserInfoKey(
+        rawValue: "local.macpad.session-state-localization"
+    )!
+
+    static func from(_ decoder: Decoder) -> MacPadLocalization {
+        if let localization = decoder.userInfo[userInfoKey] as? MacPadLocalization {
+            return localization
+        }
+        return MacPadLocalization(bundle: .main)
+    }
+}
+
 public struct AppSessionState: Codable, Equatable {
     public static let maximumWindowCount = 50
     public static let maximumTabsPerWindow = 100
@@ -17,6 +30,15 @@ public struct AppSessionState: Codable, Equatable {
         windows.flatMap(\.tabs)
     }
 
+    public static func decode(
+        data: Data,
+        localization: MacPadLocalization
+    ) throws -> AppSessionState {
+        let decoder = JSONDecoder()
+        decoder.userInfo[SessionStateLocalization.userInfoKey] = localization
+        return try decoder.decode(AppSessionState.self, from: data)
+    }
+
     private enum CodingKeys: String, CodingKey {
         case windows
         case tabs
@@ -29,7 +51,10 @@ public struct AppSessionState: Codable, Equatable {
             var decodedWindows: [EditorWindowSessionState] = []
             while !windowsContainer.isAtEnd {
                 guard decodedWindows.count < Self.maximumWindowCount else {
-                    throw Self.limitError(codingPath: decoder.codingPath)
+                    throw Self.limitError(
+                        codingPath: decoder.codingPath,
+                        localization: SessionStateLocalization.from(decoder)
+                    )
                 }
                 decodedWindows.append(try windowsContainer.decode(EditorWindowSessionState.self))
             }
@@ -39,7 +64,10 @@ public struct AppSessionState: Codable, Equatable {
             var decodedTabs: [EditorSessionState] = []
             while !tabsContainer.isAtEnd {
                 guard decodedTabs.count < Self.maximumTabsPerWindow else {
-                    throw Self.limitError(codingPath: decoder.codingPath)
+                    throw Self.limitError(
+                        codingPath: decoder.codingPath,
+                        localization: SessionStateLocalization.from(decoder)
+                    )
                 }
                 decodedTabs.append(try tabsContainer.decode(EditorSessionState.self))
             }
@@ -54,11 +82,14 @@ public struct AppSessionState: Codable, Equatable {
         try container.encode(windows, forKey: .windows)
     }
 
-    private static func limitError(codingPath: [any CodingKey]) -> DecodingError {
+    private static func limitError(
+        codingPath: [any CodingKey],
+        localization: MacPadLocalization
+    ) -> DecodingError {
         DecodingError.dataCorrupted(
             .init(
                 codingPath: codingPath,
-                debugDescription: "Session contains more windows or tabs than MacPad supports."
+                debugDescription: localization.string(.sessionWindowOrTabLimit)
             )
         )
     }
@@ -122,7 +153,8 @@ public struct EditorWindowSessionState: Codable, Equatable {
                 throw DecodingError.dataCorrupted(
                     .init(
                         codingPath: decoder.codingPath,
-                        debugDescription: "Session contains more tabs than MacPad supports."
+                        debugDescription: SessionStateLocalization.from(decoder)
+                            .string(.sessionTabLimit)
                     )
                 )
             }
@@ -209,21 +241,44 @@ public struct WindowFrameState: Codable, Equatable, Sendable {
 
 public struct EditorSessionState: Codable, Equatable {
     public let id: String
-    public let filePath: String?
+    public let fileReference: PersistedFileReference?
     public let selectedLocation: Int
     public let wordWrapEnabled: Bool
     public let statusBarVisible: Bool
     public let zoomPercent: Int
     public let lineEnding: LineEnding
 
+    public var filePath: String? {
+        fileReference?.path
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id
+        case fileReference
         case filePath
         case selectedLocation
         case wordWrapEnabled
         case statusBarVisible
         case zoomPercent
         case lineEnding
+    }
+
+    public init(
+        id: String,
+        fileReference: PersistedFileReference?,
+        selectedLocation: Int,
+        wordWrapEnabled: Bool,
+        statusBarVisible: Bool,
+        zoomPercent: Int,
+        lineEnding: LineEnding
+    ) {
+        self.id = id
+        self.fileReference = fileReference
+        self.selectedLocation = selectedLocation
+        self.wordWrapEnabled = wordWrapEnabled
+        self.statusBarVisible = statusBarVisible
+        self.zoomPercent = zoomPercent
+        self.lineEnding = lineEnding
     }
 
     public init(
@@ -235,19 +290,35 @@ public struct EditorSessionState: Codable, Equatable {
         zoomPercent: Int,
         lineEnding: LineEnding
     ) {
-        self.id = id
-        self.filePath = filePath
-        self.selectedLocation = selectedLocation
-        self.wordWrapEnabled = wordWrapEnabled
-        self.statusBarVisible = statusBarVisible
-        self.zoomPercent = zoomPercent
-        self.lineEnding = lineEnding
+        self.init(
+            id: id,
+            fileReference: filePath.map {
+                PersistedFileReference(path: $0, bookmarkData: nil)
+            },
+            selectedLocation: selectedLocation,
+            wordWrapEnabled: wordWrapEnabled,
+            statusBarVisible: statusBarVisible,
+            zoomPercent: zoomPercent,
+            lineEnding: lineEnding
+        )
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
-        filePath = try container.decodeIfPresent(String.self, forKey: .filePath)
+        if container.contains(.fileReference) {
+            fileReference = try container.decodeIfPresent(
+                PersistedFileReference.self,
+                forKey: .fileReference
+            )
+        } else {
+            fileReference = try container.decodeIfPresent(
+                String.self,
+                forKey: .filePath
+            ).map {
+                PersistedFileReference(path: $0, bookmarkData: nil)
+            }
+        }
         selectedLocation = max(0, try container.decodeIfPresent(Int.self, forKey: .selectedLocation) ?? 0)
         wordWrapEnabled = try container.decodeIfPresent(Bool.self, forKey: .wordWrapEnabled) ?? true
         statusBarVisible = try container.decodeIfPresent(Bool.self, forKey: .statusBarVisible) ?? true
@@ -258,7 +329,7 @@ public struct EditorSessionState: Codable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
-        try container.encodeIfPresent(filePath, forKey: .filePath)
+        try container.encodeIfPresent(fileReference, forKey: .fileReference)
         try container.encode(selectedLocation, forKey: .selectedLocation)
         try container.encode(wordWrapEnabled, forKey: .wordWrapEnabled)
         try container.encode(statusBarVisible, forKey: .statusBarVisible)

@@ -24,24 +24,60 @@ enum EditorWindowResolver {
     }
 
     static func controller(
-        opening url: URL,
+        opening reference: PersistedFileReference,
         controllers: [EditorWindowController]
     ) -> EditorWindowController? {
-        let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
+        let resolvedURL = URL(fileURLWithPath: reference.path)
+            .resolvingSymlinksInPath()
+            .standardizedFileURL
         return controllers.first { controller in
-            controller.fileURL?.standardizedFileURL == resolvedURL
+            guard let path = controller.fileReference?.path else { return false }
+            return URL(fileURLWithPath: path)
+                .resolvingSymlinksInPath()
+                .standardizedFileURL == resolvedURL
         }
     }
 
-    static func makeController(opening url: URL) throws -> EditorWindowController {
-        let controller = EditorWindowController()
-        try controller.loadFile(url)
+    static func makeController(
+        opening url: URL,
+        localization: MacPadLocalization,
+        fileAccess: SecurityScopedFileAccess
+    ) throws -> EditorWindowController {
+        let controller = EditorWindowController(
+            localization: localization,
+            fileAccess: fileAccess
+        )
+        try controller.loadGrantedFile(url)
         return controller
     }
 
-    static func makeController(opening url: URL, baseFont: NSFont) throws -> EditorWindowController {
-        let controller = EditorWindowController(baseFont: baseFont)
-        try controller.loadFile(url)
+    static func makeController(
+        opening url: URL,
+        baseFont: NSFont,
+        localization: MacPadLocalization,
+        fileAccess: SecurityScopedFileAccess
+    ) throws -> EditorWindowController {
+        let controller = EditorWindowController(
+            baseFont: baseFont,
+            localization: localization,
+            fileAccess: fileAccess
+        )
+        try controller.loadGrantedFile(url)
+        return controller
+    }
+
+    static func makeController(
+        opening reference: PersistedFileReference,
+        baseFont: NSFont,
+        localization: MacPadLocalization,
+        fileAccess: SecurityScopedFileAccess
+    ) throws -> EditorWindowController {
+        let controller = EditorWindowController(
+            baseFont: baseFont,
+            localization: localization,
+            fileAccess: fileAccess
+        )
+        try controller.loadFile(reference)
         return controller
     }
 }
@@ -77,31 +113,79 @@ enum EditorWindowRecency {
 }
 
 @MainActor
+enum ApplicationTermination {
+    static func reply(
+        confirmDiscardActions: [() -> Bool]
+    ) -> NSApplication.TerminateReply {
+        for confirmDiscard in confirmDiscardActions where !confirmDiscard() {
+            return .terminateCancel
+        }
+        return .terminateNow
+    }
+}
+
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, NSMenuDelegate {
     private static let preferencesLogger = Logger(
         subsystem: "local.macpad.app",
         category: "preferences"
     )
-    private let sessionDefaultsKey = "MacPad.SessionState.v1"
+    private let legacySessionDefaultsKey = "MacPad.SessionState.v1"
     private let menuBarDefaultsKey = "MacPad.ShowInMenuBar"
     private let defaults: UserDefaults
-    private let sessionLogger = Logger(subsystem: "local.macpad.app", category: "session")
+    private let localization: MacPadLocalization
+    private let distributionChannel: DistributionChannel
+    private let customerRoutes: CustomerRoutes
+    private let aboutIdentity: AboutApplicationIdentity
+    private let fileAccess: SecurityScopedFileAccess
+    private let recentDocumentStore: RecentDocumentStore
+    private let recentDocumentLogger = Logger(
+        subsystem: "local.macpad.app",
+        category: "recent-documents"
+    )
     private var windows: [EditorWindowController] = []
-    private var isRestoringSession = false
     private var pendingOpenURLs: [URL] = []
     private var hasFinishedLaunching = false
     private weak var lastActiveWindowController: EditorWindowController?
     private var preferredFont = EditorWindowController.defaultEditorFont
     private(set) var menuBarStatusItem: NSStatusItem?
+    private var aboutPanelController: AboutPanelController?
 
     override init() {
         defaults = .standard
+        localization = MacPadLocalization(bundle: .main)
+        distributionChannel = .current
+        customerRoutes = .current(for: .current)
+        aboutIdentity = AboutApplicationIdentity(bundle: .main)
+        fileAccess = SecurityScopedFileAccess(
+            requiresBookmark: DistributionChannel.current.requiresPersistentSecurityScope
+        )
+        recentDocumentStore = RecentDocumentStore(
+            defaults: .standard,
+            defaultsKey: "MacPad.RecentDocumentBookmarks.v1",
+            maximumCount: 20
+        )
         super.init()
         preferredFont = Self.loadPreferredFont()
     }
 
-    init(defaults: UserDefaults) {
+    init(
+        defaults: UserDefaults,
+        localization: MacPadLocalization,
+        distributionChannel: DistributionChannel,
+        customerRoutes: CustomerRoutes,
+        aboutIdentity: AboutApplicationIdentity,
+        fileAccess: SecurityScopedFileAccess,
+        recentDocumentStore: RecentDocumentStore
+    ) {
         self.defaults = defaults
+        self.localization = localization
+        self.distributionChannel = distributionChannel
+        self.customerRoutes = customerRoutes
+        self.aboutIdentity = aboutIdentity
+        self.fileAccess = fileAccess
+        self.recentDocumentStore = recentDocumentStore
+        NSWindow.allowsAutomaticWindowTabbing = false
         super.init()
         preferredFont = Self.loadPreferredFont()
     }
@@ -117,18 +201,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSWindow.allowsAutomaticWindowTabbing = false
         let application = NSApplication.shared
-        application.mainMenu = MainMenuFactory.makeMenu(target: self, application: application)
+        application.mainMenu = MainMenuFactory.makeMenu(
+            target: self,
+            application: application,
+            localization: localization,
+            distributionChannel: distributionChannel,
+            customerRoutes: customerRoutes
+        )
         updateMenuBarStatusItem()
 
         let launchURLs = pendingOpenURLs
         pendingOpenURLs.removeAll()
         hasFinishedLaunching = true
 
+        defaults.removeObject(forKey: legacySessionDefaultsKey)
         if !launchURLs.isEmpty {
             for url in launchURLs {
                 openDocument(url: url)
             }
-        } else if !restorePreviousSession() {
+        } else {
             openNewDocument(nil)
         }
         NSApp.activate(ignoringOtherApps: true)
@@ -149,19 +240,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        var confirmedControllers: [EditorWindowController] = []
-        for controller in windows {
-            if !controller.confirmDiscardIfNeeded() {
-                for confirmedController in confirmedControllers {
-                    confirmedController.keepInSessionRestore()
-                }
-                saveSessionNow()
-                return .terminateCancel
+        ApplicationTermination.reply(
+            confirmDiscardActions: windows.map { controller in
+                { controller.confirmDiscardIfNeeded() }
             }
-            confirmedControllers.append(controller)
-        }
-        saveSessionNow()
-        return .terminateNow
+        )
     }
 
     func application(_ sender: NSApplication, open urls: [URL]) {
@@ -176,13 +259,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     @objc func showAbout(_ sender: Any?) {
-        NSApp.orderFrontStandardAboutPanel(options: [
-            .credits: aboutCredits()
-        ])
+        if aboutPanelController == nil {
+            aboutPanelController = AboutPanelController(
+                identity: aboutIdentity,
+                icon: NSApp.applicationIconImage,
+                title: localization.string(.aboutMacPad),
+                links: aboutLinks(),
+                target: self
+            )
+        }
+        aboutPanelController?.showWindow(sender)
+        aboutPanelController?.window?.makeKeyAndOrderFront(sender)
     }
 
     @objc func openNewDocument(_ sender: Any?) {
-        openNewWindow(sender)
+        present(makeWindowController(), asTab: keyWindowController != nil)
     }
 
     @objc func openNewWindow(_ sender: Any?) {
@@ -207,31 +298,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     @objc func openRecentDocument(_ sender: Any?) {
         guard let item = sender as? NSMenuItem,
-              let url = item.representedObject as? URL else {
-            assertionFailure("Open Recent requires a menu item containing a file URL.")
+              let reference = item.representedObject as? PersistedFileReference else {
+            assertionFailure("Open Recent requires a persisted file reference.")
             return
         }
-        openDocument(url: url)
+        openDocument(reference: reference)
     }
 
     @objc func clearRecentDocuments(_ sender: Any?) {
         NSDocumentController.shared.clearRecentDocuments(sender)
+        recentDocumentStore.clear()
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
-        guard menu.title == "Open Recent" else { return }
-        RecentDocumentsMenuBuilder.populate(
+        guard menu.identifier == NSUserInterfaceItemIdentifier("file.openRecent") else { return }
+        populateRecentDocumentsMenu(
             menu,
-            urls: NSDocumentController.shared.recentDocumentURLs,
-            target: self
+            nativeURLs: NSDocumentController.shared.recentDocumentURLs
         )
     }
 
-    @objc func clearSessionData(_ sender: Any?) {
-        cancelScheduledSessionSave()
-        defaults.removeObject(forKey: sessionDefaultsKey)
-        for controller in windows {
-            controller.discardFromSessionRestore()
+    func populateRecentDocumentsMenu(_ menu: NSMenu, nativeURLs: [URL]) {
+        do {
+            let references = if distributionChannel == .direct {
+                try recentDocumentStore.directReferences(inNativeOrder: nativeURLs)
+            } else {
+                try recentDocumentStore.references(inNativeOrder: nativeURLs)
+            }
+            RecentDocumentsMenuBuilder.populate(
+                menu,
+                references: references,
+                target: self,
+                localization: localization
+            )
+        } catch {
+            recentDocumentLogger.error(
+                "Could not load recent documents: \(error.localizedDescription, privacy: .public)"
+            )
+            RecentDocumentsMenuBuilder.populateUnavailable(
+                menu,
+                target: self,
+                localization: localization
+            )
         }
     }
 
@@ -250,33 +358,60 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     private func openDocument(url: URL) {
-        if let existingController = EditorWindowResolver.controller(
-            opening: url,
-            controllers: windows
-        ) {
-            recordWindowActivity(existingController)
-            existingController.showWindow(nil)
-            existingController.window?.makeKeyAndOrderFront(nil)
-            noteRecentDocument(existingController.fileURL ?? url)
-            return
-        }
-
         do {
-            let controller = try EditorWindowResolver.makeController(
-                opening: url,
-                baseFont: preferredFont
-            )
-            configure(controller)
-            present(controller, asTab: keyWindowController != nil)
-            noteRecentDocument(controller.fileURL ?? url)
+            let reference = try fileAccess.makeReference(for: url)
+            openDocument(reference: reference)
         } catch {
             showOpenError(url: url, error: error)
         }
     }
 
+    private func openDocument(reference: PersistedFileReference) {
+        if let existingController = EditorWindowResolver.controller(
+            opening: reference,
+            controllers: windows
+        ) {
+            recordWindowActivity(existingController)
+            existingController.showWindow(nil)
+            existingController.window?.makeKeyAndOrderFront(nil)
+            if let currentReference = existingController.fileReference {
+                recordRecentDocument(currentReference)
+            }
+            return
+        }
+
+        do {
+            let controller = try EditorWindowResolver.makeController(
+                opening: reference,
+                baseFont: preferredFont,
+                localization: localization,
+                fileAccess: fileAccess
+            )
+            configure(controller)
+            present(controller, asTab: keyWindowController != nil)
+            if let currentReference = controller.fileReference {
+                recordRecentDocument(currentReference)
+            }
+        } catch {
+            showOpenError(
+                url: URL(fileURLWithPath: reference.path),
+                error: error
+            )
+        }
+    }
+
     private func makeWindowController() -> EditorWindowController {
-        let controller = EditorWindowController(baseFont: preferredFont)
+        let controller = makeUnconfiguredWindowController()
         configure(controller)
+        return controller
+    }
+
+    private func makeUnconfiguredWindowController() -> EditorWindowController {
+        let controller = EditorWindowController(
+            baseFont: preferredFont,
+            localization: localization,
+            fileAccess: fileAccess
+        )
         return controller
     }
 
@@ -284,10 +419,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         controller.onClose = { [weak self, weak controller] in
             guard let controller else { return }
             self?.windows.removeAll { $0 === controller }
-            self?.saveSessionNow()
-        }
-        controller.onStateChange = { [weak self] in
-            self?.scheduleSessionSave()
         }
         controller.onActivate = { [weak self, weak controller] in
             guard let controller else { return }
@@ -296,8 +427,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         controller.onFontChange = { [weak self] font in
             self?.storePreferredFont(font)
         }
-        controller.onSuccessfulSave = { [weak self] url in
-            self?.noteRecentDocument(url)
+        controller.onSuccessfulSave = { [weak self] transition in
+            self?.recordSuccessfulFileTransition(transition)
         }
         controller.onOpenDroppedFiles = { [weak self] urls in
             guard let self else { return }
@@ -320,7 +451,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         }
 
         recordWindowActivity(controller)
-        saveSessionNow()
     }
 
     private func recordWindowActivity(_ controller: EditorWindowController) {
@@ -340,43 +470,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         )
     }
 
-    private func aboutCredits() -> NSAttributedString {
-        let text = "Created by anvilfilbert\nPublic repo: anvilfilbert/MacPad"
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-
-        let credits = NSMutableAttributedString(
-            string: text,
-            attributes: [
-                .font: NSFont.systemFont(ofSize: 11),
-                .foregroundColor: NSColor.secondaryLabelColor,
-                .paragraphStyle: paragraph
-            ]
-        )
-        addLink(
-            to: "anvilfilbert",
-            in: credits,
-            url: "https://github.com/anvilfilbert"
-        )
-        addLink(
-            to: "anvilfilbert/MacPad",
-            in: credits,
-            url: "https://github.com/anvilfilbert/MacPad"
-        )
-        return credits
-    }
-
-    private func addLink(to substring: String, in credits: NSMutableAttributedString, url: String) {
-        let range = (credits.string as NSString).range(of: substring)
-        guard range.location != NSNotFound, let url = URL(string: url) else { return }
-        credits.addAttributes(
-            [
-                .link: url,
-                .foregroundColor: NSColor.linkColor,
-                .underlineStyle: NSUnderlineStyle.single.rawValue
-            ],
-            range: range
-        )
+    func aboutLinks() -> [AboutLinkPresentation] {
+        let websiteHost = "macpad.net"
+        let supportPath = "macpad.net/support"
+        var links: [AboutLinkPresentation] = []
+        if customerRoutes.productURL != nil {
+            links.append(
+                AboutLinkPresentation(
+                    identifier: MacPadStringKey.aboutWebsite.rawValue,
+                    title: localization.aboutWebsite(host: websiteHost),
+                    action: #selector(openWebsite(_:))
+                )
+            )
+        }
+        if customerRoutes.supportURL != nil {
+            links.append(
+                AboutLinkPresentation(
+                    identifier: MacPadStringKey.aboutSupport.rawValue,
+                    title: localization.aboutSupport(destination: supportPath),
+                    action: #selector(reportIssue(_:))
+                )
+            )
+        }
+        if customerRoutes.privacyURL != nil {
+            links.append(
+                AboutLinkPresentation(
+                    identifier: MacPadStringKey.aboutPrivacyPolicy.rawValue,
+                    title: localization.string(.aboutPrivacyPolicy),
+                    action: #selector(openPrivacy(_:))
+                )
+            )
+        }
+        return links
     }
 
     @objc func save(_ sender: Any?) { keyWindowController?.save(sender) }
@@ -396,15 +521,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     @objc func chooseFont(_ sender: Any?) { keyWindowController?.chooseFont(sender) }
 
     @objc func openHelp(_ sender: Any?) {
-        openProjectURL("https://github.com/anvilfilbert/MacPad/wiki")
+        openCustomerURL(customerRoutes.helpURL, routeName: "Help")
+    }
+
+    @objc func openWebsite(_ sender: Any?) {
+        openCustomerURL(customerRoutes.productURL, routeName: "website")
     }
 
     @objc func reportIssue(_ sender: Any?) {
-        openProjectURL("https://github.com/anvilfilbert/MacPad/issues/new/choose")
+        openCustomerURL(customerRoutes.supportURL, routeName: "support")
+    }
+
+    @objc func openPrivacy(_ sender: Any?) {
+        openCustomerURL(customerRoutes.privacyURL, routeName: "privacy")
+    }
+
+    @objc func openSecurity(_ sender: Any?) {
+        openCustomerURL(customerRoutes.securityURL, routeName: "security")
     }
 
     @objc func checkForUpdates(_ sender: Any?) {
-        openProjectURL("https://github.com/anvilfilbert/MacPad/releases/latest")
+        guard distributionChannel.showsDirectUpdateCommand else {
+            assertionFailure("The App Store channel cannot open direct updates.")
+            return
+        }
+        openCustomerURL(customerRoutes.updateURL, routeName: "update")
     }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
@@ -432,8 +573,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
                 defaults.set(false, forKey: menuBarDefaultsKey)
                 let alert = NSAlert()
                 alert.alertStyle = .warning
-                alert.messageText = "Could not add MacPad to the menu bar."
-                alert.informativeText = "macOS did not provide a menu-bar button."
+                alert.messageText = localization.string(.menuBarCreationFailure)
+                alert.informativeText = localization.string(.menuBarButtonUnavailable)
                 alert.runModal()
                 return
             }
@@ -445,8 +586,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             button.target = self
             button.action = #selector(handleMenuBarStatusItem(_:))
             button.sendAction(on: [.leftMouseUp])
-            button.toolTip = "Open a new MacPad window"
-            button.setAccessibilityLabel("Open a new MacPad window")
+            let openWindowDescription = localization.string(.menuBarOpenNewWindow)
+            button.toolTip = openWindowDescription
+            button.setAccessibilityLabel(openWindowDescription)
             menuBarStatusItem = statusItem
             return
         }
@@ -457,209 +599,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         }
     }
 
-    private func restorePreviousSession() -> Bool {
-        guard let data = defaults.data(forKey: sessionDefaultsKey) else {
-            return false
-        }
-
-        let session: AppSessionState
-        do {
-            session = try JSONDecoder().decode(AppSessionState.self, from: data)
-        } catch {
-            defaults.removeObject(forKey: sessionDefaultsKey)
-            sessionLogger.error(
-                "Discarded invalid session state: \(error.localizedDescription, privacy: .public)"
-            )
-            showSessionRestoreError(filePath: nil, error: error)
-            return false
-        }
-        guard !session.windows.isEmpty else { return false }
-
-        isRestoringSession = true
-        defer {
-            isRestoringSession = false
-            saveSessionNow()
-        }
-
-        var restoreFailures: [String] = []
-        for windowSession in session.windows {
-            var restoredControllers: [(originalIndex: Int, controller: EditorWindowController)] = []
-            for (index, tab) in windowSession.tabs.enumerated() {
-                let controller = makeWindowController()
-                do {
-                    try controller.restoreSessionState(tab)
-                    present(controller, asTab: !restoredControllers.isEmpty)
-                    restoredControllers.append((index, controller))
-                } catch {
-                    restoreFailures.append("\(tab.filePath ?? "Untitled"): \(error.localizedDescription)")
-                }
-            }
-
-            if let firstWindow = restoredControllers.first?.controller.window {
-                restoreFrame(windowSession.frame, to: firstWindow)
-            }
-            let selectedController = restoredControllers.first {
-                $0.originalIndex == windowSession.selectedTabIndex
-            }?.controller ?? restoredControllers.first?.controller
-            selectedController?.window?.makeKeyAndOrderFront(nil)
-        }
-
-        if !restoreFailures.isEmpty {
-            showSessionRestoreErrors(restoreFailures)
-        }
-
-        return !windows.isEmpty
-    }
-
-    private func scheduleSessionSave() {
-        guard !isRestoringSession else { return }
-        NSObject.cancelPreviousPerformRequests(
-            withTarget: self,
-            selector: #selector(persistScheduledSession),
-            object: nil
-        )
-        perform(#selector(persistScheduledSession), with: nil, afterDelay: 0.25)
-    }
-
-    private func saveSessionNow() {
-        cancelScheduledSessionSave()
-        writeSession()
-    }
-
-    private func cancelScheduledSessionSave() {
-        NSObject.cancelPreviousPerformRequests(
-            withTarget: self,
-            selector: #selector(persistScheduledSession),
-            object: nil
-        )
-    }
-
-    @objc private func persistScheduledSession() {
-        writeSession()
-    }
-
-    private func writeSession() {
-        guard !isRestoringSession else { return }
-
-        let windowSessions = currentWindowSessions()
-        guard !windowSessions.isEmpty else {
-            defaults.removeObject(forKey: sessionDefaultsKey)
-            return
-        }
-        if windowSessions.count > AppSessionState.maximumWindowCount {
-            sessionLogger.warning(
-                "Session window limit exceeded; total: \(windowSessions.count, privacy: .public), retained: \(AppSessionState.maximumWindowCount, privacy: .public)"
-            )
-        }
-
-        do {
-            let data = try JSONEncoder().encode(AppSessionState(windows: windowSessions))
-            defaults.set(data, forKey: sessionDefaultsKey)
-        } catch {
-            sessionLogger.error(
-                "Could not encode session state: \(error.localizedDescription, privacy: .public)"
-            )
-        }
-    }
-
-    private func currentWindowSessions() -> [EditorWindowSessionState] {
-        let controllerByWindow = Dictionary(
-            uniqueKeysWithValues: windows.compactMap { controller -> (ObjectIdentifier, EditorWindowController)? in
-                guard let window = controller.window else { return nil }
-                return (ObjectIdentifier(window), controller)
-            }
-        )
-        var seenWindows = Set<ObjectIdentifier>()
-        var sessions: [EditorWindowSessionState] = []
-
-        for controller in windows {
-            guard let window = controller.window else { continue }
-            let tabbedWindows = window.tabbedWindows ?? [window]
-            let orderedWindows = tabbedWindows.isEmpty ? [window] : tabbedWindows
-            let identifiers = orderedWindows.map(ObjectIdentifier.init)
-
-            if identifiers.contains(where: seenWindows.contains) {
-                continue
-            }
-
-            for identifier in identifiers {
-                seenWindows.insert(identifier)
-            }
-
-            let tabEntries: [(window: NSWindow, state: EditorSessionState)] = orderedWindows.compactMap { tabWindow in
-                guard let state = controllerByWindow[ObjectIdentifier(tabWindow)]?.sessionState else {
-                    return nil
-                }
-                return (tabWindow, state)
-            }
-            let tabs = tabEntries.map(\.state)
-            if tabs.count > AppSessionState.maximumTabsPerWindow {
-                sessionLogger.warning(
-                    "Session tab limit exceeded; total: \(tabs.count, privacy: .public), retained: \(AppSessionState.maximumTabsPerWindow, privacy: .public)"
-                )
-            }
-
-            if !tabs.isEmpty {
-                let selectedWindow = window.tabGroup?.selectedWindow ?? window
-                let selectedIndex = tabEntries.firstIndex { $0.window === selectedWindow } ?? 0
-                let frame = orderedWindows.first.map { windowFrameState($0.frame) }
-                let visualIndexByWindow = Dictionary(
-                    uniqueKeysWithValues: tabEntries.enumerated().map { index, entry in
-                        (ObjectIdentifier(entry.window), index)
-                    }
-                )
-                let recentlyUsedTabIndices = windows.compactMap { recentController -> Int? in
-                    guard let recentWindow = recentController.window else { return nil }
-                    return visualIndexByWindow[ObjectIdentifier(recentWindow)]
-                }
-                sessions.append(
-                    EditorWindowSessionState(
-                        tabs: tabs,
-                        selectedTabIndex: selectedIndex,
-                        frame: frame,
-                        recentlyUsedTabIndices: recentlyUsedTabIndices
-                    )
-                )
-            }
-        }
-
-        return sessions
-    }
-
-    private func showSessionRestoreError(filePath: String?, error: Error) {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "Could not restore a previous MacPad tab."
-        alert.informativeText = "\(filePath ?? "Untitled")\n\n\(error.localizedDescription)"
-        alert.runModal()
-    }
-
-    private func showSessionRestoreErrors(_ failures: [String]) {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "Some previous MacPad tabs could not be restored."
-        alert.informativeText = failures.joined(separator: "\n")
-        alert.runModal()
-    }
-
     private func showOpenError(url: URL, error: Error) {
         let alert = NSAlert()
         alert.alertStyle = .critical
-        alert.messageText = "Could not open \(url.lastPathComponent)."
-        alert.informativeText = error.localizedDescription
+        alert.messageText = localization.openFailure(fileName: url.lastPathComponent)
+        alert.informativeText = macPadLocalizedDescription(error, using: localization)
         alert.runModal()
     }
 
-    private func openProjectURL(_ value: String) {
-        guard let url = URL(string: value) else {
-            assertionFailure("Invalid project URL: \(value)")
+    private func openCustomerURL(_ url: URL?, routeName: String) {
+        guard let url else {
+            assertionFailure("No customer route is configured for \(routeName).")
             return
         }
         guard NSWorkspace.shared.open(url) else {
             let alert = NSAlert()
             alert.alertStyle = .warning
-            alert.messageText = "Could not open the link."
-            alert.informativeText = value
+            alert.messageText = localization.string(.linkOpenFailure)
+            alert.informativeText = url.absoluteString
             alert.runModal()
             return
         }
@@ -691,37 +648,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             )
             let alert = NSAlert()
             alert.alertStyle = .warning
-            alert.messageText = "Could not save the editor font."
-            alert.informativeText = error.localizedDescription
+            alert.messageText = localization.string(.fontSaveFailure)
+            alert.informativeText = macPadLocalizedDescription(error, using: localization)
             alert.runModal()
         }
     }
 
-    private func noteRecentDocument(_ url: URL) {
+    private func recordRecentDocument(_ reference: PersistedFileReference) {
+        do {
+            try recentDocumentStore.add(reference)
+            noteNativeRecentDocument(reference)
+        } catch {
+            showRecentDocumentError(error)
+        }
+    }
+
+    private func recordSuccessfulFileTransition(_ transition: SuccessfulFileTransition) {
+        do {
+            try recentDocumentStore.replace(
+                transition.previousReference,
+                with: transition.currentReference
+            )
+            noteNativeRecentDocument(transition.currentReference)
+        } catch {
+            showRecentDocumentError(error)
+        }
+    }
+
+    private func noteNativeRecentDocument(_ reference: PersistedFileReference) {
         NSDocumentController.shared.noteNewRecentDocumentURL(
-            url.resolvingSymlinksInPath().standardizedFileURL
+            URL(fileURLWithPath: reference.path)
+                .resolvingSymlinksInPath()
+                .standardizedFileURL
         )
     }
 
-    private func windowFrameState(_ frame: NSRect) -> WindowFrameState {
-        WindowFrameState(
-            x: frame.origin.x,
-            y: frame.origin.y,
-            width: frame.size.width,
-            height: frame.size.height
+    private func showRecentDocumentError(_ error: any Error) {
+        recentDocumentLogger.error(
+            "Could not update recent documents: \(error.localizedDescription, privacy: .public)"
         )
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = localization.string(.recentDocumentsUnavailable)
+        alert.informativeText = macPadLocalizedDescription(error, using: localization)
+        alert.runModal()
     }
 
-    private func restoreFrame(_ frameState: WindowFrameState?, to window: NSWindow) {
-        guard let frameState else { return }
-        let frame = NSRect(
-            x: frameState.x,
-            y: frameState.y,
-            width: frameState.width,
-            height: frameState.height
-        )
-        let targetScreen = NSScreen.screens.first { $0.frame.intersects(frame) } ?? NSScreen.main
-        let constrainedFrame = targetScreen.map { window.constrainFrameRect(frame, to: $0) } ?? frame
-        window.setFrame(constrainedFrame, display: false)
-    }
 }

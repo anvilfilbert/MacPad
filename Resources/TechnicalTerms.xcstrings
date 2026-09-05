@@ -1,0 +1,16 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "macpad.term.encoding.utf8" : {"extractionState":"manual","localizations":{"de":{"stringUnit":{"state":"translated","value":"UTF-8"}},"en":{"stringUnit":{"state":"translated","value":"UTF-8"}}}},
+    "macpad.term.encoding.utf8-bom" : {"extractionState":"manual","localizations":{"de":{"stringUnit":{"state":"translated","value":"UTF-8 BOM"}},"en":{"stringUnit":{"state":"translated","value":"UTF-8 BOM"}}}},
+    "macpad.term.encoding.utf16-le" : {"extractionState":"manual","localizations":{"de":{"stringUnit":{"state":"translated","value":"UTF-16 LE"}},"en":{"stringUnit":{"state":"translated","value":"UTF-16 LE"}}}},
+    "macpad.term.encoding.utf16-be" : {"extractionState":"manual","localizations":{"de":{"stringUnit":{"state":"translated","value":"UTF-16 BE"}},"en":{"stringUnit":{"state":"translated","value":"UTF-16 BE"}}}},
+    "macpad.term.encoding.windows-1252" : {"extractionState":"manual","localizations":{"de":{"stringUnit":{"state":"translated","value":"Windows-1252"}},"en":{"stringUnit":{"state":"translated","value":"Windows-1252"}}}},
+    "macpad.term.encoding.iso-8859-1" : {"extractionState":"manual","localizations":{"de":{"stringUnit":{"state":"translated","value":"ISO-8859-1"}},"en":{"stringUnit":{"state":"translated","value":"ISO-8859-1"}}}},
+    "macpad.term.line-ending.windows-crlf" : {"extractionState":"manual","localizations":{"de":{"stringUnit":{"state":"translated","value":"Windows (CRLF)"}},"en":{"stringUnit":{"state":"translated","value":"Windows (CRLF)"}}}},
+    "macpad.term.line-ending.unix-lf" : {"extractionState":"manual","localizations":{"de":{"stringUnit":{"state":"translated","value":"Unix (LF)"}},"en":{"stringUnit":{"state":"translated","value":"Unix (LF)"}}}},
+    "macpad.term.line-ending.classic-mac-cr" : {"extractionState":"manual","localizations":{"de":{"stringUnit":{"state":"translated","value":"Macintosh (CR)"}},"en":{"stringUnit":{"state":"translated","value":"Macintosh (CR)"}}}},
+    "macpad.term.line-ending.mixed" : {"extractionState":"manual","localizations":{"de":{"stringUnit":{"state":"translated","value":"Gemischt"}},"en":{"stringUnit":{"state":"translated","value":"Mixed"}}}}
+  },
+  "version" : "1.0"
+}
