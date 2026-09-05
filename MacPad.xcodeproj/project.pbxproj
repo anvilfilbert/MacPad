@@ -25,6 +25,7 @@
 		A10000000000000000000010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* Assets.xcassets */; };
 		A10000000000000000000011 /* TechnicalTerms.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016 /* TechnicalTerms.xcstrings */; };
 		A10000000000000000000012 /* AboutPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000017 /* AboutPanelController.swift */; };
+		A10000000000000000000013 /* EditorFileDrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000018 /* EditorFileDrop.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -51,6 +52,7 @@
 		A20000000000000000000015 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000000000000000000016 /* TechnicalTerms.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = TechnicalTerms.xcstrings; sourceTree = "<group>"; };
 		A20000000000000000000017 /* AboutPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutPanelController.swift; sourceTree = "<group>"; };
+		A20000000000000000000018 /* EditorFileDrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorFileDrop.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,6 +96,7 @@
 				A20000000000000000000001 /* main.swift */,
 				A20000000000000000000002 /* AppDelegate.swift */,
 				A20000000000000000000017 /* AboutPanelController.swift */,
+				A20000000000000000000018 /* EditorFileDrop.swift */,
 				A20000000000000000000003 /* DistributionChannel.swift */,
 				A20000000000000000000004 /* EditorFontPreferences.swift */,
 				A20000000000000000000005 /* EditorWindowController.swift */,
@@ -218,6 +221,7 @@
 				A10000000000000000000001 /* main.swift in Sources */,
 				A10000000000000000000002 /* AppDelegate.swift in Sources */,
 				A10000000000000000000012 /* AboutPanelController.swift in Sources */,
+				A10000000000000000000013 /* EditorFileDrop.swift in Sources */,
 				A10000000000000000000003 /* DistributionChannel.swift in Sources */,
 				A10000000000000000000004 /* EditorFontPreferences.swift in Sources */,
 				A10000000000000000000005 /* EditorWindowController.swift in Sources */,
