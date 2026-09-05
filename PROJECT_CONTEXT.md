@@ -42,8 +42,8 @@ releases, and macOS-specific distribution preparation.
   - deterministic AppIcon assets;
   - credential-free unsigned builds and universal archive preflight;
   - bilingual Store-preparation material and fail-closed screenshot validation.
-- Exact-head Swift CI and CodeQL passed. The recorded local suite passed
-  161/161 tests. The Save As partial-success finding is corrected and reviewed.
+- Exact-head Swift CI and CodeQL passed, including 161/161 tests in CI.
+  The Save As partial-success finding is corrected and reviewed.
 - Owner foreground evidence, including EN/DE VoiceOver and exact-head Full
   Keyboard Access, is recorded in PR #34 and issues #28/#29. Two genuine EN/DE
   system-menu-bar screenshots and final validation of the complete six-file
