@@ -8,6 +8,7 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
+        .library(name: "NotepadMacCore", targets: ["NotepadMacCore"]),
         .executable(name: "MacPad", targets: ["NotepadMac"])
     ],
     targets: [

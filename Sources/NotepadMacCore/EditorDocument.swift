@@ -2,31 +2,60 @@ import CryptoKit
 import Darwin
 import Foundation
 
-public enum EditorDocumentError: LocalizedError {
+public protocol MacPadLocalizedError: Error {
+    func localizedErrorDescription(using localization: MacPadLocalization) -> String
+}
+
+public func macPadLocalizedDescription(
+    _ error: any Error,
+    using localization: MacPadLocalization
+) -> String {
+    guard let localizedError = error as? any MacPadLocalizedError else {
+        return error.localizedDescription
+    }
+    return localizedError.localizedErrorDescription(using: localization)
+}
+
+public enum EditorDocumentError: LocalizedError, MacPadLocalizedError {
     case fileTooLarge(path: String, sizeBytes: Int64, maximumBytes: Int64)
     case documentTooLargeToSave(path: String, sizeBytes: Int64, maximumBytes: Int64)
     case fileIsNotRegular(path: String)
     case fileChangedOnDisk(path: String)
     case fileCoordinationFailed(path: String)
     case unsupportedTextEncoding(path: String)
-    case textCannotBeSaved(path: String, encoding: String)
+    case textCannotBeSaved(path: String, encoding: TextFileEncoding)
 
     public var errorDescription: String? {
+        localizedErrorDescription(using: MacPadLocalization(bundle: .main))
+    }
+
+    public func localizedErrorDescription(using localization: MacPadLocalization) -> String {
         switch self {
         case let .fileTooLarge(path, sizeBytes, maximumBytes):
-            return "File is too large to open safely: \(path) is \(sizeBytes) bytes, maximum is \(maximumBytes) bytes."
+            return localization.fileTooLarge(
+                path: path,
+                sizeBytes: sizeBytes,
+                maximumBytes: maximumBytes
+            )
         case let .documentTooLargeToSave(path, sizeBytes, maximumBytes):
-            return "Document is too large to save safely: \(path) would be \(sizeBytes) bytes, maximum is \(maximumBytes) bytes."
+            return localization.documentTooLarge(
+                path: path,
+                sizeBytes: sizeBytes,
+                maximumBytes: maximumBytes
+            )
         case let .fileIsNotRegular(path):
-            return "Only regular files can be opened safely: \(path)."
+            return localization.regularFilesOnly(path: path)
         case let .fileChangedOnDisk(path):
-            return "The file changed on disk after MacPad opened it: \(path). Reload it or use Save As to avoid overwriting another edit."
+            return localization.fileChangedOnDisk(path: path)
         case let .fileCoordinationFailed(path):
-            return "macOS did not grant coordinated write access to the file: \(path)."
+            return localization.coordinatedWriteDenied(path: path)
         case let .unsupportedTextEncoding(path):
-            return "File is not readable as supported plain text: \(path)."
+            return localization.unsupportedTextEncoding(path: path)
         case let .textCannotBeSaved(path, encoding):
-            return "The document contains text that cannot be represented as \(encoding): \(path)."
+            return localization.unrepresentableText(
+                encoding: encoding.statusLabel(using: localization),
+                path: path
+            )
         }
     }
 }
@@ -40,21 +69,31 @@ public enum TextFileEncoding: CaseIterable, Equatable, Sendable {
     case isoLatin1
 
     public var statusLabel: String {
+        statusLabel(using: MacPadLocalization(bundle: .main))
+    }
+
+    public func statusLabel(using localization: MacPadLocalization) -> String {
         switch self {
         case .utf8:
-            return "UTF-8"
+            return localization.technicalTerm(.utf8)
         case .utf8WithByteOrderMark:
-            return "UTF-8 BOM"
+            return localization.technicalTerm(.utf8WithByteOrderMark)
         case .utf16LittleEndian:
-            return "UTF-16 LE"
+            return localization.technicalTerm(.utf16LittleEndian)
         case .utf16BigEndian:
-            return "UTF-16 BE"
+            return localization.technicalTerm(.utf16BigEndian)
         case .windows1252:
-            return "Windows-1252"
+            return localization.technicalTerm(.windows1252)
         case .isoLatin1:
-            return "ISO-8859-1"
+            return localization.technicalTerm(.iso88591)
         }
     }
+}
+
+public struct WrittenDocumentSave: Sendable {
+    fileprivate let savedURL: URL
+    fileprivate let encoding: TextFileEncoding
+    fileprivate let outputData: Data
 }
 
 public final class EditorDocument {
@@ -62,6 +101,7 @@ public final class EditorDocument {
 
     public private(set) var id: String
     public private(set) var fileURL: URL?
+    public private(set) var fileReference: PersistedFileReference?
     public private(set) var text: String
     public private(set) var originalText: String
     public private(set) var lineEnding: LineEnding
@@ -80,6 +120,9 @@ public final class EditorDocument {
     ) {
         self.id = id
         self.fileURL = fileURL
+        self.fileReference = fileURL.map {
+            PersistedFileReference(path: $0.path, bookmarkData: nil)
+        }
         self.text = text
         self.originalText = originalText
         self.lineEnding = lineEnding
@@ -90,17 +133,33 @@ public final class EditorDocument {
     }
 
     public var displayName: String {
-        fileURL?.lastPathComponent ?? "Untitled"
+        displayName(using: MacPadLocalization(bundle: .main))
+    }
+
+    public func displayName(using localization: MacPadLocalization) -> String {
+        fileURL?.lastPathComponent ?? localization.string(.untitled)
     }
 
     public func loadFile(_ url: URL) throws {
         let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
+        let preservedBookmarkData: Data? = if fileURL?.resolvingSymlinksInPath().standardizedFileURL
+            == resolvedURL {
+            fileReference?.bookmarkData
+        } else {
+            nil
+        }
         let data = try Self.readBoundedRegularFile(resolvedURL)
         let decodedText = try Self.decodeText(data, path: resolvedURL.path)
         let loadedText = decodedText.text
 
         id = UUID().uuidString
         fileURL = resolvedURL
+        attachFileReference(
+            PersistedFileReference(
+                path: resolvedURL.path,
+                bookmarkData: preservedBookmarkData
+            )
+        )
         text = loadedText
         originalText = loadedText
         lineEnding = LineEnding.detected(in: loadedText)
@@ -133,21 +192,66 @@ public final class EditorDocument {
     public func save(to url: URL, encoding: TextFileEncoding) throws {
         let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
         let isCurrentFile = fileURL?.standardizedFileURL == resolvedURL
-        let outputData = try encodedData(path: resolvedURL.path, encoding: encoding)
-        guard outputData.count <= Self.maximumReadableFileBytes else {
-            throw EditorDocumentError.documentTooLargeToSave(
-                path: resolvedURL.path,
-                sizeBytes: Int64(outputData.count),
-                maximumBytes: Self.maximumReadableFileBytes
-            )
+        if isCurrentFile {
+            try saveCurrentFile(at: resolvedURL, encoding: encoding)
+            return
         }
 
-        let savedURL = if isCurrentFile {
-            try coordinatedOverwriteCurrentFile(outputData, at: resolvedURL)
-        } else {
-            try coordinatedWrite(outputData, to: resolvedURL)
-        }
+        let writtenSave = try writeNewFile(to: resolvedURL, encoding: encoding)
+        commitNewFileSave(writtenSave, bookmarkData: nil)
+    }
+
+    public func writeNewFile(
+        to url: URL,
+        encoding: TextFileEncoding
+    ) throws -> WrittenDocumentSave {
+        let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
+        let outputData = try savableData(path: resolvedURL.path, encoding: encoding)
+        let savedURL = try coordinatedWrite(outputData, to: resolvedURL)
+        return WrittenDocumentSave(
+            savedURL: savedURL,
+            encoding: encoding,
+            outputData: outputData
+        )
+    }
+
+    public func commitNewFileSave(
+        _ writtenSave: WrittenDocumentSave,
+        bookmarkData: Data?
+    ) {
+        recordSuccessfulSave(
+            at: writtenSave.savedURL,
+            encoding: writtenSave.encoding,
+            outputData: writtenSave.outputData,
+            bookmarkData: bookmarkData
+        )
+    }
+
+    public func saveCurrentFile(at url: URL, encoding: TextFileEncoding) throws {
+        let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
+        let outputData = try savableData(path: resolvedURL.path, encoding: encoding)
+        let savedURL = try coordinatedOverwriteCurrentFile(outputData, at: resolvedURL)
+        recordSuccessfulSave(
+            at: savedURL,
+            encoding: encoding,
+            outputData: outputData,
+            bookmarkData: fileReference?.bookmarkData
+        )
+    }
+
+    private func recordSuccessfulSave(
+        at savedURL: URL,
+        encoding: TextFileEncoding,
+        outputData: Data,
+        bookmarkData: Data?
+    ) {
         fileURL = savedURL
+        attachFileReference(
+            PersistedFileReference(
+                path: savedURL.path,
+                bookmarkData: bookmarkData
+            )
+        )
         originalText = text
         textEncoding = encoding
         shouldRestoreInSession = true
@@ -157,7 +261,10 @@ public final class EditorDocument {
 
     public func restoreSessionState(_ state: EditorSessionState) {
         id = state.id
-        fileURL = state.filePath.map(URL.init(fileURLWithPath:))
+        fileReference = state.fileReference
+        fileURL = state.fileReference.map {
+            URL(fileURLWithPath: $0.path)
+        }
         text = ""
         originalText = ""
         lineEnding = state.lineEnding
@@ -168,13 +275,15 @@ public final class EditorDocument {
     }
 
     public func restoreSessionStateAndReloadFile(_ state: EditorSessionState) throws {
-        guard let filePath = state.filePath else {
+        guard let fileReference = state.fileReference else {
             restoreSessionState(state)
             return
         }
 
-        try loadFile(URL(fileURLWithPath: filePath))
+        try loadFile(URL(fileURLWithPath: fileReference.path))
         id = state.id
+        attachFileReference(fileReference)
+        lineEnding = state.lineEnding
     }
 
     public func sessionState(
@@ -186,12 +295,24 @@ public final class EditorDocument {
         guard shouldRestoreInSession else { return nil }
         return EditorSessionState(
             id: id,
-            filePath: fileURL?.path,
+            fileReference: fileReference,
             selectedLocation: selectedLocation,
             wordWrapEnabled: wordWrapEnabled,
             statusBarVisible: statusBarVisible,
             zoomPercent: zoomPercent,
             lineEnding: lineEnding
+        )
+    }
+
+    public func attachFileReference(_ reference: PersistedFileReference) {
+        guard let fileURL else {
+            preconditionFailure("Cannot attach a file reference to an untitled document.")
+        }
+        let resolvedURL = fileURL.resolvingSymlinksInPath().standardizedFileURL
+        self.fileURL = resolvedURL
+        fileReference = PersistedFileReference(
+            path: resolvedURL.path,
+            bookmarkData: reference.bookmarkData
         )
     }
 
@@ -212,28 +333,40 @@ public final class EditorDocument {
             return Data([0xEF, 0xBB, 0xBF]) + Data(outputText.utf8)
         case .utf16LittleEndian:
             guard let data = outputText.data(using: .utf16LittleEndian, allowLossyConversion: false) else {
-                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding.statusLabel)
+                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding)
             }
             return Data([0xFF, 0xFE]) + data
         case .utf16BigEndian:
             guard let data = outputText.data(using: .utf16BigEndian, allowLossyConversion: false) else {
-                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding.statusLabel)
+                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding)
             }
             return Data([0xFE, 0xFF]) + data
         case .windows1252:
             guard let data = outputText.data(using: .windowsCP1252, allowLossyConversion: false) else {
-                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding.statusLabel)
+                throw EditorDocumentError.textCannotBeSaved(path: path, encoding: encoding)
             }
             return data
         case .isoLatin1:
             guard let data = outputText.data(using: .isoLatin1, allowLossyConversion: false) else {
                 throw EditorDocumentError.textCannotBeSaved(
                     path: path,
-                    encoding: encoding.statusLabel
+                    encoding: encoding
                 )
             }
             return data
         }
+    }
+
+    private func savableData(path: String, encoding: TextFileEncoding) throws -> Data {
+        let outputData = try encodedData(path: path, encoding: encoding)
+        guard outputData.count <= Self.maximumReadableFileBytes else {
+            throw EditorDocumentError.documentTooLargeToSave(
+                path: path,
+                sizeBytes: Int64(outputData.count),
+                maximumBytes: Self.maximumReadableFileBytes
+            )
+        }
+        return outputData
     }
 
     private func verifyFileHasNotChanged(_ url: URL) throws {

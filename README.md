@@ -47,17 +47,25 @@ If macOS warns that the app is from an unidentified developer, right-click `MacP
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
+## App Store preparation
+
+Repository-local English and German metadata drafts, privacy and support
+copy, compliance evidence, and unresolved owner gates are tracked in
+[App Store preparation](docs/app-store-preparation.md). This is preparation
+material only: it does not mean MacPad has been production-signed, notarized,
+submitted, approved, distributed, or published on the Mac App Store.
+
 ## Features
 
 - Plain-text editing with native undo, cut, copy, paste, delete, and select all
-- New, open, Open Recent, save, save as, and print
+- New Document, New Tab, New Window, open, Open Recent, save, save as, and print
 - Multiple windows, each with multiple tabs
-- New tabs and new windows, including separate windows with their own tab groups
+- New Document opens in the active tab group when one exists; New Window always stays separate
 - Optional OFF-by-default menu-bar launcher for opening a new empty window with one click
-- Session restore for window positions, selected tabs, tab groups, saved file tabs, and editor UI state without storing document text in preferences
+- Every normal launch opens one new blank document; saved files remain available through Open Recent instead of reopening automatically
 - Unsaved-change prompts when closing or quitting
-- Find, find next/previous, replace, and replace all with Match Case and Wrap Around options
-- Standard shortcuts including `Command-T` for a new tab, `Command-N` for a new window, and `Option-Command-F` for Replace
+- A native Find submenu with find, find next/previous, replace, and replace all controls using Match Case and Wrap Around options
+- Standard shortcuts including `Command-N` for a new document, `Command-T` for a new tab, and `Option-Command-F` for Replace
 - Go to line and insert current time/date
 - Word wrap toggle
 - App-wide persistent font chooser and per-tab zoom controls
@@ -106,7 +114,7 @@ swift test
 
 ## Community
 
-- Read the [wiki](https://github.com/anvilfilbert/MacPad/wiki) for usage details.
+- Use [MacPad Support](https://macpad.net/support) for help and usage details; the route is a release gate until the approved site is live.
 - Use [Discussions](https://github.com/anvilfilbert/MacPad/discussions) for questions and ideas.
 - Open an [issue](https://github.com/anvilfilbert/MacPad/issues/new/choose) for a reproducible bug or focused feature request.
 - See [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.

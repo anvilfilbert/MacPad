@@ -4,6 +4,30 @@ import Testing
 
 @Suite("Editor font preference")
 struct EditorFontPreferenceTests {
+    @Test("font preference errors use the injected German bundle")
+    func localizesFontPreferenceErrors() throws {
+        try LocalizationFixture.with(
+            languageCode: "de",
+            strings: [
+                MacPadStringKey.emptyFontName.rawValue:
+                    "Der Name der Editorschrift darf nicht leer sein.",
+                MacPadStringKey.invalidFontPointSize.rawValue:
+                    "Die Größe der Editorschrift muss zwischen 6 und 72 Punkt liegen: %1$g."
+            ]
+        ) { localization in
+            #expect(
+                EditorFontPreferenceError.emptyPostScriptName
+                    .localizedErrorDescription(using: localization)
+                    == "Der Name der Editorschrift darf nicht leer sein."
+            )
+            #expect(
+                EditorFontPreferenceError.invalidPointSize(73)
+                    .localizedErrorDescription(using: localization)
+                    == "Die Größe der Editorschrift muss zwischen 6 und 72 Punkt liegen: 73."
+            )
+        }
+    }
+
     @Test("valid preferences round-trip through JSON")
     func roundTripsThroughJSON() throws {
         let preference = try EditorFontPreference(

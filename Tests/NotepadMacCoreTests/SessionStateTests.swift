@@ -4,6 +4,109 @@ import Testing
 
 @Suite("Session state")
 struct SessionStateTests {
+    @Test("legacy filePath JSON migrates to a path-only reference")
+    func migratesLegacyFilePath() throws {
+        let data = Data(#"{"id":"legacy","filePath":"/tmp/legacy.txt"}"#.utf8)
+
+        let state = try JSONDecoder().decode(EditorSessionState.self, from: data)
+
+        #expect(
+            state.fileReference
+                == PersistedFileReference(path: "/tmp/legacy.txt", bookmarkData: nil)
+        )
+        #expect(state.filePath == "/tmp/legacy.txt")
+    }
+
+    @Test("new file reference with bookmark bytes round-trips")
+    func roundTripsNewFileReference() throws {
+        let reference = PersistedFileReference(
+            path: "/tmp/bookmarked.txt",
+            bookmarkData: Data([0x00, 0x80, 0xFF])
+        )
+        let state = EditorSessionState(
+            id: "bookmarked",
+            fileReference: reference,
+            selectedLocation: 8,
+            wordWrapEnabled: false,
+            statusBarVisible: true,
+            zoomPercent: 125,
+            lineEnding: .unix
+        )
+
+        let encoded = try JSONEncoder().encode(state)
+        let decoded = try JSONDecoder().decode(EditorSessionState.self, from: encoded)
+
+        #expect(decoded == state)
+        #expect(decoded.fileReference == reference)
+        #expect(decoded.filePath == reference.path)
+    }
+
+    @Test("encoded session uses only fileReference and excludes document text")
+    func encodesOnlyNewFileFieldAndNoText() throws {
+        let state = EditorSessionState(
+            id: "bookmarked",
+            fileReference: PersistedFileReference(
+                path: "/tmp/bookmarked.txt",
+                bookmarkData: Data([0xAB, 0xCD])
+            ),
+            selectedLocation: 0,
+            wordWrapEnabled: true,
+            statusBarVisible: true,
+            zoomPercent: 100,
+            lineEnding: .windows
+        )
+
+        let encoded = try JSONEncoder().encode(state)
+        let fields = try JSONDecoder().decode(JSONObjectKeySet.self, from: encoded)
+
+        #expect(fields.keys.contains("fileReference"))
+        #expect(!fields.keys.contains("filePath"))
+        #expect(!fields.keys.contains("text"))
+        #expect(!fields.keys.contains("originalText"))
+    }
+
+    @Test("untitled session encodes neither file field")
+    func untitledSessionEncodesNoFileField() throws {
+        let state = EditorSessionState(
+            id: "untitled",
+            fileReference: nil,
+            selectedLocation: 0,
+            wordWrapEnabled: true,
+            statusBarVisible: true,
+            zoomPercent: 100,
+            lineEnding: .windows
+        )
+
+        let encoded = try JSONEncoder().encode(state)
+        let fields = try JSONDecoder().decode(JSONObjectKeySet.self, from: encoded)
+
+        #expect(!fields.keys.contains("fileReference"))
+        #expect(!fields.keys.contains("filePath"))
+    }
+
+    @Test("explicit null fileReference overrides a legacy filePath")
+    func explicitNullNewReferenceIsAuthoritative() throws {
+        let data = Data(
+            #"{"id":"untitled","fileReference":null,"filePath":"/tmp/legacy.txt"}"#.utf8
+        )
+
+        let state = try JSONDecoder().decode(EditorSessionState.self, from: data)
+
+        #expect(state.fileReference == nil)
+        #expect(state.filePath == nil)
+    }
+
+    @Test("malformed new bookmark fails even when legacy filePath is valid")
+    func malformedNewBookmarkFailsClosed() {
+        let data = Data(
+            #"{"id":"invalid","fileReference":{"path":"/tmp/new.txt","bookmarkData":"%%%"},"filePath":"/tmp/legacy.txt"}"#.utf8
+        )
+
+        #expect(throws: DecodingError.self) {
+            try JSONDecoder().decode(EditorSessionState.self, from: data)
+        }
+    }
+
     @Test("decoded zoom is bounded to supported values")
     func boundsDecodedZoom() throws {
         let data = Data(
@@ -160,5 +263,29 @@ struct SessionStateTests {
             zoomPercent: 100,
             lineEnding: .windows
         )
+    }
+}
+
+private struct JSONObjectKeySet: Decodable {
+    let keys: Set<String>
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: JSONKey.self)
+        keys = Set(container.allKeys.map(\.stringValue))
+    }
+}
+
+private struct JSONKey: CodingKey {
+    let stringValue: String
+    let intValue: Int?
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        self.intValue = nil
+    }
+
+    init?(intValue: Int) {
+        self.stringValue = String(intValue)
+        self.intValue = intValue
     }
 }

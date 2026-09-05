@@ -19,6 +19,46 @@ private actor EditorTextAnalyzer {
     }
 }
 
+struct SuccessfulFileTransition: Equatable, Sendable {
+    let previousReference: PersistedFileReference?
+    let currentReference: PersistedFileReference
+}
+
+struct GoToLineAlertPresentation {
+    let alert: NSAlert
+    let input: NSTextField
+
+    @MainActor
+    func prepareForPresentation() {
+        alert.layout()
+        alert.window.initialFirstResponder = input
+    }
+}
+
+@MainActor
+enum GoToLineAlertFactory {
+    static func makeAlert(
+        currentLine: Int,
+        localization: MacPadLocalization
+    ) -> GoToLineAlertPresentation {
+        let alert = NSAlert()
+        alert.messageText = localization.string(.goToLineTitle)
+        alert.informativeText = localization.string(.lineNumberLabel)
+        let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+        input.stringValue = "\(currentLine)"
+        input.identifier = NSUserInterfaceItemIdentifier("goTo.lineNumber")
+        input.setAccessibilityLabel(localization.string(.lineNumber))
+        alert.accessoryView = input
+        let goToButton = alert.addButton(withTitle: localization.string(.goToLine))
+        goToButton.identifier = NSUserInterfaceItemIdentifier("goTo.action")
+        goToButton.setAccessibilityLabel(localization.string(.goToLine))
+        let cancelButton = alert.addButton(withTitle: localization.string(.cancel))
+        cancelButton.identifier = NSUserInterfaceItemIdentifier("action.cancel")
+        cancelButton.keyEquivalent = "\u{1b}"
+        return GoToLineAlertPresentation(alert: alert, input: input)
+    }
+}
+
 final class EditorWindowController: NSWindowController, NSWindowDelegate, NSTextViewDelegate {
     static var defaultEditorFont: NSFont {
         NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
@@ -28,12 +68,14 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     var onStateChange: (() -> Void)?
     var onActivate: (() -> Void)?
     var onFontChange: ((NSFont) -> Void)?
-    var onSuccessfulSave: ((URL) -> Void)?
+    var onSuccessfulSave: ((SuccessfulFileTransition) -> Void)?
 
     private let scrollView = NSScrollView()
     private let textView = NSTextView()
     private let statusBar = NSTextField(labelWithString: "")
     private let editorDocument = EditorDocument()
+    private let localization: MacPadLocalization
+    private let fileAccess: SecurityScopedFileAccess
     private var lastFindTerm = ""
     private var lastFindOptions = FindOptions(matchCase: false, wrapAround: true)
     private var findPanelController: FindPanelController?
@@ -47,12 +89,25 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private let textAnalyzer = EditorTextAnalyzer()
     private var pendingTextAnalysisTask: Task<Void, Never>?
 
-    convenience init() {
-        self.init(baseFont: Self.defaultEditorFont)
+    convenience init(
+        localization: MacPadLocalization,
+        fileAccess: SecurityScopedFileAccess
+    ) {
+        self.init(
+            baseFont: Self.defaultEditorFont,
+            localization: localization,
+            fileAccess: fileAccess
+        )
     }
 
-    init(baseFont: NSFont) {
+    init(
+        baseFont: NSFont,
+        localization: MacPadLocalization,
+        fileAccess: SecurityScopedFileAccess
+    ) {
         self.baseFont = baseFont
+        self.localization = localization
+        self.fileAccess = fileAccess
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 820, height: 580),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
@@ -60,12 +115,12 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
             defer: false
         )
         super.init(window: window)
-        window.title = "Untitled - MacPad"
         window.delegate = self
         window.tabbingMode = .preferred
         window.tabbingIdentifier = "MacPadEditor"
         window.center()
         setupUI()
+        updateTitle()
         updateStatusBar()
     }
 
@@ -77,8 +132,20 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         editorDocument.fileURL
     }
 
-    func loadFile(_ url: URL) throws {
-        try editorDocument.loadFile(url)
+    var fileReference: PersistedFileReference? {
+        editorDocument.fileReference
+    }
+
+    func loadGrantedFile(_ url: URL) throws {
+        let reference = try fileAccess.makeReference(for: url)
+        try loadFile(reference)
+    }
+
+    func loadFile(_ reference: PersistedFileReference) throws {
+        let result = try fileAccess.access(reference) { resolvedURL in
+            try editorDocument.loadFile(resolvedURL)
+        }
+        editorDocument.attachFileReference(result.refreshedReference)
         textView.string = editorDocument.text
         refreshLineIndexNow()
         updateTitle()
@@ -96,7 +163,22 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     func restoreSessionState(_ state: EditorSessionState) throws {
-        try editorDocument.restoreSessionStateAndReloadFile(state)
+        if let reference = state.fileReference {
+            let result = try fileAccess.access(reference) { resolvedURL in
+                try editorDocument.restoreSessionStateAndReloadFile(
+                    replacingFileReference(
+                        in: state,
+                        with: PersistedFileReference(
+                            path: resolvedURL.path,
+                            bookmarkData: nil
+                        )
+                    )
+                )
+            }
+            editorDocument.attachFileReference(result.refreshedReference)
+        } else {
+            editorDocument.restoreSessionState(state)
+        }
         textView.string = editorDocument.text
         refreshLineIndexNow()
         wordWrapEnabled = state.wordWrapEnabled
@@ -114,8 +196,8 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     @objc func save(_ sender: Any?) {
-        if let fileURL = editorDocument.fileURL {
-            write(to: fileURL)
+        if editorDocument.fileReference != nil {
+            writeCurrent()
         } else {
             saveAs(sender)
         }
@@ -124,13 +206,20 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     @objc func saveAs(_ sender: Any?) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.plainText]
-        panel.nameFieldStringValue = editorDocument.fileURL?.lastPathComponent ?? "Untitled.txt"
-        let encodingAccessory = SaveEncodingAccessory(selectedEncoding: editorDocument.textEncoding)
+        panel.nameFieldStringValue = editorDocument.fileURL?.lastPathComponent
+            ?? localization.string(.untitledFileName)
+        let encodingAccessory = SaveEncodingAccessory(
+            selectedEncoding: editorDocument.textEncoding,
+            localization: localization
+        )
         panel.accessoryView = encodingAccessory.view
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         guard let selectedEncoding = encodingAccessory.selectedEncoding else {
-            showError("Could not save the file.", detail: "No valid text encoding was selected.")
+            showError(
+                localization.string(.saveFailure),
+                detail: localization.string(.invalidTextEncoding)
+            )
             return
         }
         write(to: url, encoding: selectedEncoding)
@@ -172,19 +261,16 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
 
     @objc func goToLine(_ sender: Any?) {
         refreshLineIndexNow()
-        let alert = NSAlert()
-        alert.messageText = "Go To Line"
-        alert.informativeText = "Line number:"
-        let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
-        input.stringValue = "\(lineIndex.cursorPosition(selectedLocation: textView.selectedRange().location).line)"
-        input.identifier = NSUserInterfaceItemIdentifier("goTo.lineNumber")
-        input.setAccessibilityLabel("Line number")
-        alert.accessoryView = input
-        alert.addButton(withTitle: "Go To")
-        alert.addButton(withTitle: "Cancel")
+        let presentation = GoToLineAlertFactory.makeAlert(
+            currentLine: lineIndex.cursorPosition(
+                selectedLocation: textView.selectedRange().location
+            ).line,
+            localization: localization
+        )
+        presentation.prepareForPresentation()
 
-        guard alert.runModal() == .alertFirstButtonReturn,
-              let lineNumber = Int(input.stringValue),
+        guard presentation.alert.runModal() == .alertFirstButtonReturn,
+              let lineNumber = Int(presentation.input.stringValue),
               lineNumber > 0 else { return }
         selectLine(lineNumber)
     }
@@ -231,7 +317,10 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
             applyPreferredFont(convertedFont)
             onFontChange?(convertedFont)
         } catch {
-            showError("Could not use the selected font.", detail: error.localizedDescription)
+            showError(
+                localization.string(.fontUseFailure),
+                detail: macPadLocalizedDescription(error, using: localization)
+            )
         }
     }
 
@@ -245,11 +334,14 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         guard editorDocument.hasUnsavedChanges else { return true }
 
         let alert = NSAlert()
-        alert.messageText = "Do you want to save changes to this document?"
-        alert.informativeText = "Your changes will be lost if you do not save them."
-        alert.addButton(withTitle: "Save")
-        alert.addButton(withTitle: "Don't Save")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = localization.string(.unsavedChangesQuestion)
+        alert.informativeText = localization.string(.unsavedChangesWarning)
+        let saveButton = alert.addButton(withTitle: localization.string(.save))
+        saveButton.identifier = NSUserInterfaceItemIdentifier("document.save")
+        let dontSaveButton = alert.addButton(withTitle: localization.string(.dontSave))
+        dontSaveButton.identifier = NSUserInterfaceItemIdentifier("document.dontSave")
+        let cancelButton = alert.addButton(withTitle: localization.string(.cancel))
+        cancelButton.identifier = NSUserInterfaceItemIdentifier("document.cancel")
         alert.alertStyle = .warning
 
         switch alert.runModal() {
@@ -340,7 +432,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         textView.autoresizingMask = [.width]
         textView.enabledTextCheckingTypes = NSTextCheckingResult.CheckingType.spelling.rawValue
         textView.identifier = NSUserInterfaceItemIdentifier("editor.text")
-        textView.setAccessibilityLabel("Document text")
+        textView.setAccessibilityLabel(localization.string(.documentText))
 
         scrollView.documentView = textView
         stack.addArrangedSubview(scrollView)
@@ -355,7 +447,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         statusBar.setContentHuggingPriority(.required, for: .vertical)
         statusBar.heightAnchor.constraint(equalToConstant: 24).isActive = true
         statusBar.identifier = NSUserInterfaceItemIdentifier("editor.status")
-        statusBar.setAccessibilityLabel("Document status")
+        statusBar.setAccessibilityLabel(localization.string(.documentStatus))
         stack.addArrangedSubview(statusBar)
 
         applyWordWrap()
@@ -395,6 +487,7 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     private func makeFindPanel(showReplace: Bool) {
         if findPanelController == nil {
             findPanelController = FindPanelController(
+                localization: localization,
                 onFindNext: { [weak self] term, options in
                     self?.find(term: term, backwards: false, options: options)
                 },
@@ -497,7 +590,9 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
     }
 
     private func updateTitle() {
-        window?.title = "\(editorDocument.displayName) - MacPad"
+        window?.title = localization.windowTitle(
+            documentName: editorDocument.displayName(using: localization)
+        )
         window?.representedURL = editorDocument.fileURL
         window?.isDocumentEdited = editorDocument.hasUnsavedChanges
     }
@@ -506,7 +601,13 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         guard statusBarVisible,
               appliedLineIndexGeneration == lineIndexGeneration else { return }
         let position = lineIndex.cursorPosition(selectedLocation: textView.selectedRange().location)
-        statusBar.stringValue = "Ln \(position.line), Col \(position.column)  |  \(zoomPercent)%  |  \(editorDocument.lineEnding.statusLabel)  |  \(editorDocument.textEncoding.statusLabel)"
+        statusBar.stringValue = localization.statusLine(
+            line: position.line,
+            column: position.column,
+            zoom: zoomPercent,
+            lineEnding: editorDocument.lineEnding.statusLabel(using: localization),
+            encoding: editorDocument.textEncoding.statusLabel(using: localization)
+        )
     }
 
     private func scheduleTextAnalysis(for text: String, originalText: String) {
@@ -556,23 +657,29 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         await task?.value
     }
 
-    private func resolveExternalFileChange(at url: URL) {
+    private func resolveExternalFileChange() {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "This file changed outside MacPad."
-        alert.informativeText = "Save your MacPad edits to another file, reload the version on disk, or cancel to keep editing."
-        alert.addButton(withTitle: "Save As...")
-        alert.addButton(withTitle: "Reload from Disk")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = localization.string(.externalChangeTitle)
+        alert.informativeText = localization.string(.externalChangeGuidance)
+        let saveAsButton = alert.addButton(withTitle: localization.string(.saveAs))
+        saveAsButton.identifier = NSUserInterfaceItemIdentifier("conflict.saveAs")
+        let reloadButton = alert.addButton(withTitle: localization.string(.reloadFromDisk))
+        reloadButton.identifier = NSUserInterfaceItemIdentifier("conflict.reload")
+        let cancelButton = alert.addButton(withTitle: localization.string(.cancel))
+        cancelButton.identifier = NSUserInterfaceItemIdentifier("conflict.cancel")
 
         switch alert.runModal() {
         case .alertFirstButtonReturn:
             saveAs(nil)
         case .alertSecondButtonReturn:
             do {
-                try loadFile(url)
+                try reloadDocument()
             } catch {
-                showError("Could not reload the file.", detail: error.localizedDescription)
+                showError(
+                    localization.string(.reloadFailure),
+                    detail: macPadLocalizedDescription(error, using: localization)
+                )
             }
         default:
             break
@@ -603,18 +710,93 @@ final class EditorWindowController: NSWindowController, NSWindowDelegate, NSText
         do {
             try saveDocument(to: url, encoding: encoding)
         } catch EditorDocumentError.fileChangedOnDisk {
-            resolveExternalFileChange(at: url)
+            resolveExternalFileChange()
         } catch {
-            showError("Could not save the file.", detail: error.localizedDescription)
+            showError(
+                localization.string(.saveFailure),
+                detail: macPadLocalizedDescription(error, using: localization)
+            )
+        }
+    }
+
+    private func writeCurrent() {
+        do {
+            try saveCurrentDocument(encoding: editorDocument.textEncoding)
+        } catch EditorDocumentError.fileChangedOnDisk {
+            resolveExternalFileChange()
+        } catch {
+            showError(
+                localization.string(.saveFailure),
+                detail: macPadLocalizedDescription(error, using: localization)
+            )
         }
     }
 
     func saveDocument(to url: URL, encoding: TextFileEncoding) throws {
+        let previousReference = editorDocument.fileReference
         editorDocument.updateText(textView.string)
-        try editorDocument.save(to: url, encoding: encoding)
+        let result = try fileAccess.accessGrantedURL(url) { grantedURL in
+            try editorDocument.writeNewFile(to: grantedURL, encoding: encoding)
+        }
+        editorDocument.commitNewFileSave(
+            result.value,
+            bookmarkData: result.refreshedReference.bookmarkData
+        )
+        finishSuccessfulSave(previousReference: previousReference)
+    }
+
+    func saveCurrentDocument(encoding: TextFileEncoding) throws {
+        guard let previousReference = editorDocument.fileReference else {
+            throw SecurityScopedFileAccessError.missingPersistentAccess(
+                path: editorDocument.fileURL?.path ?? ""
+            )
+        }
+        editorDocument.updateText(textView.string)
+        let result = try fileAccess.access(previousReference) { resolvedURL in
+            try editorDocument.saveCurrentFile(at: resolvedURL, encoding: encoding)
+        }
+        editorDocument.attachFileReference(result.refreshedReference)
+        finishSuccessfulSave(previousReference: previousReference)
+    }
+
+    func reloadDocument() throws {
+        guard let reference = editorDocument.fileReference else {
+            throw SecurityScopedFileAccessError.missingPersistentAccess(
+                path: editorDocument.fileURL?.path ?? ""
+            )
+        }
+        try loadFile(reference)
+    }
+
+    private func finishSuccessfulSave(
+        previousReference: PersistedFileReference?
+    ) {
         updateTitle()
         updateStatusBar()
         notifyStateChanged()
-        onSuccessfulSave?(editorDocument.fileURL ?? url.standardizedFileURL)
+        guard let currentReference = editorDocument.fileReference else {
+            preconditionFailure("A successful file save must attach a file reference.")
+        }
+        onSuccessfulSave?(
+            SuccessfulFileTransition(
+                previousReference: previousReference,
+                currentReference: currentReference
+            )
+        )
+    }
+
+    private func replacingFileReference(
+        in state: EditorSessionState,
+        with reference: PersistedFileReference
+    ) -> EditorSessionState {
+        EditorSessionState(
+            id: state.id,
+            fileReference: reference,
+            selectedLocation: state.selectedLocation,
+            wordWrapEnabled: state.wordWrapEnabled,
+            statusBarVisible: state.statusBarVisible,
+            zoomPercent: state.zoomPercent,
+            lineEnding: state.lineEnding
+        )
     }
 }
