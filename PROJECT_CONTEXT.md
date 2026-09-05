@@ -30,8 +30,8 @@ releases, and macOS-specific distribution preparation.
 - The implementation base for PR #34 is product commit `59c1e66`.
 - PR #34, `Implement English/German localization and Store preparation
   foundations`, is open and mergeable on `codex/localization-app-store-prep`.
-- Its exact verified head at reconciliation is `7cf22e9`; it is ready for review,
-  not draft, and remains unmerged.
+- Its accepted runtime head is `7cf22e9`; it is ready for review, not draft, and
+  remains unmerged. The follow-up adds screenshot evidence and documentation only.
 - Repository-local implementation in PR #34 includes:
   - English/German native localization and compiled resources;
   - bookmark-backed security-scoped access and Open Recent;
@@ -45,9 +45,9 @@ releases, and macOS-specific distribution preparation.
 - Exact-head Swift CI and CodeQL passed, including 161/161 tests in CI.
   The Save As partial-success finding is corrected and reviewed.
 - Owner foreground evidence, including EN/DE VoiceOver and exact-head Full
-  Keyboard Access, is recorded in PR #34 and issues #28/#29. Two genuine EN/DE
-  system-menu-bar screenshots and final validation of the complete six-file
-  screenshot set remain before final acceptance and merge review.
+  Keyboard Access, is recorded in PR #34 and issues #28/#29. All six genuine
+  EN/DE screenshots now pass final validation; final exact-head merge review
+  remains. See `docs/verification/app-store-local-smoke.md` for provenance.
 - Signed Store sandbox/migration proof remains a separate owner gate.
 - Issue #30 is closed after verified Launch Services cleanup.
 - PR #35 implements issue #31 at `466a236`; the owner verified that dragging
@@ -56,8 +56,8 @@ releases, and macOS-specific distribution preparation.
 - Open issues:
   - #28: Mac App Store preparation; implementation substantially complete but
     manual, owner, and Apple gates remain.
-  - #29: English/German localization; code/resources are implemented but final
-    foreground/manual evidence remains.
+  - #29: English/German localization; implementation and foreground evidence
+    are complete, pending final review and merge disposition.
   - #31: dragging a supported file inserts its path instead of opening it.
 - Issue #32 was closed as a duplicate of #30.
 - The bilingual family website is deployed and verified at `https://macpad.net`.

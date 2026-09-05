@@ -1,0 +1,81 @@
+{
+  "sourceCommit": "7cf22e9abbafc45860a5efaa726450f459028e0d",
+  "captureBundleIdentifier": "local.macpad.app.acceptance.capture7cf22e9",
+  "captureExecutableSHA256": "13c569fc818d79508b692fbff5acced7ff7739ca2a5fa7f73d1f58b30cc834cd",
+  "processing": "Native CoreGraphics sRGB conversion, alpha compositing over black, integer center padding. No resizing, cropping, generative editing, or UI reconstruction.",
+  "validation": "Repository validate-store-screenshots.sh passed 6/6; native-size center RGB verified against equally converted/flattened originals; visual review completed.",
+  "files": [
+    {
+      "canvasHeight": 900,
+      "canvasWidth": 1440,
+      "contentRGBVerified": true,
+      "file": "en/01-menu-bar.png",
+      "normalizedSHA256": "a833868bc63230f654aaf350e604274f04fdd5d81b15b71a1cadabb0daba055a",
+      "offsetX": 308,
+      "offsetY": 127,
+      "originalSHA256": "34f715244f05069fffdbf85b98846925aa3139454d03f6a715dadbdcb9b8145f",
+      "sourceHeight": 645,
+      "sourceWidth": 824
+    },
+    {
+      "canvasHeight": 900,
+      "canvasWidth": 1440,
+      "contentRGBVerified": true,
+      "file": "en/02-editor-tabs.png",
+      "normalizedSHA256": "b93082152ac9663b4a31c4643ace2e0819c6e8332c1a747aca5e263a15698d64",
+      "offsetX": 254,
+      "offsetY": 88,
+      "originalSHA256": "70c17fada06e8b02b366adf5a9a4583787c588e135b5076d2b9c7d222793ca14",
+      "sourceHeight": 724,
+      "sourceWidth": 932
+    },
+    {
+      "canvasHeight": 900,
+      "canvasWidth": 1440,
+      "contentRGBVerified": true,
+      "file": "en/03-safe-conflict.png",
+      "normalizedSHA256": "361c5ff2c91686d00165f7108261cb2b1f4d4d01f8e122785883fca17b7db67a",
+      "offsetX": 307,
+      "offsetY": 144,
+      "originalSHA256": "65778d6460503e0518131c1881e223c73902dc4047ec3d80aa5d4463b92125fd",
+      "sourceHeight": 611,
+      "sourceWidth": 825
+    },
+    {
+      "canvasHeight": 900,
+      "canvasWidth": 1440,
+      "contentRGBVerified": true,
+      "file": "de/01-menu-bar.png",
+      "normalizedSHA256": "7f9d4a1287770704dc4f78a2e0cfdaaece244795bfe7085e188e1831866aca7e",
+      "offsetX": 304,
+      "offsetY": 124,
+      "originalSHA256": "2b5326d8f939ae81c739504992029f4e68a7fbd2c4885706218af757b71c00a6",
+      "sourceHeight": 651,
+      "sourceWidth": 832
+    },
+    {
+      "canvasHeight": 900,
+      "canvasWidth": 1440,
+      "contentRGBVerified": true,
+      "file": "de/02-editor-tabs.png",
+      "normalizedSHA256": "23905a7334202d168f04bd5c62fe8febcabeec3128d35ff9dd1f5715e0392d6c",
+      "offsetX": 254,
+      "offsetY": 88,
+      "originalSHA256": "94de83f618bcb8bcb31e69ef3320c43a7808f355e34953dbf94772686b63ff07",
+      "sourceHeight": 724,
+      "sourceWidth": 932
+    },
+    {
+      "canvasHeight": 900,
+      "canvasWidth": 1440,
+      "contentRGBVerified": true,
+      "file": "de/03-safe-conflict.png",
+      "normalizedSHA256": "be451d3932bfa9c0830d207454bee6a42f7155fc7cae0dcd591cde4ae6a7b11e",
+      "offsetX": 310,
+      "offsetY": 145,
+      "originalSHA256": "55873962996e0cc91cf76e19f49587a9f7ed670a0a2fddadc813c13e8e84be43",
+      "sourceHeight": 610,
+      "sourceWidth": 819
+    }
+  ]
+}
