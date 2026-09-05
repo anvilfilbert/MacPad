@@ -12,9 +12,9 @@ Ultra-fast native plain-text editor for macOS. No bloat.
 
 ## MacPad family
 
-- [MacPad family website](https://anvilfilbert.github.io/) presents both apps.
+- [MacPad family website](https://macpad.net/) presents both apps.
 - MacPad is the native macOS editor in this repository.
-- [MacPad Mobile](https://github.com/anvilfilbert/MacPad-Mobile) is the native
+- [MacPad Mobile](https://macpad.net) is the native
   iPhone and iPad counterpart.
 
 The apps are separate codebases and do not automatically synchronize open
