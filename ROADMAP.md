@@ -5,12 +5,11 @@ Issue and PR evidence is authoritative for exact-head acceptance.
 
 ## Finish localization and Store foundations
 
-**Status:** Implemented; final foreground acceptance outstanding
+**Status:** Implemented; foreground evidence complete; final merge review pending
 **Tracking:** PR #34, issues #28 and #29
 
-1. Capture the two remaining genuine EN/DE system-menu-bar screenshots.
-2. Validate all six screenshot files and their provenance.
-3. Refresh the final acceptance summary and complete exact-head merge review.
+All six genuine EN/DE screenshots and their provenance are present and validated.
+Complete final exact-head automated checks and merge review.
 
 Preserve accepted owner tests, including Full Keyboard Access. The Save As
 partial-success finding is resolved. Signed Store sandbox/migration and Apple
@@ -28,7 +27,7 @@ for behavior affected by integration. Issue #30 is closed after verified cleanup
 
 ## Documentation foundation
 
-**Status:** PR ready
+**Status:** Merged
 **Tracking:** PR #33
 
 Keep portfolio ownership and release gates current without changing runtime
