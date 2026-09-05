@@ -2,8 +2,135 @@ import Foundation
 import Testing
 @testable import NotepadMacCore
 
+private enum CoordinationWaitError: Error {
+    case timedOut(String)
+}
+
+private func waitForCoordinationSignal(
+    _ semaphore: DispatchSemaphore,
+    name: String
+) throws {
+    guard semaphore.wait(timeout: .now() + 15) == .success else {
+        throw CoordinationWaitError.timedOut(name)
+    }
+}
+
 @Suite("Editor document")
 struct EditorDocumentTests {
+    @Test("document display values and errors use the injected German bundle")
+    func localizesDocumentValuesAndErrors() throws {
+        try LocalizationFixture.with(
+            languageCode: "de",
+            strings: [
+                MacPadStringKey.untitled.rawValue: "Unbenannt",
+                MacPadStringKey.fileTooLarge.rawValue:
+                    "Die Datei ist zu groß, um sie sicher zu öffnen: %1$@ hat %2$lld Byte, maximal zulässig sind %3$lld Byte.",
+                MacPadStringKey.documentTooLarge.rawValue:
+                    "Das Dokument ist zu groß, um es sicher zu sichern: %1$@ hätte %2$lld Byte, maximal zulässig sind %3$lld Byte.",
+                MacPadStringKey.regularFilesOnly.rawValue:
+                    "Nur reguläre Dateien können sicher geöffnet werden: %1$@.",
+                MacPadStringKey.fileChangedOnDisk.rawValue:
+                    "Die Datei wurde nach dem Öffnen in MacPad auf dem Datenträger geändert: %1$@. Neu laden oder mit ‚Sichern unter‘ sichern, damit keine andere Änderung überschrieben wird.",
+                MacPadStringKey.coordinatedWriteDenied.rawValue:
+                    "macOS hat keinen koordinierten Schreibzugriff auf die Datei gewährt: %1$@.",
+                MacPadStringKey.unsupportedTextEncoding.rawValue:
+                    "Die Datei kann nicht als unterstützter Klartext gelesen werden: %1$@.",
+                MacPadStringKey.unrepresentableText.rawValue:
+                    "Das Dokument enthält Text, der nicht als %1$@ dargestellt werden kann: %2$@."
+            ],
+            technicalTerms: [
+                "macpad.term.encoding.utf8": "Technischer Begriff UTF-8",
+                "macpad.term.encoding.utf8-bom": "Technischer Begriff UTF-8 BOM",
+                "macpad.term.encoding.utf16-le": "Technischer Begriff UTF-16 LE",
+                "macpad.term.encoding.utf16-be": "Technischer Begriff UTF-16 BE",
+                "macpad.term.encoding.windows-1252": "Technischer Begriff Windows-1252",
+                "macpad.term.encoding.iso-8859-1": "Technischer Begriff ISO-8859-1"
+            ]
+        ) { localization in
+            let document = EditorDocument()
+            #expect(document.displayName(using: localization) == "Unbenannt")
+            #expect(
+                TextFileEncoding.allCases.map { $0.statusLabel(using: localization) }
+                    == [
+                        "Technischer Begriff UTF-8",
+                        "Technischer Begriff UTF-8 BOM",
+                        "Technischer Begriff UTF-16 LE",
+                        "Technischer Begriff UTF-16 BE",
+                        "Technischer Begriff Windows-1252",
+                        "Technischer Begriff ISO-8859-1"
+                    ]
+            )
+
+            let cases: [(EditorDocumentError, String)] = [
+                (
+                    .fileTooLarge(path: "/tmp/note.txt", sizeBytes: 11, maximumBytes: 10),
+                    "Die Datei ist zu groß, um sie sicher zu öffnen: /tmp/note.txt hat 11 Byte, maximal zulässig sind 10 Byte."
+                ),
+                (
+                    .documentTooLargeToSave(
+                        path: "/tmp/note.txt",
+                        sizeBytes: 11,
+                        maximumBytes: 10
+                    ),
+                    "Das Dokument ist zu groß, um es sicher zu sichern: /tmp/note.txt hätte 11 Byte, maximal zulässig sind 10 Byte."
+                ),
+                (
+                    .fileIsNotRegular(path: "/tmp/folder"),
+                    "Nur reguläre Dateien können sicher geöffnet werden: /tmp/folder."
+                ),
+                (
+                    .fileChangedOnDisk(path: "/tmp/note.txt"),
+                    "Die Datei wurde nach dem Öffnen in MacPad auf dem Datenträger geändert: /tmp/note.txt. Neu laden oder mit ‚Sichern unter‘ sichern, damit keine andere Änderung überschrieben wird."
+                ),
+                (
+                    .fileCoordinationFailed(path: "/tmp/note.txt"),
+                    "macOS hat keinen koordinierten Schreibzugriff auf die Datei gewährt: /tmp/note.txt."
+                ),
+                (
+                    .unsupportedTextEncoding(path: "/tmp/note.txt"),
+                    "Die Datei kann nicht als unterstützter Klartext gelesen werden: /tmp/note.txt."
+                ),
+                (
+                    .textCannotBeSaved(path: "/tmp/note.txt", encoding: .windows1252),
+                    "Das Dokument enthält Text, der nicht als Technischer Begriff Windows-1252 dargestellt werden kann: /tmp/note.txt."
+                )
+            ]
+
+            for (error, expectedDescription) in cases {
+                #expect(error.localizedErrorDescription(using: localization) == expectedDescription)
+            }
+        }
+    }
+
+    @Test("session limit decoding uses the injected German bundle")
+    func localizesSessionLimitDecodingError() throws {
+        try LocalizationFixture.with(
+            languageCode: "de",
+            strings: [
+                MacPadStringKey.sessionWindowOrTabLimit.rawValue:
+                    "Die Sitzung enthält mehr Fenster oder Tabs, als MacPad unterstützt."
+            ]
+        ) { localization in
+            let windows = Array(
+                repeating: #"{"tabs":[],"selectedTabIndex":0}"#,
+                count: AppSessionState.maximumWindowCount + 1
+            ).joined(separator: ",")
+            let data = Data(#"{"windows":[\#(windows)]}"#.utf8)
+
+            do {
+                _ = try AppSessionState.decode(data: data, localization: localization)
+                Issue.record("Expected an over-limit session to fail decoding.")
+            } catch DecodingError.dataCorrupted(let context) {
+                #expect(
+                    context.debugDescription
+                        == "Die Sitzung enthält mehr Fenster oder Tabs, als MacPad unterstützt."
+                )
+            } catch {
+                Issue.record(error)
+            }
+        }
+    }
+
     @Test("save refuses to overwrite an externally changed file")
     func rejectsExternalModification() throws {
         let directory = try temporaryDirectory()
@@ -19,6 +146,94 @@ struct EditorDocumentTests {
             try document.save(to: fileURL)
         }
         #expect(try String(contentsOf: fileURL, encoding: .utf8) == "external edit")
+    }
+
+    @Test("session reload preserves the saved line ending when disk content differs")
+    func sessionReloadPreservesSavedLineEnding() throws {
+        let directory = try temporaryDirectory()
+        let fileURL = directory.appendingPathComponent("session-line-ending.txt")
+        try Data("first\r\nsecond".utf8).write(to: fileURL)
+        let state = EditorSessionState(
+            id: "saved-session",
+            fileReference: PersistedFileReference(path: fileURL.path, bookmarkData: Data([1])),
+            selectedLocation: 0,
+            wordWrapEnabled: true,
+            statusBarVisible: true,
+            zoomPercent: 100,
+            lineEnding: .unix
+        )
+        let document = EditorDocument()
+
+        try document.restoreSessionStateAndReloadFile(state)
+
+        #expect(document.text == "first\r\nsecond")
+        #expect(document.lineEnding == .unix)
+        #expect(document.sessionState(
+            selectedLocation: 0,
+            wordWrapEnabled: true,
+            statusBarVisible: true,
+            zoomPercent: 100
+        )?.lineEnding == .unix)
+    }
+
+    @Test("current-file save rejects a moved destination changed outside MacPad")
+    func currentFileSaveRejectsMovedExternalChange() throws {
+        let directory = try temporaryDirectory()
+        let originalURL = directory.appendingPathComponent("current-original.txt")
+        let movedURL = directory.appendingPathComponent("current-moved.txt")
+        try Data("original".utf8).write(to: originalURL)
+        let document = EditorDocument()
+        try document.loadFile(originalURL)
+        document.attachFileReference(
+            PersistedFileReference(path: originalURL.path, bookmarkData: Data([0x41]))
+        )
+        let originalReference = document.fileReference
+        let originalDocumentURL = document.fileURL
+        document.updateText("MacPad edit")
+        try FileManager.default.moveItem(at: originalURL, to: movedURL)
+        try Data("external edit".utf8).write(to: movedURL)
+
+        do {
+            try document.saveCurrentFile(at: movedURL, encoding: .utf8)
+            Issue.record("Expected the external edit to reject the moved-file save.")
+        } catch EditorDocumentError.fileChangedOnDisk(let path) {
+            #expect(path == movedURL.resolvingSymlinksInPath().standardizedFileURL.path)
+        } catch {
+            Issue.record(error)
+        }
+
+        #expect(try String(contentsOf: movedURL, encoding: .utf8) == "external edit")
+        #expect(document.fileURL == originalDocumentURL)
+        #expect(document.fileReference == originalReference)
+        #expect(document.text == "MacPad edit")
+        #expect(document.originalText == "original")
+        #expect(document.hasUnsavedChanges)
+    }
+
+    @Test("successful current-file save adopts a bookmark-resolved moved location")
+    func currentFileSaveAdoptsMovedLocationAfterSuccess() throws {
+        let directory = try temporaryDirectory()
+        let originalURL = directory.appendingPathComponent("success-original.txt")
+        let movedURL = directory.appendingPathComponent("success-moved.txt")
+        try Data("original".utf8).write(to: originalURL)
+        let document = EditorDocument()
+        try document.loadFile(originalURL)
+        let bookmarkData = Data([0x42])
+        document.attachFileReference(
+            PersistedFileReference(path: originalURL.path, bookmarkData: bookmarkData)
+        )
+        document.updateText("MacPad edit")
+        try FileManager.default.moveItem(at: originalURL, to: movedURL)
+
+        try document.saveCurrentFile(at: movedURL, encoding: .utf8)
+
+        let canonicalMovedURL = movedURL.resolvingSymlinksInPath().standardizedFileURL
+        #expect(try String(contentsOf: movedURL, encoding: .utf8) == "MacPad edit")
+        #expect(document.fileURL == canonicalMovedURL)
+        #expect(document.fileReference?.path == canonicalMovedURL.path)
+        #expect(document.fileReference?.bookmarkData == bookmarkData)
+        #expect(document.originalText == "MacPad edit")
+        #expect(!document.hasUnsavedChanges)
     }
 
     @Test("save follows a symbolic link instead of replacing it")
@@ -280,22 +495,38 @@ struct EditorDocumentTests {
         let holderQueue = OperationQueue()
         holderQueue.maxConcurrentOperationCount = 1
         holderQueue.qualityOfService = .userInitiated
+        var holderFinishedObserved = false
         holderQueue.addOperation {
             let coordinator = NSFileCoordinator(filePresenter: nil)
             var coordinationError: NSError?
             coordinator.coordinate(writingItemAt: fileURL, options: [], error: &coordinationError) { _ in
                 holderAcquired.signal()
-                releaseHolder.wait()
+                do {
+                    try waitForCoordinationSignal(releaseHolder, name: "release holder")
+                } catch {
+                    Issue.record(error)
+                }
             }
             #expect(coordinationError == nil)
             holderFinished.signal()
         }
-        #expect(holderAcquired.wait(timeout: .now() + 15) == .success)
+        defer {
+            releaseHolder.signal()
+            if !holderFinishedObserved {
+                do {
+                    try waitForCoordinationSignal(holderFinished, name: "holder finished")
+                } catch {
+                    Issue.record(error)
+                }
+            }
+        }
+        try waitForCoordinationSignal(holderAcquired, name: "holder acquired")
 
         let saveFinished = DispatchSemaphore(value: 0)
         let saveQueue = OperationQueue()
         saveQueue.maxConcurrentOperationCount = 1
         saveQueue.qualityOfService = .userInitiated
+        var saveFinishedObserved = false
         saveQueue.addOperation {
             do {
                 let document = EditorDocument()
@@ -307,14 +538,26 @@ struct EditorDocumentTests {
             }
             saveFinished.signal()
         }
+        defer {
+            releaseHolder.signal()
+            if !saveFinishedObserved {
+                do {
+                    try waitForCoordinationSignal(saveFinished, name: "save finished")
+                } catch {
+                    Issue.record(error)
+                }
+            }
+        }
 
         let earlySaveResult = saveFinished.wait(timeout: .now() + 0.2)
         #expect(earlySaveResult == .timedOut)
         releaseHolder.signal()
-        #expect(holderFinished.wait(timeout: .now() + 15) == .success)
+        try waitForCoordinationSignal(holderFinished, name: "holder finished")
+        holderFinishedObserved = true
         if earlySaveResult == .timedOut {
-            #expect(saveFinished.wait(timeout: .now() + 15) == .success)
+            try waitForCoordinationSignal(saveFinished, name: "save finished")
         }
+        saveFinishedObserved = true
         #expect(try String(contentsOf: fileURL, encoding: .utf8) == "MacPad edit")
     }
 
@@ -330,13 +573,18 @@ struct EditorDocumentTests {
         let saveQueue = OperationQueue()
         saveQueue.maxConcurrentOperationCount = 1
         saveQueue.qualityOfService = .userInitiated
+        var saveFinishedObserved = false
         saveQueue.addOperation {
             do {
                 let document = EditorDocument()
                 try document.loadFile(fileURL)
                 document.updateText("MacPad edit")
                 documentLoaded.signal()
-                beginSave.wait()
+                do {
+                    try waitForCoordinationSignal(beginSave, name: "begin save")
+                } catch {
+                    Issue.record(error)
+                }
                 do {
                     try document.save(to: fileURL)
                     Issue.record("Expected the coordinated external edit to reject the save.")
@@ -350,7 +598,17 @@ struct EditorDocumentTests {
             }
             saveFinished.signal()
         }
-        #expect(documentLoaded.wait(timeout: .now() + 15) == .success)
+        defer {
+            beginSave.signal()
+            if !saveFinishedObserved {
+                do {
+                    try waitForCoordinationSignal(saveFinished, name: "save finished")
+                } catch {
+                    Issue.record(error)
+                }
+            }
+        }
+        try waitForCoordinationSignal(documentLoaded, name: "document loaded")
 
         let holderAcquired = DispatchSemaphore(value: 0)
         let releaseHolder = DispatchSemaphore(value: 0)
@@ -358,6 +616,7 @@ struct EditorDocumentTests {
         let holderQueue = OperationQueue()
         holderQueue.maxConcurrentOperationCount = 1
         holderQueue.qualityOfService = .userInitiated
+        var holderFinishedObserved = false
         holderQueue.addOperation {
             let coordinator = NSFileCoordinator(filePresenter: nil)
             var coordinationError: NSError?
@@ -368,23 +627,39 @@ struct EditorDocumentTests {
                     Issue.record(error)
                 }
                 holderAcquired.signal()
-                releaseHolder.wait()
+                do {
+                    try waitForCoordinationSignal(releaseHolder, name: "release holder")
+                } catch {
+                    Issue.record(error)
+                }
             }
             if let coordinationError {
                 Issue.record(coordinationError)
             }
             holderFinished.signal()
         }
-        #expect(holderAcquired.wait(timeout: .now() + 15) == .success)
+        defer {
+            releaseHolder.signal()
+            if !holderFinishedObserved {
+                do {
+                    try waitForCoordinationSignal(holderFinished, name: "holder finished")
+                } catch {
+                    Issue.record(error)
+                }
+            }
+        }
+        try waitForCoordinationSignal(holderAcquired, name: "holder acquired")
 
         beginSave.signal()
         let earlySaveResult = saveFinished.wait(timeout: .now() + 0.2)
         #expect(earlySaveResult == .timedOut)
         releaseHolder.signal()
-        #expect(holderFinished.wait(timeout: .now() + 15) == .success)
+        try waitForCoordinationSignal(holderFinished, name: "holder finished")
+        holderFinishedObserved = true
         if earlySaveResult == .timedOut {
-            #expect(saveFinished.wait(timeout: .now() + 15) == .success)
+            try waitForCoordinationSignal(saveFinished, name: "save finished")
         }
+        saveFinishedObserved = true
         #expect(try String(contentsOf: fileURL, encoding: .utf8) == "external edit")
     }
 
@@ -423,5 +698,96 @@ struct EditorDocumentTests {
             withIntermediateDirectories: true
         )
         return directory
+    }
+}
+
+enum LocalizationFixture {
+    static func with<Result>(
+        languageCode: String,
+        strings: [String: String],
+        body: (MacPadLocalization) throws -> Result
+    ) throws -> Result {
+        try with(
+            languageCode: languageCode,
+            tables: ["Localizable": strings],
+            body: body
+        )
+    }
+
+    static func with<Result>(
+        languageCode: String,
+        strings: [String: String],
+        technicalTerms: [String: String],
+        body: (MacPadLocalization) throws -> Result
+    ) throws -> Result {
+        try with(
+            languageCode: languageCode,
+            tables: ["Localizable": strings, "TechnicalTerms": technicalTerms],
+            body: body
+        )
+    }
+
+    private static func with<Result>(
+        languageCode: String,
+        tables: [String: [String: String]],
+        body: (MacPadLocalization) throws -> Result
+    ) throws -> Result {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+            .appendingPathComponent("MacPadLocalization.bundle", isDirectory: true)
+        defer {
+            do {
+                try FileManager.default.removeItem(at: root)
+            } catch {
+                Issue.record(error)
+            }
+        }
+
+        let contents = root.appendingPathComponent("Contents", isDirectory: true)
+        let resources = contents.appendingPathComponent("Resources", isDirectory: true)
+        let localizationDirectory = resources.appendingPathComponent(
+            "\(languageCode).lproj",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: localizationDirectory,
+            withIntermediateDirectories: true
+        )
+
+        let info = CoreLocalizationBundleInfo(
+            developmentRegion: languageCode,
+            identifier: "local.macpad.tests.core-localization.\(UUID().uuidString)",
+            localizations: [languageCode],
+            packageType: "BNDL"
+        )
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .xml
+        try encoder.encode(info).write(
+            to: contents.appendingPathComponent("Info.plist"),
+            options: .atomic
+        )
+        for (table, strings) in tables {
+            try encoder.encode(strings).write(
+                to: localizationDirectory.appendingPathComponent("\(table).strings"),
+                options: .atomic
+            )
+        }
+
+        let bundle = try #require(Bundle(path: root.path))
+        return try body(MacPadLocalization(bundle: bundle))
+    }
+}
+
+private struct CoreLocalizationBundleInfo: Encodable {
+    let developmentRegion: String
+    let identifier: String
+    let localizations: [String]
+    let packageType: String
+
+    private enum CodingKeys: String, CodingKey {
+        case developmentRegion = "CFBundleDevelopmentRegion"
+        case identifier = "CFBundleIdentifier"
+        case localizations = "CFBundleLocalizations"
+        case packageType = "CFBundlePackageType"
     }
 }

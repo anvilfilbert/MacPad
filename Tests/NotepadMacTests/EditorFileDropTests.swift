@@ -1,4 +1,5 @@
 import AppKit
+import NotepadMacCore
 import Testing
 @testable import NotepadMac
 
@@ -89,8 +90,12 @@ struct EditorFileDropTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let fileURL = directory.appendingPathComponent("already-open.txt")
         try Data("Already open".utf8).write(to: fileURL)
-        let existingEditor = EditorWindowController()
-        try existingEditor.loadFile(fileURL)
+        let fileAccess = SecurityScopedFileAccess(requiresBookmark: false)
+        let existingEditor = EditorWindowController(
+            localization: MacPadLocalization(bundle: .main),
+            fileAccess: fileAccess
+        )
+        try existingEditor.loadFile(fileAccess.makeReference(for: fileURL))
         let decision = EditorFileDropClassifier.classify(
             pasteboard: try makeFilePasteboard(urls: [fileURL])
         )
@@ -100,7 +105,7 @@ struct EditorFileDropTests {
         }
 
         let resolved = EditorWindowResolver.controller(
-            opening: try #require(urls.first),
+            opening: try fileAccess.makeReference(for: #require(urls.first)),
             controllers: [existingEditor]
         )
 

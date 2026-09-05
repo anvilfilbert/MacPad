@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Localized the native app interface and packaged metadata with English and German resources.
+- Added security-scoped bookmark persistence and recovery for sandbox-oriented file access across Open Recent and save-conflict handling.
+- Added separate Direct and AppStore Xcode configurations, a complete AppIcon asset catalog, and a credential-free unsigned archive preflight.
+- Prepared bilingual App Store metadata and added a fail-closed validator for future Store screenshots; no screenshots or signed distribution artifacts are included.
+- Changed normal launch to open exactly one blank document, removed document-session persistence and restoration, and kept saved files available through Open Recent.
+- Simplified About to Website, Support, and Privacy Policy links on macpad.net, with no creator, source-code, or email presentation in either distribution channel.
+- Added adaptive New Document (`Command-N`), retained explicit New Tab (`Command-T`), and made New Window a separate shortcut-free command.
+- Grouped Find commands in a localized native submenu and corrected Find-only, Save As encoding, and Go To layouts without changing their editing behavior.
+
 ## 1.3.1
 
 - Restored Dock reopening while menu-bar mode keeps MacPad running after the last editor window closes.
