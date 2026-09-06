@@ -22,7 +22,7 @@ struct WindowRoutingTests {
         )
 
         #expect(contract.developmentRegion == "en")
-        #expect(contract.identifier == "local.macpad.app")
+        #expect(contract.identifier == "com.anvilfilbert.MacPad")
         #expect(contract.localizations == ["en", "de"])
         #expect(contract.applicationCategory == "public.app-category.utilities")
     }

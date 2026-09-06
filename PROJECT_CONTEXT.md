@@ -2,7 +2,7 @@
 
 **Repository:** `anvilfilbert/MacPad`
 **Product:** MacPad for macOS
-**Last verified:** 2026-09-05
+**Last verified:** 2026-09-06
 
 ## Purpose
 
@@ -14,7 +14,7 @@ releases, and macOS-specific distribution preparation.
 
 - Native AppKit application with reusable Swift core logic.
 - Swift Package Manager remains the direct-release and test foundation.
-- A native Xcode application target is implemented in open PR #34 with separate
+- A native Xcode application target is merged through PR #34 with separate
   DirectRelease and AppStore configurations that reuse the same implementation.
 - Multiple windows and tabs, explicit save behavior, file-format preservation,
   one-blank-document relaunch without automatic session restoration, and the
@@ -27,12 +27,8 @@ releases, and macOS-specific distribution preparation.
 ## Verified current state
 
 - Latest published direct release remains `1.3.1`.
-- The implementation base for PR #34 is product commit `59c1e66`.
-- PR #34, `Implement English/German localization and Store preparation
-  foundations`, is open and mergeable on `codex/localization-app-store-prep`.
-- Its accepted runtime head is `7cf22e9`; it is ready for review, not draft, and
-  remains unmerged. The follow-up adds screenshot evidence and documentation only.
-- Repository-local implementation in PR #34 includes:
+- PR #34 merged at `4c4da538`; PR #35 merged at `330189263`.
+- Merged repository-local implementation includes:
   - English/German native localization and compiled resources;
   - bookmark-backed security-scoped access and Open Recent;
   - sandbox-aware open, save, Save As, reload, and Open Recent;
@@ -42,23 +38,26 @@ releases, and macOS-specific distribution preparation.
   - deterministic AppIcon assets;
   - credential-free unsigned builds and universal archive preflight;
   - bilingual Store-preparation material and fail-closed screenshot validation.
-- Exact-head Swift CI and CodeQL passed, including 161/161 tests in CI.
-  The Save As partial-success finding is corrected and reviewed.
+- Automated acceptance and the corrected Save As partial-success finding are
+  recorded in the merged PRs. Verification results belong to their exact heads.
 - Owner foreground evidence, including EN/DE VoiceOver and exact-head Full
   Keyboard Access, is recorded in PR #34 and issues #28/#29. All six genuine
-  EN/DE screenshots now pass final validation; final exact-head merge review
-  remains. See `docs/verification/app-store-local-smoke.md` for provenance.
+  EN/DE screenshots passed final validation. See
+  `docs/verification/app-store-local-smoke.md` for provenance.
 - Signed Store sandbox/migration proof remains a separate owner gate.
 - Issue #30 is closed after verified Launch Services cleanup.
-- PR #35 implements issue #31 at `466a236`; the owner verified that dragging
-  a text file opens its content instead of inserting its path. It is unmerged
-  and requires integration after PR #34, with fresh checks of overlapping code.
+- PR #35 implements issue #31; the owner verified that dragging a text file
+  opens its content instead of inserting its path. Integration is merged.
 - Open issues:
   - #28: Mac App Store preparation; implementation substantially complete but
     manual, owner, and Apple gates remain.
-  - #29: English/German localization; implementation and foreground evidence
-    are complete, pending final review and merge disposition.
-  - #31: dragging a supported file inserts its path instead of opening it.
+- Issues #29 and #31 are closed.
+- The owner-approved production bundle identifier is `com.anvilfilbert.MacPad`.
+  The uploaded candidate was built from `330189263` plus the five identifier
+  substitutions now preserved in source, packaging checks, and the existing test.
+- Apple-connected validation, upload, and beta review milestones are recorded
+  in [App Store preparation](docs/app-store-preparation.md). That document is
+  authoritative for the dated distribution snapshot and remaining owner gates.
 - Issue #32 was closed as a duplicate of #30.
 - The bilingual family website is deployed and verified at `https://macpad.net`.
 - Both apps are approved as free hobby tools without monetization. Customer

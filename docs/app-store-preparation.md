@@ -2,27 +2,41 @@
 
 **Audit date:** 2026-08-31
 
+**Distribution evidence updated:** 2026-09-06, from owner-provided Xcode and
+App Store Connect screenshots; not continuous monitoring.
+
 **Scope:** MacPad desktop only
 
-**Status:** Repository-local preparation; not a release record
+**Status:** External TestFlight beta submitted; no public Mac App Store release
 
 This document is the authoritative repository source for MacPad App Store
 metadata drafts, privacy evidence, public-page copy, review instructions,
-identifier proposals, and unresolved owner gates. It implements preparation
-work only.
+the approved identifier, and unresolved owner gates. Draft copy and historical
+source audits below are not proof of completed Store metadata or release.
 
 | State | Current evidence |
 | --- | --- |
 | Repository-local preparation implemented | Yes: this document and the qualified README link |
 | Launch model | The binding cross-project design's free, non-commercial hobby policy applies to MacPad Desktop |
-| Apple Developer Program | Required by the binding cross-project design; repository evidence cannot establish active membership |
+| Apple Developer Program | Active membership owner-confirmed for the authorized signing/upload workflow; account details excluded |
 | Credential-free build and test evidence | Must be recorded for the exact candidate; it does not establish signing or distribution |
-| Merged | No: implementation branch only; merge not performed |
-| Production-signed or notarized | No |
-| Submitted to App Store Connect | No |
-| Approved by App Review | No |
+| Merged foundations | PR #34 and PR #35 merged; upload base is `330189263` plus five approved bundle-ID substitutions |
+| Signed archive and validation | Universal `1.3.1 (15)` archive passed strict signature checks and Xcode Validate App; no Developer ID notarization claimed |
+| App Store Connect upload | Complete and processed under MacPad – Plain-Text Editor; export-compliance prompt completed by owner |
+| External TestFlight | Friends group has one build; last observed status Waiting for Review; public link capped at 20 and blocked pending approval |
+| Desktop TestFlight installation | Internal group setup owner-reported; installation, launch, and installed-build smoke not yet confirmed |
+| Full App Store review | Not submitted; beta review is a separate process |
 | Distributed through the Mac App Store | No |
 | Verified live with a customer account | No |
+
+Remaining: beta approval and testing availability; installed desktop sandbox
+checks; signed legacy migration; final metadata/screenshots/privacy/age rating;
+owner declarations, free price and storefront selection; full review and
+separately approved public release. The Store draft version was `1.0`, while
+the uploaded build is `1.3.1 (15)`; reconcile before selecting the release build.
+
+Keep invitation links, tester identities, review contacts, account/team IDs,
+signing artifacts, and local archive paths outside this repository.
 
 No Apple account, certificate, team, signing, notarization, upload, live
 free-price or storefront entry, publication, DNS, SourceForge, or
@@ -90,9 +104,10 @@ manifest files.
 
 ### App name
 
-MacPad
+MacPad – Plain-Text Editor
 
-Length: 6 characters.
+Length: 26 characters. This is the accepted English (U.S.) Store record name;
+the shorter MacPad name was unavailable.
 
 ### Subtitle
 
@@ -237,9 +252,10 @@ The owner approved these repository-local destinations:
 - customer support: `https://macpad.net/support`;
 - privacy policy: `https://macpad.net/privacy`.
 
-The URLs are compiled preparation, not production verification. macpad.net
-does not yet serve the correct MacPad site, so no candidate may be released
-until Shared Services verifies the exact anonymous English and German pages.
+Shared Services verified the bilingual family site during the 6 September
+2026 workflow. Recheck the exact anonymous English and German product,
+support, and privacy pages before public release; website availability is
+not App Store publication or migration acceptance.
 
 The remaining public contract must still supply stable, anonymous English
 and German destinations for:
@@ -507,17 +523,17 @@ requires the named owner gate.
 | Primary category | Utilities, matching public.app-category.utilities in Xcode | Confirm in App Store Connect |
 | Age rating | No objectionable content, unrestricted web access, gambling, contests, messaging, user-generated content, advertising, or purchases in the app | Reconfirm every answer in Apple's live questionnaire; do not assert the calculated rating in advance |
 | App Privacy | No data collected | Re-audit the final binary, then enter and attest in App Store Connect |
-| Export compliance | Local SHA-256 file hashing; no network communication or user-facing encryption feature | Complete Apple's live legal determination before adding ITSAppUsesNonExemptEncryption or making an export claim |
+| Export compliance | Owner completed the prompt for uploaded build 15; Missing Compliance cleared | Reassess for changed encryption/dependencies; no Info.plist exemption declaration added in this cleanup |
 | Content rights | Repository artwork plus Apache-2.0 code and license evidence are available | Owner reviews the evidence and attests the rights |
 | EU DSA | No status inferred | Owner determines and declares trader status; Apple says it cannot make that determination |
 | Portfolio launch policy | Binding cross-project design | Verify the final app and Store record conform; do not redefine monetization in this Desktop package |
 | Store price | Free under the binding policy | Owner confirms the free price and required tax category in App Store Connect |
 | Storefront availability | No selection | Owner chooses storefront availability later; EU availability does not replace the separate DSA self-assessment |
-| Apple Developer Program | Required under the binding policy | Owner enrolls or renews separately; repository evidence cannot establish active membership |
-| Store record | MacPad and bilingual copy are drafts | Owner confirms name availability, primary language, immutable SKU, seller and copyright text, and App Review contact |
+| Apple Developer Program | Active membership owner-confirmed during signing/upload | Renewal and account administration remain owner-controlled |
+| Store record | MacPad – Plain-Text Editor created with English (U.S.) as primary language | Complete localized metadata, version alignment, copyright, and full App Review information |
 | Accessibility | The app has VoiceOver labels and identifiers, but no Store label is claimed here | Test all common tasks before the owner enters any Accessibility Nutrition Label |
-| Public routes | Unresolved | Owner approves the final HTTPS contract after anonymous English and German verification |
-| Signing and release | Not performed | Separate approvals are required for identifiers, team/signing, notarization, upload, review submission, release, and publication |
+| Public routes | Family website verified by Shared Services during this workflow | Recheck release-specific routes; migration and Store listing remain gated |
+| Signing and release | Signed archive validated and uploaded; external beta submitted | Notarization, full review, migration, release, and publication remain separate gates |
 
 The App Store is the approved official installation and update channel at
 launch. A Direct build is limited to repository-local verification and one
@@ -530,17 +546,12 @@ live Mac App Store listing, and the separate owner approvals in the binding
 cross-project cutover documents have passed. Permanent SourceForge deletion
 requires its own later owner approval.
 
-## Production identifier proposal
+## Approved production identifier
 
-The project remains on the preparation placeholder local.macpad.app. This
-preparation package does not change it.
-
-The owner must choose exactly one production option:
-
-1. **Recommended: com.anvilfilbert.MacPad** — aligns with the public
-   publisher namespace.
-2. **Alternative: app.macpad.editor** — stronger product naming, but only
-   if the brand namespace is controlled for the long term.
+The owner approved and registered `com.anvilfilbert.MacPad` on 6 September
+2026. The uploaded candidate uses this identifier instead of the former
+`local.macpad.app` placeholder. Source and packaging checks preserve that
+choice; no personal signing configuration is committed.
 
 Changing the bundle identifier changes the UserDefaults preference domain,
 recent-document identity, sandbox container, and code-signing identity
@@ -548,10 +559,10 @@ association. Direct and Store builds should normally adopt the same approved
 production identifier before the first App Store upload. Apple does not
 allow the Store bundle identifier to be changed after a build is uploaded.
 
-Do not implement a preference, session, recent-file, or container migration
-until the owner selects the identifier. After selection, design one
-fail-closed migration for the selected identifier, add focused tests, and
-validate it through the exact signed sequence below.
+Identifier selection does not verify preference, recent-file, or container
+migration. Such implementation and the exact signed sequence below still
+require separately approved work. No migration is implemented by these
+identifier substitutions.
 
 ## Legacy-user signed migration gate
 
@@ -560,8 +571,8 @@ Required sequence:
 installed v1.3.1-or-earlier Direct app → Developer ID-signed and notarized
 final transition build → production Mac App Store build
 
-No build in that exact sequence has been produced or tested. Every matrix
-cell is therefore fail-closed.
+The TestFlight upload does not complete this exact migration sequence.
+Every migration matrix cell remains fail-closed until separately tested.
 
 | Concern | Direct app → final transition build | Final transition build → Store build | Required evidence |
 | --- | --- | --- | --- |
@@ -655,9 +666,9 @@ monetization or storefront strategy.
 This preparation package is ready for review only when all repository-local
 checks below pass for the exact diff:
 
-- only MacPad Desktop Store-preparation and verification documentation changes;
+- changes stay within MacPad Desktop Store preparation and approved identity;
 - Package.swift and the source audit still match the evidence above;
-- local.macpad.app remains the project placeholder;
+- source and packaging checks use the approved com.anvilfilbert.MacPad identity;
 - no PrivacyInfo.xcprivacy is added;
 - the binding portfolio launch policy is referenced without a downstream
   override or competing monetization definition;

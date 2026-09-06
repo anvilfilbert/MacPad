@@ -193,7 +193,7 @@ require_nonempty_file "$RESOURCE_DIRECTORY/de.lproj/InfoPlist.strings"
 /usr/bin/plutil -lint "$INFO_PLIST"
 /usr/bin/cmp -s "$ROOT_DIR/LICENSE" "$RESOURCE_DIRECTORY/LICENSE" || fail "bundled LICENSE differs from repository LICENSE"
 
-require_plist_value "$INFO_PLIST" CFBundleIdentifier local.macpad.app
+require_plist_value "$INFO_PLIST" CFBundleIdentifier com.anvilfilbert.MacPad
 require_plist_value "$INFO_PLIST" CFBundleShortVersionString 1.3.1
 require_plist_value "$INFO_PLIST" CFBundleVersion 15
 require_plist_value "$INFO_PLIST" LSApplicationCategoryType public.app-category.utilities

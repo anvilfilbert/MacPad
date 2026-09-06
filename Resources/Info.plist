@@ -9,7 +9,7 @@
     <key>CFBundleExecutable</key>
     <string>MacPad</string>
     <key>CFBundleIdentifier</key>
-    <string>local.macpad.app</string>
+    <string>com.anvilfilbert.MacPad</string>
     <key>CFBundleLocalizations</key>
     <array>
         <string>en</string>
