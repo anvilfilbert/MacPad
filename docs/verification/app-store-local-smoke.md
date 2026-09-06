@@ -2,6 +2,11 @@
 
 ## Status and scope
 
+This is historical, exact-candidate local acceptance evidence. For the newer
+signed archive, TestFlight upload, and remaining release gates, see
+[App Store preparation](../app-store-preparation.md). The local-only limitations
+below describe those earlier runs, not the subsequent Apple-connected workflow.
+
 - This record keeps chronological evidence separate for the 2026-08-29 worker
   attempt, the 2026-08-31 owner foreground baseline, the owner-contract
   correction based on `c8dacb0d37fd7d26ef707b2898ee2e3207a4476f`,

@@ -47,13 +47,19 @@ If macOS warns that the app is from an unidentified developer, right-click `MacP
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
-## App Store preparation
+## TestFlight and App Store status
 
-Repository-local English and German metadata drafts, privacy and support
-copy, compliance evidence, and unresolved owner gates are tracked in
-[App Store preparation](docs/app-store-preparation.md). This is preparation
-material only: it does not mean MacPad has been production-signed, notarized,
-submitted, approved, distributed, or published on the Mac App Store.
+As of 6 September 2026, MacPad `1.3.1 (15)` has been uploaded and processed
+in App Store Connect as **MacPad – Plain-Text Editor**. Its external TestFlight
+beta is waiting for review; this is not a public Mac App Store release.
+
+Desktop TestFlight installation and migration from existing direct-download
+versions have not yet been verified. Keep your existing installation and use
+backups or disposable files for beta testing. The direct download above remains
+the previously published release, not the TestFlight build.
+
+See [App Store preparation](docs/app-store-preparation.md) for the dated
+distribution evidence, English/German metadata drafts, and remaining gates.
 
 ## Features
 
@@ -114,7 +120,7 @@ swift test
 
 ## Community
 
-- Use [MacPad Support](https://macpad.net/support) for help and usage details; the route is a release gate until the approved site is live.
+- Use [MacPad Support](https://macpad.net/support) for help and usage details.
 - Use [Discussions](https://github.com/anvilfilbert/MacPad/discussions) for questions and ideas.
 - Open an [issue](https://github.com/anvilfilbert/MacPad/issues/new/choose) for a reproducible bug or focused feature request.
 - See [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.

@@ -51,7 +51,7 @@ verify_plist_contract() {
   local localization_count
   require_non_empty_regular_file "$plist_path" "app Info.plist"
   require_plist_string "$plist_path" "CFBundleDevelopmentRegion" "en"
-  require_plist_string "$plist_path" "CFBundleIdentifier" "local.macpad.app"
+  require_plist_string "$plist_path" "CFBundleIdentifier" "com.anvilfilbert.MacPad"
   require_plist_string "$plist_path" "LSApplicationCategoryType" "public.app-category.utilities"
   if ! localization_count="$(/usr/bin/plutil -extract CFBundleLocalizations raw -expect array "$plist_path" 2>&1)"; then
     echo "Could not read required array 'CFBundleLocalizations' from $plist_path: $localization_count" >&2
