@@ -2,12 +2,12 @@
 
 **Audit date:** 2026-08-31
 
-**Distribution evidence updated:** 2026-09-06, from owner-provided Xcode and
-App Store Connect screenshots; not continuous monitoring.
+**Distribution evidence updated:** 2026-09-08, from owner-provided Xcode,
+App Store Connect, and TestFlight evidence; not continuous monitoring.
 
 **Scope:** MacPad desktop only
 
-**Status:** External TestFlight beta submitted; no public Mac App Store release
+**Status:** External TestFlight beta approved; no public Mac App Store release
 
 This document is the authoritative repository source for MacPad App Store
 metadata drafts, privacy evidence, public-page copy, review instructions,
@@ -23,17 +23,17 @@ source audits below are not proof of completed Store metadata or release.
 | Merged foundations | PR #34 and PR #35 merged; upload base is `330189263` plus five approved bundle-ID substitutions |
 | Signed archive and validation | Universal `1.3.1 (15)` archive passed strict signature checks and Xcode Validate App; no Developer ID notarization claimed |
 | App Store Connect upload | Complete and processed under MacPad – Plain-Text Editor; export-compliance prompt completed by owner |
-| External TestFlight | Friends group has one build; last observed status Waiting for Review; public link capped at 20 and blocked pending approval |
-| Desktop TestFlight installation | Internal group setup owner-reported; installation, launch, and installed-build smoke not yet confirmed |
+| External TestFlight | MacPad `1.3.1 (15)` approved for external testing; invitations available through the MacPad Support page; no public join link published |
+| Desktop TestFlight installation | Installation, launch, and basic create/save/reopen smoke owner-confirmed on a Mac |
 | Full App Store review | Not submitted; beta review is a separate process |
 | Distributed through the Mac App Store | No |
 | Verified live with a customer account | No |
 
-Remaining: beta approval and testing availability; installed desktop sandbox
-checks; signed legacy migration; final metadata/screenshots/privacy/age rating;
-owner declarations, free price and storefront selection; full review and
-separately approved public release. The Store draft version was `1.0`, while
-the uploaded build is `1.3.1 (15)`; reconcile before selecting the release build.
+Remaining: external tester feedback; signed legacy migration; final
+metadata/screenshots/privacy/age rating; owner declarations, free price and
+storefront selection; full review and separately approved public release. The
+Store draft version was `1.0`, while the uploaded build is `1.3.1 (15)`;
+reconcile before selecting the release build.
 
 Keep invitation links, tester identities, review contacts, account/team IDs,
 signing artifacts, and local archive paths outside this repository.

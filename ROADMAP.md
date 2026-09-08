@@ -40,10 +40,11 @@ administration remain outside this repository.
 
 The dated distribution snapshot is in
 [App Store preparation](docs/app-store-preparation.md), tracked by issue #28.
-Remaining work includes beta approval, desktop TestFlight installation and
-sandbox smoke, signed legacy migration, final Store metadata and screenshots,
-version/build alignment, owner declarations, free pricing and storefront choices.
-Full App Store submission and public release require separate approval.
+External TestFlight approval and a basic installed-build smoke are complete.
+Remaining work includes external tester feedback, signed legacy migration,
+final Store metadata and screenshots, version/build alignment, owner
+declarations, free pricing and storefront choices. Full App Store submission
+and public release require separate approval.
 
 Apple accounts, signing, notarization, Store upload, review, and publication
 require separate owner approvals and evidence. Source visibility and SourceForge

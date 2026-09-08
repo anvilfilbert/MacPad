@@ -49,14 +49,17 @@ See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
 ## TestFlight and App Store status
 
-As of 6 September 2026, MacPad `1.3.1 (15)` has been uploaded and processed
-in App Store Connect as **MacPad – Plain-Text Editor**. Its external TestFlight
-beta is waiting for review; this is not a public Mac App Store release.
+As of 8 September 2026, MacPad `1.3.1 (15)` is approved for external
+TestFlight testing as **MacPad – Plain-Text Editor**. Installation, launch, and
+a basic create, save, and reopen smoke test were owner-confirmed on a Mac.
+Interested in testing? Request an invitation through
+[MacPad Support](https://macpad.net/support/). This is not a public Mac App
+Store release.
 
-Desktop TestFlight installation and migration from existing direct-download
-versions have not yet been verified. Keep your existing installation and use
-backups or disposable files for beta testing. The direct download above remains
-the previously published release, not the TestFlight build.
+Migration from an existing direct-download installation has not yet been
+verified. Keep your existing installation and use backups or disposable files
+for beta testing. The direct download above remains the separately published
+release, not the TestFlight build.
 
 See [App Store preparation](docs/app-store-preparation.md) for the dated
 distribution evidence, English/German metadata drafts, and remaining gates.

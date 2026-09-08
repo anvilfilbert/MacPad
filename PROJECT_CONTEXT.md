@@ -2,7 +2,7 @@
 
 **Repository:** `anvilfilbert/MacPad`
 **Product:** MacPad for macOS
-**Last verified:** 2026-09-06
+**Last verified:** 2026-09-08
 
 ## Purpose
 
@@ -58,6 +58,10 @@ releases, and macOS-specific distribution preparation.
 - Apple-connected validation, upload, and beta review milestones are recorded
   in [App Store preparation](docs/app-store-preparation.md). That document is
   authoritative for the dated distribution snapshot and remaining owner gates.
+- MacPad `1.3.1 (15)` is approved for external TestFlight testing. The owner
+  confirmed installation, launch, and a basic create, save, and reopen smoke
+  test on a Mac. Invitations are available through the MacPad Support page; no
+  public TestFlight join link or public Mac App Store release is claimed.
 - Issue #32 was closed as a duplicate of #30.
 - The bilingual family website is deployed and verified at `https://macpad.net`.
 - Both apps are approved as free hobby tools without monetization. Customer
