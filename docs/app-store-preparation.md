@@ -19,7 +19,7 @@ source audits below are not proof of completed Store metadata or release.
 | Repository-local preparation implemented | Yes: this document and the qualified README link |
 | Launch model | The binding cross-project design's free, non-commercial hobby policy applies to MacPad Desktop |
 | Apple Developer Program | Active membership owner-confirmed for the authorized signing/upload workflow; account details excluded |
-| Credential-free build and test evidence | Must be recorded for the exact candidate; it does not establish signing or distribution |
+| Credential-free build and test evidence | Recorded for exact source `3ab2c1d1549a1392d9dc30e862838dc3fbf681da`; it is structural-only and does not establish signing, Apple validation, or distribution |
 | Merged foundations | PR #34 and PR #35 merged; upload base is `330189263` plus five approved bundle-ID substitutions |
 | Signed archive and validation | Universal `1.3.1 (15)` archive passed strict signature checks and Xcode Validate App; no Developer ID notarization claimed |
 | App Store Connect upload | Complete and processed under MacPad – Plain-Text Editor; export-compliance prompt completed by owner |
