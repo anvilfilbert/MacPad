@@ -1,6 +1,6 @@
 # MacPad App Store Preparation
 
-**Audit date:** 2026-08-31
+**Audit date:** 2026-09-16
 
 **Distribution evidence updated:** 2026-09-08, from owner-provided Xcode,
 App Store Connect, and TestFlight evidence; not continuous monitoring.
@@ -29,11 +29,11 @@ source audits below are not proof of completed Store metadata or release.
 | Distributed through the Mac App Store | No |
 | Verified live with a customer account | No |
 
-Remaining: external tester feedback; signed legacy migration; final
-metadata/screenshots/privacy/age rating; owner declarations, free price and
-storefront selection; full review and separately approved public release. The
-Store draft version was `1.0`, while the uploaded build is `1.3.1 (15)`;
-reconcile before selecting the release build.
+Remaining: external tester feedback; signed legacy migration; final live
+metadata entry, privacy and age-rating attestations; owner declarations, free
+price and storefront selection; full review and separately approved public
+release. The repository, uploaded TestFlight build, Store draft, and unsigned
+structural checks are aligned to version `1.3.1 (15)`.
 
 Keep invitation links, tester identities, review contacts, account/team IDs,
 signing artifacts, and local archive paths outside this repository.
@@ -41,6 +41,19 @@ signing artifacts, and local archive paths outside this repository.
 No Apple account, certificate, team, signing, notarization, upload, live
 free-price or storefront entry, publication, DNS, SourceForge, or
 repository-visibility action is authorized by this document.
+
+## Exact-candidate credential-free evidence
+
+On 16 September 2026, repository head
+`3ab2c1d1549a1392d9dc30e862838dc3fbf681da` passed the complete unsigned
+`scripts/app-store-preflight.sh` flow using Xcode 26.6. The flow verified the
+approved `com.anvilfilbert.MacPad` identity and `1.3.1 (15)` version, both
+unsigned distribution configurations, the four Store sandbox entitlements,
+universal `arm64 x86_64` architecture, English/German resource products, icon
+assets, bundled license, absence of legacy customer-route tokens in the Store
+bundle, and an unsigned `.xcarchive`. This is structural credential-free
+evidence only; it is not distribution signing, Apple validation, upload,
+submission, approval, or publication.
 
 ## Source and privacy audit
 
@@ -253,9 +266,12 @@ The owner approved these repository-local destinations:
 - privacy policy: `https://macpad.net/privacy`.
 
 Shared Services verified the bilingual family site during the 6 September
-2026 workflow. Recheck the exact anonymous English and German product,
-support, and privacy pages before public release; website availability is
-not App Store publication or migration acceptance.
+2026 workflow. A read-only check on 16 September 2026 received HTTP 200 HTML
+responses from the English and German home, support, and privacy routes and
+confirmed the expected language and MacPad page identity. Recheck the exact
+anonymous content and legally sufficient support contact before submission
+and public release; website availability is not App Store publication or
+migration acceptance.
 
 The remaining public contract must still supply stable, anonymous English
 and German destinations for:
@@ -530,7 +546,7 @@ requires the named owner gate.
 | Store price | Free under the binding policy | Owner confirms the free price and required tax category in App Store Connect |
 | Storefront availability | No selection | Owner chooses storefront availability later; EU availability does not replace the separate DSA self-assessment |
 | Apple Developer Program | Active membership owner-confirmed during signing/upload | Renewal and account administration remain owner-controlled |
-| Store record | MacPad – Plain-Text Editor created with English (U.S.) as primary language | Complete localized metadata, version alignment, copyright, and full App Review information |
+| Store record | MacPad – Plain-Text Editor created with English (U.S.) as primary language; repository draft aligned to 1.3.1 (15) | Enter and verify localized metadata, copyright, and full App Review information |
 | Accessibility | The app has VoiceOver labels and identifiers, but no Store label is claimed here | Test all common tasks before the owner enters any Accessibility Nutrition Label |
 | Public routes | Family website verified by Shared Services during this workflow | Recheck release-specific routes; migration and Store listing remain gated |
 | Signing and release | Signed archive validated and uploaded; external beta submitted | Notarization, full review, migration, release, and publication remain separate gates |
@@ -681,8 +697,8 @@ checks below pass for the exact diff:
 - each subtitle is at most 30 characters, each promotional text is at most
   170 characters, and each keyword field is at most 100 UTF-8 bytes;
 - exactly three screenshot captions exist in each language;
-- the exact public URL owner-input sentence is present and no public URL or
-  contact is invented;
+- the approved public URL contract is present, the compiled destinations match
+  it, and final live content/contact sufficiency remains explicitly gated;
 - all signed-migration rows remain NOT TESTED / OWNER-GATED;
 - current direct-download README instructions remain unchanged;
 - scripts/verify-public-repo.sh and scripts/check-localizations.sh pass;
