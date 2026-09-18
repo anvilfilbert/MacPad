@@ -2,7 +2,7 @@
 
 **Audit date:** 2026-09-18
 
-**Distribution evidence updated:** 2026-09-08, from owner-provided Xcode,
+**Distribution evidence updated:** 2026-09-18, from owner-provided Xcode,
 App Store Connect, and TestFlight evidence; not continuous monitoring.
 
 **Public-route evidence updated:** 2026-09-18, from read-only anonymous HTTP
@@ -10,12 +10,13 @@ checks; not a legal, operational, or publication acceptance.
 
 **Scope:** MacPad desktop only
 
-**Status:** External TestFlight beta approved; no public Mac App Store release
+**Status:** Submitted to App Review and waiting for review; no public Mac App
+Store release
 
 This document is the authoritative repository source for MacPad App Store
-metadata drafts, privacy evidence, public-page copy, review instructions,
-the approved identifier, and unresolved owner gates. Draft copy and historical
-source audits below are not proof of completed Store metadata or release.
+metadata, privacy evidence, public-page copy, review instructions, the approved
+identifier, the owner-confirmed submission state, and unresolved release gates.
+Historical source audits below are not proof of approval or release.
 
 | State | Current evidence |
 | --- | --- |
@@ -28,22 +29,21 @@ source audits below are not proof of completed Store metadata or release.
 | App Store Connect upload | Complete and processed under MacPad – Plain-Text Editor; export-compliance prompt completed by owner |
 | External TestFlight | MacPad `1.3.1 (15)` approved for external testing; invitations available through the MacPad Support page; no public join link published |
 | Desktop TestFlight installation | Installation, launch, and basic create/save/reopen smoke owner-confirmed on a Mac |
-| Full App Store review | Not submitted; beta review is a separate process |
+| Full App Store review | Version `1.3.1 (15)` submitted on 18 September 2026; status **Waiting for Review**; submission is not approval |
 | Distributed through the Mac App Store | No |
 | Verified live with a customer account | No |
 
-Remaining: external tester feedback; signed legacy migration; final live
-metadata entry, privacy and age-rating attestations; owner declarations, free
-price and storefront selection; full review and separately approved public
-release. The repository, uploaded TestFlight build, Store draft, and unsigned
-structural checks are aligned to version `1.3.1 (15)`.
+Remaining: Apple's review decision; the signed legacy migration; a separate
+owner-controlled manual release after approval; and verification of the live
+listing with a customer account. The repository, submitted build, Store record,
+and unsigned structural checks are aligned to version `1.3.1 (15)`.
 
 Keep invitation links, tester identities, review contacts, account/team IDs,
 signing artifacts, and local archive paths outside this repository.
 
-No Apple account, certificate, team, signing, notarization, upload, live
-free-price or storefront entry, publication, DNS, SourceForge, or
-repository-visibility action is authorized by this document.
+This document records completed owner-controlled Apple actions but does not
+authorize a new account, certificate, team, signing, notarization, upload,
+submission, publication, DNS, SourceForge, or repository-visibility action.
 
 ## Exact-candidate credential-free evidence
 
@@ -92,9 +92,10 @@ processing separately. The public English and German product, Support,
 Privacy, and Legal pages were live-verified on 18 September 2026; their final
 legal, content, contact, and operational acceptance remains an owner gate.
 
-Draft App Privacy answer: **No data collected.** The owner must enter and
-attest that answer in App Store Connect only after a final-source,
-final-dependency, and final-archive audit.
+Published App Privacy answer: **No data collected.** App Store Connect lists
+`https://macpad.net/privacy/` for English and
+`https://macpad.net/de/privacy/` for German. Re-audit this answer whenever the
+source, dependencies, archive, or public policy changes.
 
 ## Privacy-manifest decision
 
@@ -177,8 +178,8 @@ optional menu-bar access, English and German, tabs, encoding and line-ending
 preservation, safe external-change handling, and Open Recent access to saved
 documents.
 
-This is launch release copy for the future approved website, review package,
-or release history. It is not an App Store Connect What's New field. Apple
+This is launch release copy for the review package or release history. It is
+not an App Store Connect What's New field. Apple
 says What's New is unavailable for an app's first Store version and required
 for later versions.
 
@@ -288,7 +289,7 @@ German and were confirmed as HTTP 404 on 18 September 2026:
 - direct-user migration and update guidance.
 
 Release notes and the final Mac App Store listing remain separate owner and
-Apple publication gates; neither is a currently configured customer route.
+Apple publication gates; the submitted listing is not yet a customer route.
 
 The App Store Help menu now exposes the approved Support and Privacy routes,
 but still omits unconfigured Help and Security commands as well as every
@@ -496,9 +497,9 @@ the standard macOS print panel.
 6. Enable the optional menu-bar item and create a new empty window from it.
 7. Verify English and German through the macOS per-app language setting.
 8. No account or credentials are required. Support and Privacy use the
-   live-verified macpad.net routes. Help and Security remain absent. Before
-   submission, the owner must recheck final anonymous page content and the
-   approved support contact.
+   live-verified macpad.net routes. Help and Security remain absent. The owner
+   rechecked the anonymous pages and approved support contact before the
+   18 September 2026 submission.
 
 ### Deutsche Hinweise
 
@@ -531,72 +532,54 @@ auswählt. Zum Drucken wird der Standard-Druckdialog von macOS verwendet.
    App-Sprache.
 8. Es sind kein Konto und keine Zugangsdaten nötig. Support und Datenschutz
    verwenden die live-verifizierten macpad.net-Routen. Hilfe und Sicherheit
-   bleiben ohne Befehl. Vor der Einreichung muss der Eigentümer die endgültigen
-   anonymen Seiteninhalte und den freigegebenen Support-Kontakt erneut prüfen.
+   bleiben ohne Befehl. Der Eigentümer hat die endgültigen anonymen
+   Seiteninhalte und den freigegebenen Support-Kontakt vor der Einreichung am
+   18. September 2026 erneut geprüft.
 
-## Draft owner decisions
+## Recorded owner decisions
 
-Nothing in this table changes external state. Each live value or attestation
-requires the named owner gate.
+Nothing in this table changes external state. Completed values are dated
+owner-provided App Store Connect evidence; future changes retain their named
+owner gate.
 
-| Field | Repository draft | Owner gate |
+| Field | Recorded state | Owner gate |
 | --- | --- | --- |
 | Primary category | Utilities, matching public.app-category.utilities in Xcode | Confirm in App Store Connect |
-| Age rating | No objectionable content, unrestricted web access, gambling, contests, messaging, user-generated content, advertising, or purchases in the app | Reconfirm every answer in Apple's live questionnaire; do not assert the calculated rating in advance |
-| App Privacy | No data collected | Re-audit the final binary, then enter and attest in App Store Connect |
+| Age rating | Apple calculated `4+` from the owner-completed questionnaire | Reassess if product behavior changes |
+| App Privacy | Published as **No data collected** with English and German policy URLs | Re-audit if the app, dependencies, archive, or policy changes |
 | Export compliance | Owner completed the prompt for uploaded build 15; Missing Compliance cleared | Reassess for changed encryption/dependencies; no Info.plist exemption declaration added in this cleanup |
-| Content rights | Repository artwork plus Apache-2.0 code and license evidence are available | Owner reviews the evidence and attests the rights |
+| Content rights | Owner answered that the app does not contain, show, or access third-party content | Reassess if app content or Store assets change |
 | EU DSA | No status inferred | Owner determines and declares trader status; Apple says it cannot make that determination |
 | Portfolio launch policy | Binding cross-project design | Verify the final app and Store record conform; do not redefine monetization in this Desktop package |
-| Store price | Free under the binding policy | Owner confirms the free price and required tax category in App Store Connect |
-| Storefront availability | No selection | Owner chooses storefront availability later; EU availability does not replace the separate DSA self-assessment |
+| Store price | Free in all configured regions | Any future pricing change remains owner-controlled |
+| Tax category | App Store software | Reassess if the product or monetization model changes |
+| Storefront availability | Public distribution; available on app release in all 175 countries or regions | Any future availability change remains owner-controlled; worldwide availability does not replace the separate DSA self-assessment |
 | Apple Developer Program | Active membership owner-confirmed during signing/upload | Renewal and account administration remain owner-controlled |
-| Store record | MacPad – Plain-Text Editor created with English (U.S.) as primary language; repository draft aligned to 1.3.1 (15) | Enter and verify localized metadata, copyright, and full App Review information |
+| Store record | MacPad – Plain-Text Editor with English and German metadata, three screenshots per localization, and build `1.3.1 (15)` | Recheck before any later version submission |
 | Accessibility | The app has VoiceOver labels and identifiers, but no Store label is claimed here | Test all common tasks before the owner enters any Accessibility Nutrition Label |
 | Public routes | English/German product, Support, Privacy, and Legal routes live-verified on 18 September 2026; Help, Security, and migration routes remain unconfigured | Owner rechecks final page content and support operation; migration and Store listing remain gated |
-| Signing and release | Signed archive validated and uploaded; external beta submitted | Notarization, full review, migration, release, and publication remain separate gates |
+| Review submission | Version `1.3.1 (15)` is **Waiting for Review** | Apple approval remains external and unverified |
+| Release method | Manual release | Approval does not publish the app; public release remains a separate owner action |
 
-## Owner interactive App Store Connect checklist
+## App Store Connect submission snapshot
 
-Complete these steps in App Store Connect only with the owner present. They
-are a checklist, not evidence that any field has already been entered or any
-submission has occurred.
+The owner completed the submission on 18 September 2026. This snapshot records
+the evidence without exposing account, team, contact, or signing identifiers.
 
-1. **Metadata.** Open the existing `MacPad – Plain-Text Editor` record and
-   select the macOS version being prepared. Compare the app name, subtitle,
-   promotional text, description, keywords, category, copyright, Support URL,
-   and Privacy Policy URL with the English and German drafts above. Copy only
-   owner-approved text; do not alter the product claims in this repository.
-2. **Screenshots.** Attach the six accepted 16:10 Mac screenshots to the
-   matching localization(s). Confirm each depicts the selected build and has
-   no private data, misleading representation, or obsolete support/source
-   route. Do not substitute generated screenshots for accepted evidence.
-3. **Build selection.** Select the processed App Store build only after its
-   bundle identifier, version, and build number match the final signed
-   candidate. Do not select an unverified replacement build merely because it
-   has the same marketing version.
-4. **App Privacy.** Re-audit the final binary, dependencies, and public
-   Privacy Policy URL. Then the owner enters and attests the source-supported
-   App Privacy answers; the current draft is **No data collected**.
-5. **Age rating.** The owner answers every live Apple questionnaire item from
-   the final product behavior. Do not infer or prestate Apple's calculated
-   rating from this document.
-6. **Content rights.** The owner reviews the repository artwork, Apache-2.0
-   license, and any Store assets, then makes the required rights attestation.
-7. **EU DSA.** The owner determines trader status and completes the live
-   Digital Services Act self-assessment. The hobby-project model does not
-   determine that legal status.
-8. **Free price.** Confirm the approved free price for this version; do not
-   introduce an alternative monetization model in the Store record.
-9. **Tax category and storefronts.** The owner selects the applicable tax
-   category and intended storefront availability. Record the chosen scope in
-   the owner-controlled App Store record; do not infer worldwide or EU
-   availability from this document.
-10. **Review and submission.** Recheck App Review contact, notes, support and
-    privacy links, selected build, metadata, screenshots, compliance answers,
-    and availability. Submit for App Review only after the owner explicitly
-    approves the final record and all separate signing, migration, legal, and
-    release gates are satisfied.
+1. **Metadata and screenshots:** English and German records entered with three
+   accepted 16:10 Mac screenshots per localization.
+2. **Build:** processed App Store build `1.3.1 (15)` selected.
+3. **Privacy:** **No data collected** published with localized policy URLs.
+4. **Age rating:** live questionnaire completed; calculated rating `4+`.
+5. **Content rights:** no third-party content declared.
+6. **Pricing and availability:** free, Public, App Store software tax category,
+   and available on app release in all 175 countries or regions.
+7. **Review:** one item submitted; version status **Waiting for Review**.
+8. **Release:** manual release selected. Approval alone will not make the app
+   public.
+
+The exact EU DSA declaration was not captured in the repository-safe evidence.
+Do not infer it from the hobby-project model or from successful submission.
 
 The App Store is the approved official installation and update channel at
 launch. A Direct build is limited to repository-local verification and one
@@ -735,8 +718,8 @@ checks below pass for the exact diff:
 - no PrivacyInfo.xcprivacy is added;
 - the binding portfolio launch policy is referenced without a downstream
   override or competing monetization definition;
-- the Store price is free under the binding policy and storefront
-  availability remains `No selection` until the owner chooses it;
+- the Store price is free under the binding policy, distribution is Public,
+  and availability covers all 175 configured countries or regions;
 - EU DSA trader status remains an owner legal self-assessment and is not
   inferred from the hobby-project model;
 - the two descriptions begin with the required positioning and put
@@ -753,7 +736,8 @@ checks below pass for the exact diff:
   reported separately with their real results; and
 - git diff --check passes.
 
-These checks verify repository preparation only. They do not verify a
-production signature, notarization, submission, approval, distribution, a
-live Store listing, a migration from signed builds, a public domain,
-SourceForge retirement, or private-repository operation.
+These checks verify repository preparation only. Owner-provided evidence
+separately records signing, upload, and submission. Neither source checks nor
+submission verify Apple approval, distribution, a live Store listing, a
+migration from signed builds, SourceForge retirement, or private-repository
+operation.
