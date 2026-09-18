@@ -1,9 +1,12 @@
 # MacPad App Store Preparation
 
-**Audit date:** 2026-09-16
+**Audit date:** 2026-09-18
 
 **Distribution evidence updated:** 2026-09-08, from owner-provided Xcode,
 App Store Connect, and TestFlight evidence; not continuous monitoring.
+
+**Public-route evidence updated:** 2026-09-18, from read-only anonymous HTTP
+checks; not a legal, operational, or publication acceptance.
 
 **Scope:** MacPad desktop only
 
@@ -82,11 +85,12 @@ App Privacy as transmitting data off the device in a form retained beyond
 the time needed to service a real-time request. Apple also states that data
 processed only on the device is not collected for the App Privacy answers.
 
-Opening a configured Help, Support, Privacy, or Security route leaves MacPad
-and opens the destination in the default browser. The public website must describe its own processing
-separately. The compiled macpad.net destinations remain a hard release gate
-until Shared Services verifies that the correct anonymous MacPad pages are
-live in English and German.
+Opening a configured Support or Privacy route leaves MacPad and opens the
+destination in the default browser. Help and Security are deliberately absent
+until their routes are configured. The public website must describe its own
+processing separately. The public English and German product, Support,
+Privacy, and Legal pages were live-verified on 18 September 2026; their final
+legal, content, contact, and operational acceptance remains an owner gate.
 
 Draft App Privacy answer: **No data collected.** The owner must enter and
 attest that answer in App Store Connect only after a final-source,
@@ -265,23 +269,26 @@ The owner approved these repository-local destinations:
 - customer support: `https://macpad.net/support`;
 - privacy policy: `https://macpad.net/privacy`.
 
-Shared Services verified the bilingual family site during the 6 September
-2026 workflow. A read-only check on 16 September 2026 received HTTP 200 HTML
-responses from the English and German home, support, and privacy routes and
-confirmed the expected language and MacPad page identity. Recheck the exact
-anonymous content and legally sufficient support contact before submission
-and public release; website availability is not App Store publication or
-migration acceptance.
+The public Legal route, `https://macpad.net/legal`, is live-verified but is
+not currently a compiled MacPad customer link.
 
-The remaining public contract must still supply stable, anonymous English
-and German destinations for:
+Read-only anonymous checks on 18 September 2026 received HTTP 200 HTML
+responses from the English and German product, Support, Privacy, and Legal
+routes. The pages reported their expected language, canonical URL, and
+English/German/x-default hreflang set. The owner-approved support contact is
+`support`@`macpad.net`; route availability does not establish mailbox operation,
+final page content, legal sufficiency, App Store publication, or migration
+acceptance.
 
-- product and marketing information;
+The following public routes remain deliberately unconfigured in English and
+German and were confirmed as HTTP 404 on 18 September 2026:
+
 - Help and documentation;
 - security reporting;
-- release notes;
-- direct-user migration and update guidance; and
-- the final Mac App Store listing.
+- direct-user migration and update guidance.
+
+Release notes and the final Mac App Store listing remain separate owner and
+Apple publication gates; neither is a currently configured customer route.
 
 The App Store Help menu now exposes the approved Support and Privacy routes,
 but still omits unconfigured Help and Security commands as well as every
@@ -355,11 +362,10 @@ geprüft werden.
 
 MacPad works without an account.
 
-For help, bug reports, or feature requests, use
-[OWNER INPUT REQUIRED: final public support contact]. Include the MacPad
-version, macOS version, expected result, actual result, and reproducible
-steps. Do not attach private document contents unless they are essential
-and you intentionally choose to share them.
+For help, bug reports, or feature requests, use `support`@`macpad.net`. Include
+the MacPad version, macOS version, expected result, actual result, and
+reproducible steps. Do not attach private document contents unless they are
+essential and you intentionally choose to share them.
 
 Report security concerns through
 [OWNER INPUT REQUIRED: final public security-reporting route].
@@ -370,12 +376,10 @@ Report security concerns through
 
 MacPad funktioniert ohne Konto.
 
-Für Hilfe, Fehlerberichte oder Funktionswünsche nutze
-[EINGABE DES EIGENTÜMERS ERFORDERLICH: endgültiger öffentlicher
-Support-Kontakt]. Nenne MacPad-Version, macOS-Version, erwartetes Ergebnis,
-tatsächliches Ergebnis und reproduzierbare Schritte. Hänge keine privaten
-Dokumentinhalte an, außer sie sind unbedingt nötig und du entscheidest dich
-bewusst dafür.
+Für Hilfe, Fehlerberichte oder Funktionswünsche nutze `support`@`macpad.net`.
+Nenne MacPad-Version, macOS-Version, erwartetes Ergebnis, tatsächliches
+Ergebnis und reproduzierbare Schritte. Hänge keine privaten Dokumentinhalte
+an, außer sie sind unbedingt nötig und du entscheidest dich bewusst dafür.
 
 Melde Sicherheitsprobleme über
 [EINGABE DES EIGENTÜMERS ERFORDERLICH: endgültiger öffentlicher
@@ -492,8 +496,9 @@ the standard macOS print panel.
 6. Enable the optional menu-bar item and create a new empty window from it.
 7. Verify English and German through the macOS per-app language setting.
 8. No account or credentials are required. Support and Privacy use the
-   approved macpad.net routes. Help and Security remain absent. Do not use
-   this candidate for review until the configured routes are verified live.
+   live-verified macpad.net routes. Help and Security remain absent. Before
+   submission, the owner must recheck final anonymous page content and the
+   approved support contact.
 
 ### Deutsche Hinweise
 
@@ -525,9 +530,9 @@ auswählt. Zum Drucken wird der Standard-Druckdialog von macOS verwendet.
 7. Prüfe Englisch und Deutsch über die macOS-Einstellung für die
    App-Sprache.
 8. Es sind kein Konto und keine Zugangsdaten nötig. Support und Datenschutz
-   verwenden die freigegebenen macpad.net-Routen. Hilfe und Sicherheit
-   bleiben ohne Befehl. Dieser Kandidat darf erst nach der Live-Prüfung der
-   konfigurierten Routen zur Prüfung verwendet werden.
+   verwenden die live-verifizierten macpad.net-Routen. Hilfe und Sicherheit
+   bleiben ohne Befehl. Vor der Einreichung muss der Eigentümer die endgültigen
+   anonymen Seiteninhalte und den freigegebenen Support-Kontakt erneut prüfen.
 
 ## Draft owner decisions
 
@@ -548,8 +553,50 @@ requires the named owner gate.
 | Apple Developer Program | Active membership owner-confirmed during signing/upload | Renewal and account administration remain owner-controlled |
 | Store record | MacPad – Plain-Text Editor created with English (U.S.) as primary language; repository draft aligned to 1.3.1 (15) | Enter and verify localized metadata, copyright, and full App Review information |
 | Accessibility | The app has VoiceOver labels and identifiers, but no Store label is claimed here | Test all common tasks before the owner enters any Accessibility Nutrition Label |
-| Public routes | Family website verified by Shared Services during this workflow | Recheck release-specific routes; migration and Store listing remain gated |
+| Public routes | English/German product, Support, Privacy, and Legal routes live-verified on 18 September 2026; Help, Security, and migration routes remain unconfigured | Owner rechecks final page content and support operation; migration and Store listing remain gated |
 | Signing and release | Signed archive validated and uploaded; external beta submitted | Notarization, full review, migration, release, and publication remain separate gates |
+
+## Owner interactive App Store Connect checklist
+
+Complete these steps in App Store Connect only with the owner present. They
+are a checklist, not evidence that any field has already been entered or any
+submission has occurred.
+
+1. **Metadata.** Open the existing `MacPad – Plain-Text Editor` record and
+   select the macOS version being prepared. Compare the app name, subtitle,
+   promotional text, description, keywords, category, copyright, Support URL,
+   and Privacy Policy URL with the English and German drafts above. Copy only
+   owner-approved text; do not alter the product claims in this repository.
+2. **Screenshots.** Attach the six accepted 16:10 Mac screenshots to the
+   matching localization(s). Confirm each depicts the selected build and has
+   no private data, misleading representation, or obsolete support/source
+   route. Do not substitute generated screenshots for accepted evidence.
+3. **Build selection.** Select the processed App Store build only after its
+   bundle identifier, version, and build number match the final signed
+   candidate. Do not select an unverified replacement build merely because it
+   has the same marketing version.
+4. **App Privacy.** Re-audit the final binary, dependencies, and public
+   Privacy Policy URL. Then the owner enters and attests the source-supported
+   App Privacy answers; the current draft is **No data collected**.
+5. **Age rating.** The owner answers every live Apple questionnaire item from
+   the final product behavior. Do not infer or prestate Apple's calculated
+   rating from this document.
+6. **Content rights.** The owner reviews the repository artwork, Apache-2.0
+   license, and any Store assets, then makes the required rights attestation.
+7. **EU DSA.** The owner determines trader status and completes the live
+   Digital Services Act self-assessment. The hobby-project model does not
+   determine that legal status.
+8. **Free price.** Confirm the approved free price for this version; do not
+   introduce an alternative monetization model in the Store record.
+9. **Tax category and storefronts.** The owner selects the applicable tax
+   category and intended storefront availability. Record the chosen scope in
+   the owner-controlled App Store record; do not infer worldwide or EU
+   availability from this document.
+10. **Review and submission.** Recheck App Review contact, notes, support and
+    privacy links, selected build, metadata, screenshots, compliance answers,
+    and availability. Submit for App Review only after the owner explicitly
+    approves the final record and all separate signing, migration, legal, and
+    release gates are satisfied.
 
 The App Store is the approved official installation and update channel at
 launch. A Direct build is limited to repository-local verification and one
@@ -601,8 +648,8 @@ Every migration matrix cell remains fail-closed until separately tested.
 | Recent files | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Native recents and repository-managed references remain usable or fail clearly |
 | Security-scoped bookmarks | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Bookmark refresh remains balanced for explicit opens, saves, and Open Recent; inaccessible files fail clearly |
 | Conflict and recovery behavior | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | External changes, reload, and recovery choices do not overwrite content silently |
-| Help, Support, Privacy, and Security | COMPILED / NOT LIVE-VERIFIED | COMPILED / NOT LIVE-VERIFIED | Every configured domain route opens the correct anonymous MacPad page in English and German; unconfigured Help and Security routes remain absent |
-| Migration and update guidance | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | The transition build points only to the verified migration page; that page exposes the Store link after live-listing verification |
+| Help, Support, Privacy, and Security | Support and Privacy COMPILED / LIVE-VERIFIED; Help and Security NOT CONFIGURED | Support and Privacy COMPILED / LIVE-VERIFIED; Help and Security NOT CONFIGURED | Configured Support and Privacy routes open the correct anonymous MacPad page in English and German; unconfigured Help and Security routes remain absent |
+| Migration and update guidance | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | The transition build points only to a future verified migration page; that page exposes the Store link after live-listing verification |
 
 Do not publish instructions telling a user to overwrite, replace, remove, or
 delete an existing app until this exact signed matrix passes. A successful
