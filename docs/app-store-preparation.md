@@ -648,7 +648,7 @@ Every migration matrix cell remains fail-closed until separately tested.
 | Recent files | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Native recents and repository-managed references remain usable or fail clearly |
 | Security-scoped bookmarks | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Bookmark refresh remains balanced for explicit opens, saves, and Open Recent; inaccessible files fail clearly |
 | Conflict and recovery behavior | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | External changes, reload, and recovery choices do not overwrite content silently |
-| Help, Support, Privacy, and Security | Support and Privacy COMPILED / LIVE-VERIFIED; Help and Security NOT CONFIGURED | Support and Privacy COMPILED / LIVE-VERIFIED; Help and Security NOT CONFIGURED | Configured Support and Privacy routes open the correct anonymous MacPad page in English and German; unconfigured Help and Security routes remain absent |
+| Help, Support, Privacy, and Security | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | Support and Privacy are COMPILED / LIVE-VERIFIED; Help and Security are NOT CONFIGURED. Configured Support and Privacy routes open the correct anonymous MacPad page in English and German; unconfigured Help and Security routes remain absent |
 | Migration and update guidance | NOT TESTED / OWNER-GATED | NOT TESTED / OWNER-GATED | The transition build points only to a future verified migration page; that page exposes the Store link after live-listing verification |
 
 Do not publish instructions telling a user to overwrite, replace, remove, or
