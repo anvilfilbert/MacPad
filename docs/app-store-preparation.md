@@ -1,4 +1,10 @@
-# MacPad App Store Preparation
+# MacPad App Store Preparation — Historical Record
+
+This page preserves dated Store/TestFlight preparation and acceptance evidence.
+The Mac App Store path is discontinued and issue #28 is closed. Its historical
+drafts, cutover proposals and owner gates below are not current release tasks.
+For the released direct DMG, use the [README](../README.md#download) and
+[current project state](../PROJECT_CONTEXT.md#verified-current-state).
 
 **Audit date:** 2026-09-18
 
@@ -12,15 +18,16 @@ checks; not a legal, operational, or publication acceptance.
 
 **Current distribution direction (2026-10-17):** The App Review appeal was
 unsuccessful. The owner chose direct macOS distribution and no further Store
-submission. The unreleased direct candidate is `1.4.0 (16)`; the public direct
-release remains `1.3.1`. MacPad Mobile is unchanged.
+submission. MacPad `1.4.0 (16)` is now published as a Developer ID-signed,
+Apple-notarized DMG through GitHub Releases and linked from macpad.net. MacPad
+Mobile is unchanged and follows its independent App Store release path.
 
 **Historical submission status (2026-09-18):** Submitted to App Review and
 waiting for review; no public Mac App Store release.
 
 This document is the authoritative repository source for MacPad App Store
 metadata, privacy evidence, public-page copy, review instructions, the approved
-identifier, the owner-confirmed submission state, and unresolved release gates.
+identifier, the owner-confirmed historical submission state, and historical gates.
 Historical source audits below are not proof of approval or release.
 
 | State | Evidence at 2026-09-18 |
@@ -42,7 +49,7 @@ At that snapshot, remaining gates were Apple's review decision, signed legacy
 migration, an owner-controlled manual release after approval, and verification
 of the live listing. The submitted build, Store record, and dated unsigned
 checks used `1.3.1 (15)`. Those historical checks are not acceptance of the
-current direct DMG candidate; its release gates are in `PROJECT_CONTEXT.md`.
+released direct DMG; its separate acceptance is in `PROJECT_CONTEXT.md`.
 
 Keep invitation links, tester identities, review contacts, account/team IDs,
 signing artifacts, and local archive paths outside this repository.

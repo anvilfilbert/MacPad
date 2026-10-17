@@ -29,23 +29,28 @@ releases, and macOS-specific distribution preparation.
 - The macOS App Review appeal was unsuccessful. The owner has chosen direct
   distribution for the Mac application instead of further App Store submissions.
   MacPad Mobile remains independently distributed through the App Store.
-- The approved direct-release target is a charcoal/cyan, drag-to-Applications
-  DMG, signed with Developer ID Application, notarized, and stapled. Publication
-  is not complete until the exact artifact and checksum are available through
-  GitHub Releases and macpad.net and downloaded copies pass verification.
-- Release preparation is local. The owner-created Developer ID Application
-  identity passed a real signing check on a temporary candidate app. Notarization
-  authentication and final artifact acceptance remain open; no signed/notarized
-  DMG is claimed as publicly available.
+- [MacPad 1.4.0 (16)](https://github.com/anvilfilbert/MacPad/releases/tag/v1.4.0)
+  is published from merged source `6cb8f138def2c2a916daed90633e0e69ccb9998f`.
+  Its charcoal/cyan drag-to-Applications DMG contains a universal Apple Silicon
+  and Intel app for macOS 14 or later. App and DMG are Developer ID-signed;
+  Apple notarization was accepted and the ticket is stapled to the DMG.
+- Strict signature, stapler, Gatekeeper, downloaded installation and launch
+  checks passed. The owner confirmed typing, saving and reopening a test file.
+  The public DMG and checksum match the tested final artifact byte-for-byte.
+  Release notes contain the exact SHA-256 and installation instructions.
+- The English/German macpad.net download pages offer the same versioned DMG,
+  checksum and release notes. Shared Services activated its separately approved
+  exact candidate `da49ca088fd73b9db314c51d378bc0c9de9ffec4`; all 12 public routes
+  and website-linked anonymous downloads passed verification. See PR #38 for
+  app release evidence. Mobile and other hosted services were unchanged.
 - The existing unsigned/ad-hoc build and ZIP preflight remain separate from the
   new DMG tooling. The legacy workflow is manual and read-only; version tags do
   not rebuild or publish ad-hoc ZIPs. Usage and publication gates are in the docstrings
   of `scripts/package-dmg.py`, `scripts/verify-developer-id.py`, and
   `scripts/notarize-dmg.py`.
 
-- Latest published direct release remains `1.3.1`.
-- The unreleased direct DMG candidate is `1.4.0 (16)`, covering the newer merged
-  features and packaging without replacing the existing `v1.3.1` tag or assets.
+- The legacy `v1.3.1` tag and ad-hoc-signed ZIP assets remain unchanged. They are
+  not Apple-notarized and are not the current recommended download.
 - PR #34 merged at `4c4da538`; PR #35 merged at `330189263`.
 - Merged repository-local implementation includes:
   - English/German native localization and compiled resources;
@@ -63,23 +68,23 @@ releases, and macOS-specific distribution preparation.
   Keyboard Access, is recorded in PR #34 and issues #28/#29. All six genuine
   EN/DE screenshots passed final validation. See
   `docs/verification/app-store-local-smoke.md` for provenance.
-- Signed Store sandbox/migration proof remains a separate owner gate.
+- Signed Store sandbox/migration proof was not completed; it is historical
+  Store work, not a remaining gate for the released direct DMG.
 - Issue #30 is closed after verified Launch Services cleanup.
 - PR #35 implements issue #31; the owner verified that dragging a text file
   opens its content instead of inserting its path. Integration is merged.
-- Open issues:
-  - #28: Mac App Store preparation; implementation substantially complete but
-    manual, owner, and Apple gates remain.
+- Issue #28 is closed following the owner's decision to discontinue Mac App
+  Store distribution and provide direct downloads instead.
 - Issues #29 and #31 are closed.
 - The owner-approved production bundle identifier is `com.anvilfilbert.MacPad`.
   The uploaded candidate was built from `330189263` plus the five identifier
   substitutions now preserved in source, packaging checks, and the existing test.
-- Apple-connected validation, upload, and beta review milestones are recorded
-  in [App Store preparation](docs/app-store-preparation.md). That document is
-  authoritative for the dated distribution snapshot and remaining owner gates.
+- Historical Apple-connected validation, upload, and beta review milestones are
+  recorded in [App Store preparation](docs/app-store-preparation.md). Those dated
+  Store records do not supersede the current direct-release status above.
 - MacPad `1.3.1 (15)` was approved for external TestFlight testing. The owner
   confirmed installation, launch, and a basic create, save, and reopen smoke
-  test on a Mac. This is historical acceptance, not acceptance of the new DMG;
+  test on a Mac. This is historical acceptance, separate from the DMG acceptance;
   public testing is closed and no public Mac App Store release is claimed.
 - Issue #32 was closed as a duplicate of #30.
 - The bilingual family website is deployed and verified at `https://macpad.net`.

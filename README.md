@@ -14,7 +14,7 @@ Ultra-fast native plain-text editor for macOS. No bloat.
 
 - [MacPad family website](https://macpad.net/) presents both apps.
 - MacPad is the native macOS editor in this repository.
-- [MacPad Mobile](https://macpad.net) is the native
+- [MacPad Mobile](https://macpad.net/mobile/) is the native
   iPhone and iPad counterpart.
 
 The apps are separate codebases and do not automatically synchronize open
@@ -29,19 +29,33 @@ can be opened explicitly from either app.
 
 ## Download
 
-Download the latest ready-to-use universal app for Apple silicon and Intel Macs
-running macOS 14 or later:
+**MacPad 1.4.0** is available as a ready-to-use universal DMG for Apple Silicon
+and Intel Macs running macOS 14 or later. The app and disk image are Developer
+ID-signed; Apple notarization was accepted and its ticket is stapled to the DMG.
 
-[Download the latest MacPad release](https://github.com/anvilfilbert/MacPad/releases/latest)
+[Download MacPad 1.4.0 (.dmg)](https://github.com/anvilfilbert/MacPad/releases/download/v1.4.0/MacPad-macOS-universal.dmg)
+· [SHA-256 checksum](https://github.com/anvilfilbert/MacPad/releases/download/v1.4.0/MacPad-macOS-universal.dmg.sha256)
+· [Release notes](https://github.com/anvilfilbert/MacPad/releases/tag/v1.4.0)
+· [Website](https://macpad.net/mac/)
 
-For a DMG, open the disk image and drag `MacPad.app` to Applications. For a legacy
-ZIP, unzip it and drag `MacPad.app` to Applications. Quit an existing copy before
-replacing it. The release page provides the matching checksum and release notes.
+1. Save your documents and quit any running copy of MacPad.
+2. Open the DMG and drag **MacPad** to **Applications**. Confirm replacement if updating.
+3. Eject the disk image and open MacPad from Applications.
+
+To check the download, save the DMG and checksum in the same folder, then run:
+
+```sh
+shasum -a 256 -c MacPad-macOS-universal.dmg.sha256
+```
+
+The expected result is `MacPad-macOS-universal.dmg: OK`. Gatekeeper, downloaded
+installation and launch, and a create/save/reopen smoke check passed for this release.
 
 GitHub is the canonical download source. The [SourceForge mirror](https://sourceforge.net/projects/macpad-editor/files/latest/download)
 may offer an older release; do not assume it contains the newest GitHub artifact.
 
-The legacy 1.3.1 ZIP is ad-hoc-signed, not Apple-notarized. Its matching `.sha256`
+The [legacy 1.3.1 ZIP](https://github.com/anvilfilbert/MacPad/releases/tag/v1.3.1)
+is retained but is ad-hoc-signed, not Apple-notarized. Its matching `.sha256`
 and GitHub build-provenance attestation do not change that signing status.
 
 ## Latest Changes
@@ -52,17 +66,16 @@ release history.
 
 ## Distribution status
 
-MacPad for macOS will continue as a direct download, following an unsuccessful
-Mac App Store appeal. MacPad Mobile remains independently available through the
-App Store. Public Mac testing is closed.
+MacPad for macOS is distributed directly through GitHub Releases and linked from
+macpad.net, not through the Mac App Store. MacPad Mobile remains independently
+available through the App Store. Public Mac TestFlight testing is closed.
 
-Branded direct-distribution DMGs must pass Developer ID signing, notarization,
-stapling, Gatekeeper, installation, and launch checks before publication. Only
-files listed on the release page are available to download; preparation in this
-repository is not a published release. Version tags do not automatically publish ZIPs.
+Version 1.4.0 passed the signed-DMG release checks. Local development builds and
+legacy ZIPs do not inherit that signing or notarization status. Future releases
+must pass their own verification; version tags do not automatically publish ZIPs.
 
-See [App Store preparation](docs/app-store-preparation.md) for the dated
-distribution evidence, English/German metadata drafts, and remaining gates.
+See [App Store preparation](docs/app-store-preparation.md) for historical Store
+and TestFlight evidence, not an active Mac App Store submission plan.
 
 ## Features
 
