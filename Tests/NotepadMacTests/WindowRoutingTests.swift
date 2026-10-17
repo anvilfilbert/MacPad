@@ -1026,6 +1026,43 @@ struct WindowRoutingTests {
         #expect(transitionCount == 0)
     }
 
+    @Test("Save As to the current file or its symlink preserves an external edit")
+    func saveAsCurrentFileRejectsExternalModification() throws {
+        try withTemporaryDirectory { directory in
+            let fileURL = directory.appendingPathComponent("original.txt")
+            let linkURL = directory.appendingPathComponent("alias.txt")
+            try Data("original".utf8).write(to: fileURL)
+            try FileManager.default.createSymbolicLink(at: linkURL, withDestinationURL: fileURL)
+            let controller = EditorWindowController(
+                localization: englishLocalization,
+                fileAccess: directFileAccess
+            )
+            try controller.loadFile(directFileAccess.makeReference(for: fileURL))
+            let originalReference = controller.fileReference
+            let contentView = try #require(controller.window?.contentView)
+            let editor = try #require(
+                view(withIdentifier: "editor.text", in: contentView) as? NSTextView
+            )
+            editor.string = "MacPad edit"
+            try Data("external edit".utf8).write(to: fileURL)
+            var transitionCount = 0
+            controller.onSuccessfulSave = { _ in transitionCount += 1 }
+
+            for destination in [fileURL, linkURL] {
+                do {
+                    try controller.saveDocument(to: destination, encoding: .utf8)
+                    Issue.record("Expected Save As to preserve the external edit.")
+                } catch EditorDocumentError.fileChangedOnDisk(let path) {
+                    #expect(path == fileURL.resolvingSymlinksInPath().standardizedFileURL.path)
+                }
+                #expect(try String(contentsOf: fileURL, encoding: .utf8) == "external edit")
+                #expect(controller.fileReference == originalReference)
+                #expect(editor.string == "MacPad edit")
+                #expect(transitionCount == 0)
+            }
+        }
+    }
+
     @Test("Save As stays attached to its previous state when bookmark persistence fails")
     func saveAsPersistenceFailureKeepsPreviousState() throws {
         try withTemporaryDirectory { directory in

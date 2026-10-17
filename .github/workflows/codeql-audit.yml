@@ -1,0 +1,72 @@
+name: Two-ref Swift security audit
+
+# Supplemental evidence only. GitHub's default CodeQL setup remains enabled.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'codex/developer-id-dmg'
+    name: CodeQL audit (${{ matrix.label }})
+    runs-on: macos-15
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: published-1.3.1
+            ref: 59c1e66a5bb33054979172ae549d3a6e88647452
+            version: '1.3.1'
+            build: '15'
+          - label: repaired-candidate
+            ref: ${{ github.event.pull_request.head.sha }}
+            version: '1.4.0'
+            build: '16'
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      AUDIT_REF: ${{ matrix.ref }}
+      AUDIT_LABEL: ${{ matrix.label }}
+      AUDIT_HELPER_REF: ${{ github.event.pull_request.head.sha }}
+      AUDIT_VERSION: ${{ matrix.version }}
+      AUDIT_BUILD: ${{ matrix.build }}
+    steps:
+      - name: Checkout audit helpers at exact PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: audit-tools
+          persist-credentials: false
+      - name: Checkout exact source revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.ref }}
+          path: source
+          persist-credentials: false
+      - name: Test evidence gates
+        run: python3 -B -m unittest discover -s audit-tools/scripts/codeql-audit -p 'test_*.py'
+      - name: Extract and analyze without signing or cached build products
+        run: >-
+          bash audit-tools/scripts/codeql-audit/run.sh
+          "$GITHUB_WORKSPACE/source" "$AUDIT_REF"
+          "$RUNNER_TEMP/macpad-audit-$AUDIT_LABEL"
+      - name: Prepare privacy-checked evidence, including failed runs
+        id: evidence
+        if: always()
+        run: >-
+          python3 -B audit-tools/scripts/codeql-audit/publish_evidence.py
+          "$RUNNER_TEMP/macpad-audit-$AUDIT_LABEL"
+          "$RUNNER_TEMP/macpad-evidence-$AUDIT_LABEL"
+      - name: Retain evidence (no code-scanning upload or release publication)
+        if: always() && steps.evidence.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: codeql-${{ matrix.label }}-${{ matrix.ref }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/macpad-evidence-${{ matrix.label }}
+          if-no-files-found: error
+          retention-days: 30

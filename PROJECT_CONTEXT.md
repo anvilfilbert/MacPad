@@ -2,7 +2,7 @@
 
 **Repository:** `anvilfilbert/MacPad`
 **Product:** MacPad for macOS
-**Last verified:** 2026-09-08
+**Last verified:** 2026-10-17
 
 ## Purpose
 
@@ -26,7 +26,26 @@ releases, and macOS-specific distribution preparation.
 
 ## Verified current state
 
+- The macOS App Review appeal was unsuccessful. The owner has chosen direct
+  distribution for the Mac application instead of further App Store submissions.
+  MacPad Mobile remains independently distributed through the App Store.
+- The approved direct-release target is a charcoal/cyan, drag-to-Applications
+  DMG, signed with Developer ID Application, notarized, and stapled. Publication
+  is not complete until the exact artifact and checksum are available through
+  GitHub Releases and macpad.net and downloaded copies pass verification.
+- Release preparation is local. The owner-created Developer ID Application
+  identity passed a real signing check on a temporary candidate app. Notarization
+  authentication and final artifact acceptance remain open; no signed/notarized
+  DMG is claimed as publicly available.
+- The existing unsigned/ad-hoc build and ZIP preflight remain separate from the
+  new DMG tooling. The legacy workflow is manual and read-only; version tags do
+  not rebuild or publish ad-hoc ZIPs. Usage and publication gates are in the docstrings
+  of `scripts/package-dmg.py`, `scripts/verify-developer-id.py`, and
+  `scripts/notarize-dmg.py`.
+
 - Latest published direct release remains `1.3.1`.
+- The unreleased direct DMG candidate is `1.4.0 (16)`, covering the newer merged
+  features and packaging without replacing the existing `v1.3.1` tag or assets.
 - PR #34 merged at `4c4da538`; PR #35 merged at `330189263`.
 - Merged repository-local implementation includes:
   - English/German native localization and compiled resources;
@@ -58,10 +77,10 @@ releases, and macOS-specific distribution preparation.
 - Apple-connected validation, upload, and beta review milestones are recorded
   in [App Store preparation](docs/app-store-preparation.md). That document is
   authoritative for the dated distribution snapshot and remaining owner gates.
-- MacPad `1.3.1 (15)` is approved for external TestFlight testing. The owner
+- MacPad `1.3.1 (15)` was approved for external TestFlight testing. The owner
   confirmed installation, launch, and a basic create, save, and reopen smoke
-  test on a Mac. Invitations are available through the MacPad Support page; no
-  public TestFlight join link or public Mac App Store release is claimed.
+  test on a Mac. This is historical acceptance, not acceptance of the new DMG;
+  public testing is closed and no public Mac App Store release is claimed.
 - Issue #32 was closed as a duplicate of #30.
 - The bilingual family website is deployed and verified at `https://macpad.net`.
 - Both apps are approved as free hobby tools without monetization. Customer

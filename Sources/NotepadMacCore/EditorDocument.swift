@@ -207,7 +207,12 @@ public final class EditorDocument {
     ) throws -> WrittenDocumentSave {
         let resolvedURL = url.resolvingSymlinksInPath().standardizedFileURL
         let outputData = try savableData(path: resolvedURL.path, encoding: encoding)
-        let savedURL = try coordinatedWrite(outputData, to: resolvedURL)
+        let savedURL: URL
+        if fileURL?.standardizedFileURL == resolvedURL {
+            savedURL = try coordinatedOverwriteCurrentFile(outputData, at: resolvedURL)
+        } else {
+            savedURL = try coordinatedWrite(outputData, to: resolvedURL)
+        }
         return WrittenDocumentSave(
             savedURL: savedURL,
             encoding: encoding,
@@ -395,11 +400,14 @@ public final class EditorDocument {
         to url: URL,
         validateBeforeWriting: (URL) throws -> Void
     ) throws -> URL {
+        // Coordination can itself open the destination before calling the accessor.
+        try Self.validateWriteDestination(url)
         let coordinator = NSFileCoordinator(filePresenter: nil)
         var coordinationError: NSError?
         var writeResult: Result<URL, any Error>?
         coordinator.coordinate(writingItemAt: url, options: [], error: &coordinationError) { coordinatedURL in
             do {
+                try Self.validateWriteDestination(coordinatedURL)
                 try validateBeforeWriting(coordinatedURL)
                 try data.write(to: coordinatedURL, options: .atomic)
                 writeResult = .success(coordinatedURL.standardizedFileURL)
@@ -417,8 +425,40 @@ public final class EditorDocument {
         return try writeResult.get()
     }
 
+    private static func validateWriteDestination(_ url: URL) throws {
+        try url.withUnsafeFileSystemRepresentation { path in
+            guard let path else {
+                throw CocoaError(.fileWriteInvalidFileName, userInfo: [NSURLErrorKey: url])
+            }
+            var fileStatus = stat()
+            guard stat(path, &fileStatus) == 0 else {
+                let errorCode = errno
+                if errorCode == ENOENT {
+                    return
+                }
+                throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO,
+                                 userInfo: [NSFilePathErrorKey: url.path])
+            }
+            guard (fileStatus.st_mode & S_IFMT) == S_IFREG else {
+                throw EditorDocumentError.fileIsNotRegular(path: url.path)
+            }
+        }
+    }
+
     private static func readBoundedRegularFile(_ url: URL) throws -> Data {
-        let handle = try FileHandle(forReadingFrom: url)
+        // A blocking open of a FIFO never reaches the descriptor's type check.
+        let descriptor: Int32 = try url.withUnsafeFileSystemRepresentation { path in
+            guard let path else {
+                throw CocoaError(.fileReadInvalidFileName, userInfo: [NSURLErrorKey: url])
+            }
+            let descriptor = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC)
+            guard descriptor >= 0 else {
+                throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO,
+                                 userInfo: [NSFilePathErrorKey: url.path])
+            }
+            return descriptor
+        }
+        let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
         defer { handle.closeFile() }
 
         var fileStatus = stat()

@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import Testing
 @testable import NotepadMacCore
@@ -661,6 +662,74 @@ struct EditorDocumentTests {
         }
         saveFinishedObserved = true
         #expect(try String(contentsOf: fileURL, encoding: .utf8) == "external edit")
+    }
+
+    @Test("a named pipe without a writer is rejected without changing document state")
+    func rejectsNamedPipe() throws {
+        let directory = try temporaryDirectory()
+        let pipeURL = directory.appendingPathComponent("pipe.txt")
+        try #require(mkfifo(pipeURL.path, 0o600) == 0)
+        let document = EditorDocument()
+        document.updateText("unsaved text")
+
+        do {
+            try document.loadFile(pipeURL)
+            Issue.record("Expected a named pipe to be rejected.")
+        } catch EditorDocumentError.fileIsNotRegular(let path) {
+            #expect(path == pipeURL.resolvingSymlinksInPath().standardizedFileURL.path)
+        }
+        #expect(document.fileURL == nil)
+        #expect(document.text == "unsaved text")
+        #expect(document.hasUnsavedChanges)
+    }
+
+    @Test("saving rejects a current file replaced by a named pipe without a writer")
+    func rejectsNamedPipeDuringSave() throws {
+        let directory = try temporaryDirectory()
+        let fileURL = directory.appendingPathComponent("note.txt")
+        try Data("original".utf8).write(to: fileURL)
+        let document = EditorDocument()
+        try document.loadFile(fileURL)
+        document.updateText("unsaved text")
+        let reference = document.fileReference
+        try FileManager.default.removeItem(at: fileURL)
+        try #require(mkfifo(fileURL.path, 0o600) == 0)
+
+        do {
+            try document.save(to: fileURL)
+            Issue.record("Expected the replacement named pipe to be rejected.")
+        } catch EditorDocumentError.fileIsNotRegular(let path) {
+            #expect(path == fileURL.resolvingSymlinksInPath().standardizedFileURL.path)
+        }
+        #expect(document.fileReference == reference)
+        #expect(document.text == "unsaved text")
+        #expect(document.originalText == "original")
+        #expect(document.hasUnsavedChanges)
+        var status = stat()
+        try #require(lstat(fileURL.path, &status) == 0)
+        #expect(status.st_mode & S_IFMT == S_IFIFO)
+    }
+
+    @Test("Save As rejects a named-pipe destination without changing document state")
+    func rejectsNamedPipeDuringSaveAs() throws {
+        let directory = try temporaryDirectory()
+        let pipeURL = directory.appendingPathComponent("pipe.txt")
+        try #require(mkfifo(pipeURL.path, 0o600) == 0)
+        let document = EditorDocument()
+        document.updateText("unsaved text")
+
+        do {
+            _ = try document.writeNewFile(to: pipeURL, encoding: .utf8)
+            Issue.record("Expected the named-pipe destination to be rejected.")
+        } catch EditorDocumentError.fileIsNotRegular(let path) {
+            #expect(path == pipeURL.resolvingSymlinksInPath().standardizedFileURL.path)
+        }
+        #expect(document.fileURL == nil)
+        #expect(document.text == "unsaved text")
+        #expect(document.hasUnsavedChanges)
+        var status = stat()
+        try #require(lstat(pipeURL.path, &status) == 0)
+        #expect(status.st_mode & S_IFMT == S_IFIFO)
     }
 
     @Test("directories are rejected as editor documents")
