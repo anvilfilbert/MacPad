@@ -21,8 +21,6 @@ The apps are separate codebases and do not automatically synchronize open
 documents, tabs, settings, or recovery data. Files stored in a shared location
 can be opened explicitly from either app.
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/anvilfilbert/MacPad)
-
 <p align="center">
   <img src="Assets/MacPad-Review.png" alt="MacPad editor windows with tabs" width="760">
 </p>
