@@ -2,7 +2,7 @@
 
 **Repository:** `anvilfilbert/MacPad`
 **Product:** MacPad for macOS
-**Last verified:** 2026-09-08
+**Last verified:** 2026-10-17
 
 ## Purpose
 
@@ -25,6 +25,20 @@ releases, and macOS-specific distribution preparation.
   `MacPad-SharedServices` after explicit approval.
 
 ## Verified current state
+
+- The macOS App Review appeal was unsuccessful. The owner has chosen direct
+  distribution for the Mac application instead of further App Store submissions.
+  MacPad Mobile remains independently distributed through the App Store.
+- The approved direct-release target is a charcoal/cyan, drag-to-Applications
+  DMG, signed with Developer ID Application, notarized, and stapled. Publication
+  is not complete until the exact artifact and checksum are available through
+  GitHub Releases and macpad.net and downloaded copies pass verification.
+- Release preparation is local. The required Developer ID Application identity
+  is not yet installed; no signed/notarized DMG is claimed as available.
+- The existing unsigned/ad-hoc build and ZIP workflow remains separate from the
+  new DMG tooling. Usage and publication gates are documented in the docstrings
+  of `scripts/package-dmg.py`, `scripts/verify-developer-id.py`, and
+  `scripts/notarize-dmg.py`.
 
 - Latest published direct release remains `1.3.1`.
 - PR #34 merged at `4c4da538`; PR #35 merged at `330189263`.

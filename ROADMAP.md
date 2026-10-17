@@ -32,20 +32,25 @@ Issue #30 is closed after verified cleanup.
 Keep portfolio ownership and release gates current without changing runtime
 behavior or deployment workflows.
 
-## Distribution and shared services
+## Signed direct distribution and shared services
 
 The published direct release remains 1.3.1, independently of Store preparation.
 The bilingual website is deployed by Shared Services. Website and mailbox
 administration remain outside this repository.
 
-The dated distribution snapshot is in
-[App Store preparation](docs/app-store-preparation.md), tracked by issue #28.
-External TestFlight approval and a basic installed-build smoke are complete.
-Remaining work includes external tester feedback, signed legacy migration,
-final Store metadata and screenshots, version/build alignment, owner
-declarations, free pricing and storefront choices. Full App Store submission
-and public release require separate approval.
+The current owner-approved direction is direct Mac distribution, following the
+unsuccessful App Review appeal. Preserve the Store/TestFlight evidence in
+[App Store preparation](docs/app-store-preparation.md); it is historical evidence,
+not a plan to resubmit the Mac application. MacPad Mobile stays in the App Store.
+
+Prepare the branded universal DMG, verify Developer ID signing, notarization,
+stapling and Gatekeeper, then verify installation and launch from the downloaded
+release. Publish the same final artifact and checksum through GitHub Releases
+and update the English/German Mac website pages through Shared Services. Keep
+the old release available for rollback and do not replace its assets.
 
 Apple accounts, signing, notarization, Store upload, review, and publication
-require separate owner approvals and evidence. Source visibility and SourceForge
-cutover decisions are not authorized by this roadmap.
+require explicit owner approvals and evidence. The signed DMG and website release
+workflow is approved; creation of signing credentials and other security-sensitive
+account changes retain their action-time approval gates. Source visibility and
+SourceForge changes are not part of this work.
