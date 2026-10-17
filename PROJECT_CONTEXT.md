@@ -42,6 +42,8 @@ releases, and macOS-specific distribution preparation.
   `scripts/notarize-dmg.py`.
 
 - Latest published direct release remains `1.3.1`.
+- The unreleased direct DMG candidate is `1.4.0 (16)`, covering the newer merged
+  features and packaging without replacing the existing `v1.3.1` tag or assets.
 - PR #34 merged at `4c4da538`; PR #35 merged at `330189263`.
 - Merged repository-local implementation includes:
   - English/German native localization and compiled resources;

@@ -194,8 +194,8 @@ require_nonempty_file "$RESOURCE_DIRECTORY/de.lproj/InfoPlist.strings"
 /usr/bin/cmp -s "$ROOT_DIR/LICENSE" "$RESOURCE_DIRECTORY/LICENSE" || fail "bundled LICENSE differs from repository LICENSE"
 
 require_plist_value "$INFO_PLIST" CFBundleIdentifier com.anvilfilbert.MacPad
-require_plist_value "$INFO_PLIST" CFBundleShortVersionString 1.3.1
-require_plist_value "$INFO_PLIST" CFBundleVersion 15
+require_plist_value "$INFO_PLIST" CFBundleShortVersionString 1.4.0
+require_plist_value "$INFO_PLIST" CFBundleVersion 16
 require_plist_value "$INFO_PLIST" LSApplicationCategoryType public.app-category.utilities
 require_plist_value "$INFO_PLIST" LSMinimumSystemVersion 14.0
 require_plist_value "$INFO_PLIST" CFBundleDevelopmentRegion en

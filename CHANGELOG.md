@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.4.0
+
+- Prepared a branded universal drag-to-Applications DMG with explicit Developer ID signing, notarization, stapling, and Gatekeeper release gates; version tags no longer automatically publish ad-hoc ZIPs.
 - Localized the native app interface and packaged metadata with English and German resources.
 - Added security-scoped bookmark persistence and recovery for sandbox-oriented file access across Open Recent and save-conflict handling.
 - Added separate Direct and AppStore Xcode configurations, a complete AppIcon asset catalog, and a credential-free unsigned archive preflight.
