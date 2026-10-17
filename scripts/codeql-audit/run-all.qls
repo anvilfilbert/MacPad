@@ -1,0 +1,7 @@
+- description: Full official Swift security-and-quality plus security-experimental
+- import: codeql-suites/swift-security-and-quality.qls
+  from: codeql/swift-queries
+  version: 1.3.12
+- import: codeql-suites/swift-security-experimental.qls
+  from: codeql/swift-queries
+  version: 1.3.12
