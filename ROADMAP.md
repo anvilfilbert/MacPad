@@ -12,8 +12,9 @@ All six genuine EN/DE screenshots and their provenance are present and validated
 Merged through PR #34. Preserve the exact-head automated and owner evidence.
 
 Preserve accepted owner tests, including Full Keyboard Access. The Save As
-partial-success finding is resolved. Signed Store sandbox/migration and Apple
-publication gates remain separate; merging alone does not complete issue #28.
+partial-success finding is resolved. Issue #28 is closed because the owner
+discontinued Mac App Store distribution; this is not a claim that the historical
+Store sandbox/migration or Apple publication gates passed.
 
 ## Integrate Finder file opening
 
@@ -34,8 +35,11 @@ behavior or deployment workflows.
 
 ## Signed direct distribution and shared services
 
-The published direct release remains 1.3.1, independently of Store preparation.
-The bilingual website is deployed by Shared Services. Website and mailbox
+**Status:** Released and verified, 2026-10-17
+**Tracking:** PR #38 and [MacPad 1.4.0](https://github.com/anvilfilbert/MacPad/releases/tag/v1.4.0)
+
+MacPad 1.4.0 (16) is available as a signed, notarized universal DMG. The bilingual
+website links the same release through Shared Services. Website and mailbox
 administration remain outside this repository.
 
 The current owner-approved direction is direct Mac distribution, following the
@@ -43,11 +47,11 @@ unsuccessful App Review appeal. Preserve the Store/TestFlight evidence in
 [App Store preparation](docs/app-store-preparation.md); it is historical evidence,
 not a plan to resubmit the Mac application. MacPad Mobile stays in the App Store.
 
-Prepare the branded universal DMG, verify Developer ID signing, notarization,
-stapling and Gatekeeper, then verify installation and launch from the downloaded
-release. Publish the same final artifact and checksum through GitHub Releases
-and update the English/German Mac website pages through Shared Services. Keep
-the old release available for rollback and do not replace its assets.
+Developer ID signing, notarization, DMG stapling, Gatekeeper, downloaded
+installation/launch, owner save/reopen acceptance, public checksum verification
+and live English/German download checks passed. Keep the old release and website
+rollback available; do not replace historical assets. Future releases need
+their own exact-artifact checks and owner approvals.
 
 Apple accounts, signing, notarization, Store upload, review, and publication
 require explicit owner approvals and evidence. The signed DMG and website release

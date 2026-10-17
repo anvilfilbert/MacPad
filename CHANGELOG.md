@@ -4,11 +4,13 @@
 
 ## 1.4.0
 
-- Prepared a branded universal drag-to-Applications DMG with explicit Developer ID signing, notarization, stapling, and Gatekeeper release gates; version tags no longer automatically publish ad-hoc ZIPs.
+- Released a branded universal drag-to-Applications DMG, Developer ID-signed and Apple-notarized, with a stapled DMG ticket and verified Gatekeeper, installation, launch, and checksum checks; version tags no longer automatically publish ad-hoc ZIPs.
+- Preserved external-change conflict protection when saving to the current file through Save As, including symbolic-link aliases.
+- Rejected special-file destinations and used nonblocking reads before file validation to prevent the reproduced FIFO hangs.
 - Localized the native app interface and packaged metadata with English and German resources.
 - Added security-scoped bookmark persistence and recovery for sandbox-oriented file access across Open Recent and save-conflict handling.
 - Added separate Direct and AppStore Xcode configurations, a complete AppIcon asset catalog, and a credential-free unsigned archive preflight.
-- Prepared bilingual App Store metadata and added a fail-closed validator for future Store screenshots; no screenshots or signed distribution artifacts are included.
+- Added bilingual Store-preparation material and screenshot validation; Store/TestFlight evidence is retained as historical documentation after the switch to direct distribution.
 - Changed normal launch to open exactly one blank document, removed document-session persistence and restoration, and kept saved files available through Open Recent.
 - Simplified About to Website, Support, and Privacy Policy links on macpad.net, with no creator, source-code, or email presentation in either distribution channel.
 - Added adaptive New Document (`Command-N`), retained explicit New Tab (`Command-T`), and made New Window a separate shortcut-free command.
