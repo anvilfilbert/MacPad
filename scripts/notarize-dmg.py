@@ -9,6 +9,19 @@ certificates, uploads to GitHub, or overwrites release files. Private submission
 receipts stay in a restricted temporary directory outside the repository. If
 Apple is still processing after the wait, use the recorded submission ID to
 inspect/resume that submission rather than running another upload.
+
+Manual continuation after a timeout (use the printed private working directory):
+1. Read submission.json for its id and run xcrun notarytool wait ID with the
+   same --keychain-profile PROFILE --timeout 10m --output-format json. Require
+   the same id and status Accepted; otherwise inspect xcrun notarytool log ID.
+2. Run xcrun stapler staple DMG and xcrun stapler validate DMG on the retained
+   candidate, then codesign --verify --strict DMG and hdiutil verify DMG.
+3. Run spctl --assess --type execute --verbose=4 on the retained MacPad.app and
+   spctl --assess --type open --context context:primary-signature --verbose=4
+   on the DMG. Every check must succeed. Do not bypass a failed assessment.
+4. Copy only the verified DMG to a new destination, never overwrite a release,
+   and generate its .dmg.sha256 using shasum -a 256 on the final stapled bytes.
+   Verify that checksum again before any separately authorized publication.
 """
 
 import argparse
@@ -51,8 +64,16 @@ def notarize(candidate: Path, profile: str, receipt_directory: Path) -> None:
     submitted = subprocess.run(
         ["xcrun", "notarytool", "submit", str(candidate), "--keychain-profile", profile,
          "--output-format", "json"],
-        check=True, capture_output=True, text=True,
+        check=False, capture_output=True, text=True,
     )
+    (receipt_directory / "submit.stdout").write_text(submitted.stdout)
+    (receipt_directory / "submit.stderr").write_text(submitted.stderr)
+    if submitted.returncode != 0:
+        raise RuntimeError(
+            f"notarytool submit exited {submitted.returncode}: {submitted.stderr}. "
+            f"Private stdout/stderr are in {receipt_directory}. Inspect them before "
+            "another submission; an upload may already have reached Apple."
+        )
     (receipt_directory / "submission.json").write_text(submitted.stdout)
     identifier = read_submission_id(json.loads(submitted.stdout))
     print(f"Notarization submitted; private receipts: {receipt_directory}", flush=True)

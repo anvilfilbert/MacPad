@@ -1,29 +1,23 @@
-name: Release
+name: Legacy ZIP preflight
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Existing v* tag to verify and publish
+        description: Existing v* tag to verify without publishing
         required: true
         type: string
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
-  artifact-metadata: write
+  contents: read
 
 jobs:
   release:
-    name: Release
+    name: Verify legacy ZIP only
     runs-on: macos-15
     timeout-minutes: 30
     env:
-      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
 
     steps:
       - name: Checkout
@@ -31,7 +25,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
+          ref: ${{ inputs.release_tag }}
 
       - name: Verify tag matches app version
         run: |
@@ -64,30 +58,3 @@ jobs:
 
       - name: Build and verify universal release package
         run: ./scripts/package-release.sh
-
-      - name: Attest release package
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-        with:
-          subject-path: dist/MacPad-macOS-universal.zip
-
-      - name: Create verified draft release and publish it
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" \
-              dist/MacPad-macOS-universal.zip \
-              dist/MacPad-macOS-universal.zip.sha256 \
-              --clobber
-          else
-            gh release create "$RELEASE_TAG" \
-              dist/MacPad-macOS-universal.zip \
-              dist/MacPad-macOS-universal.zip.sha256 \
-              --draft \
-              --verify-tag
-          fi
-          gh release edit "$RELEASE_TAG" \
-            --draft=false \
-            --latest \
-            --notes-file "$RUNNER_TEMP/release-notes.md" \
-            --title "MacPad ${RELEASE_TAG#v}"

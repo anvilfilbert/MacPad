@@ -22,6 +22,28 @@ def sha256(path: Path) -> str:
 
 
 class DiskImageIntegrationTests(unittest.TestCase):
+    def test_single_architecture_app_is_rejected_without_creating_output(self) -> None:
+        self.assertTrue(APP.is_dir(), "Build the real app with scripts/build-app.sh first")
+        with tempfile.TemporaryDirectory(prefix="macpad-thin-app-") as directory:
+            app = Path(directory) / "MacPad.app"
+            subprocess.run(["ditto", "--norsrc", str(APP), str(app)], check=True)
+            executable = app / "Contents" / "MacOS" / "MacPad"
+            thin = Path(directory) / "MacPad-arm64"
+            subprocess.run(["lipo", str(executable), "-thin", "arm64", "-output", str(thin)], check=True)
+            thin.replace(executable)
+            subprocess.run(["xattr", "-cr", str(app)], check=True)
+            subprocess.run(["codesign", "--force", "--sign", "-", str(app)], check=True)
+            output = Path(directory) / "MacPad.dmg"
+            result = subprocess.run(
+                [sys.executable, str(BUILDER), str(app), str(output)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Universal MacPad requires arm64 and x86_64", result.stderr)
+            self.assertFalse(output.exists())
+
     def test_release_preflight_refuses_unknown_identity_without_touching_app(self) -> None:
         self.assertTrue(APP.is_dir(), "Build the real app with scripts/build-app.sh first")
         original = sha256(APP / "Contents" / "MacOS" / "MacPad")

@@ -26,8 +26,14 @@ def validate_app(app: Path) -> None:
         info = plistlib.load(source)
     if not isinstance(info, dict) or info.get("CFBundleIdentifier") != "com.anvilfilbert.MacPad":
         raise ValueError(f"The app must use the approved MacPad bundle identifier: {app}")
-    if not (app / "Contents" / "MacOS" / "MacPad").is_file():
+    executable = app / "Contents" / "MacOS" / "MacPad"
+    if not executable.is_file():
         raise FileNotFoundError(f"The MacPad executable is missing from: {app}")
+    architectures = subprocess.run(
+        ["lipo", "-archs", str(executable)], check=True, capture_output=True, text=True,
+    ).stdout.split()
+    if set(architectures) != {"arm64", "x86_64"}:
+        raise ValueError(f"Universal MacPad requires arm64 and x86_64; found {architectures}: {app}")
 
 
 def package_disk_image(app: Path, output: Path) -> None:
@@ -44,6 +50,7 @@ def package_disk_image(app: Path, output: Path) -> None:
         # File Provider metadata must not enter the signed bundle on the volume.
         subprocess.run(["ditto", "--norsrc", str(app), str(staged_app)], check=True)
         subprocess.run(["xattr", "-cr", str(staged_app)], check=True)
+        validate_app(staged_app)
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(staged_app)], check=True)
         artwork = Path(__file__).resolve().with_name("render-dmg-background.swift")
         for scale in [1, 2]:

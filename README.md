@@ -37,7 +37,7 @@ Unzip it and drag `MacPad.app` into Applications. The [latest release page](http
 
 GitHub is the canonical download source. A synchronized mirror is available on [SourceForge](https://sourceforge.net/projects/macpad-editor/files/latest/download).
 
-Each release includes a matching `.sha256` checksum and GitHub build-provenance attestation.
+The existing ZIP release includes a matching `.sha256` checksum and GitHub build-provenance attestation.
 
 If macOS warns that the app is from an unidentified developer, right-click `MacPad.app`, choose **Open**, then confirm **Open**. The app is locally signed but not Apple-notarized.
 
@@ -47,19 +47,16 @@ If macOS warns that the app is from an unidentified developer, right-click `MacP
 
 See [CHANGELOG.md](CHANGELOG.md) for full release history.
 
-## TestFlight and App Store status
+## Distribution status
 
-As of 8 September 2026, MacPad `1.3.1 (15)` is approved for external
-TestFlight testing as **MacPad – Plain-Text Editor**. Installation, launch, and
-a basic create, save, and reopen smoke test were owner-confirmed on a Mac.
-Interested in testing? Request an invitation through
-[MacPad Support](https://macpad.net/support/). This is not a public Mac App
-Store release.
+MacPad for macOS will continue as a direct download, following an unsuccessful
+Mac App Store appeal. MacPad Mobile remains independently available through the
+App Store. Public Mac testing is closed.
 
-Migration from an existing direct-download installation has not yet been
-verified. Keep your existing installation and use backups or disposable files
-for beta testing. The direct download above remains the separately published
-release, not the TestFlight build.
+A branded Developer ID-signed, notarized DMG is being prepared. It is not yet
+published; the ZIP linked above remains the existing ad-hoc-signed release.
+New DMGs must pass signing, notarization, Gatekeeper, installation, and launch
+checks before publication. Version tags no longer automatically publish ZIPs.
 
 See [App Store preparation](docs/app-store-preparation.md) for the dated
 distribution evidence, English/German metadata drafts, and remaining gates.
@@ -109,11 +106,16 @@ Install it into `/Applications` with:
 ./scripts/install-app.sh
 ```
 
-Create a release zip with:
+Create an ad-hoc-signed development ZIP with:
 
 ```sh
 ./scripts/package-release.sh
 ```
+
+For the separately authorized Developer ID DMG release, use the project-local
+environment and commands documented in `scripts/notarize-dmg.py`. The owner must
+provide an existing signing identity and notarytool Keychain profile. Do not
+publish the unsigned preview produced by `scripts/package-dmg.py`.
 
 Run the automated suite with:
 
