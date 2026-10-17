@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 
 import dmgbuild
+from dmg_contents import mounted_disk_image, verify_app_copy
 
 
 def validate_app(app: Path) -> None:
@@ -49,7 +50,7 @@ def package_disk_image(app: Path, output: Path) -> None:
         staged_app = staging / "MacPad.app"
         # File Provider metadata must not enter the signed bundle on the volume.
         subprocess.run(["ditto", "--norsrc", str(app), str(staged_app)], check=True)
-        subprocess.run(["xattr", "-cr", str(staged_app)], check=True)
+        subprocess.run(["xattr", "-crs", str(staged_app)], check=True)
         validate_app(staged_app)
         subprocess.run(["codesign", "--verify", "--deep", "--strict", str(staged_app)], check=True)
         artwork = Path(__file__).resolve().with_name("render-dmg-background.swift")
@@ -81,6 +82,10 @@ def package_disk_image(app: Path, output: Path) -> None:
             },
         )
         subprocess.run(["hdiutil", "verify", str(staged_dmg)], check=True)
+        with mounted_disk_image(staged_dmg) as mount:
+            verify_app_copy(staged_app, mount / "MacPad.app")
+            if (mount / "Applications").readlink() != Path("/Applications"):
+                raise ValueError("The DMG must link to /Applications for installation")
         with staged_dmg.open("rb") as source, output.open("xb") as destination:
             shutil.copyfileobj(source, destination)
     with output.open("rb") as source:

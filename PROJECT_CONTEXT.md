@@ -33,8 +33,10 @@ releases, and macOS-specific distribution preparation.
   DMG, signed with Developer ID Application, notarized, and stapled. Publication
   is not complete until the exact artifact and checksum are available through
   GitHub Releases and macpad.net and downloaded copies pass verification.
-- Release preparation is local. The required Developer ID Application identity
-  is not yet installed; no signed/notarized DMG is claimed as available.
+- Release preparation is local. The owner-created Developer ID Application
+  identity passed a real signing check on a temporary candidate app. Notarization
+  authentication and final artifact acceptance remain open; no signed/notarized
+  DMG is claimed as publicly available.
 - The existing unsigned/ad-hoc build and ZIP preflight remain separate from the
   new DMG tooling. The legacy workflow is manual and read-only; version tags do
   not rebuild or publish ad-hoc ZIPs. Usage and publication gates are in the docstrings

@@ -16,9 +16,12 @@ Manual continuation after a timeout (use the printed private working directory):
    the same id and status Accepted; otherwise inspect xcrun notarytool log ID.
 2. Run xcrun stapler staple DMG and xcrun stapler validate DMG on the retained
    candidate, then codesign --verify --strict DMG and hdiutil verify DMG.
-3. Run spctl --assess --type execute --verbose=4 on the retained MacPad.app and
-   spctl --assess --type open --context context:primary-signature --verbose=4
-   on the DMG. Every check must succeed. Do not bypass a failed assessment.
+3. Mount the DMG read-only. Use dmg_contents.verify_app_copy to compare its
+   MacPad.app with the retained signed app, run verify-developer-id.py on the
+   mounted app with the expected team, and run spctl --assess --type execute
+   --verbose=4 on that mounted app. Detach the image, then run spctl --assess
+   --type open --context context:primary-signature --verbose=4 on the DMG.
+   Every check must succeed. Do not bypass a failed assessment.
 4. Copy only the verified DMG to a new destination, never overwrite a release,
    and generate its .dmg.sha256 using shasum -a 256 on the final stapled bytes.
    Verify that checksum again before any separately authorized publication.
@@ -34,6 +37,8 @@ import sys
 import tempfile
 from pathlib import Path
 from uuid import UUID
+
+from dmg_contents import mounted_disk_image, verify_app_copy
 
 
 def require_identity(identity: str, team: str) -> None:
@@ -110,7 +115,7 @@ def release(app: Path, identity: str, team: str, profile: str, output: Path) -> 
     print(f"Private release working directory: {working}", flush=True)
     signed_app = working / "MacPad.app"
     subprocess.run(["ditto", "--norsrc", str(app), str(signed_app)], check=True)
-    subprocess.run(["xattr", "-cr", str(signed_app)], check=True)
+    subprocess.run(["xattr", "-crs", str(signed_app)], check=True)
     subprocess.run(
         ["codesign", "--force", "--options", "runtime", "--timestamp", "--sign", identity, str(signed_app)],
         check=True,
@@ -125,7 +130,14 @@ def release(app: Path, identity: str, team: str, profile: str, output: Path) -> 
     subprocess.run(["xcrun", "stapler", "validate", str(candidate)], check=True)
     subprocess.run(["codesign", "--verify", "--strict", str(candidate)], check=True)
     subprocess.run(["hdiutil", "verify", str(candidate)], check=True)
-    subprocess.run(["spctl", "--assess", "--type", "execute", "--verbose=4", str(signed_app)], check=True)
+    with mounted_disk_image(candidate) as mount:
+        contained_app = mount / "MacPad.app"
+        verify_app_copy(signed_app, contained_app)
+        subprocess.run(
+            [sys.executable, str(scripts / "verify-developer-id.py"), str(contained_app), team],
+            check=True,
+        )
+        subprocess.run(["spctl", "--assess", "--type", "execute", "--verbose=4", str(contained_app)], check=True)
     subprocess.run(
         ["spctl", "--assess", "--type", "open", "--context", "context:primary-signature", "--verbose=4", str(candidate)],
         check=True,
