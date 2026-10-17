@@ -49,8 +49,7 @@ shasum -a 256 -c MacPad-macOS-universal.dmg.sha256
 The expected result is `MacPad-macOS-universal.dmg: OK`. Gatekeeper, downloaded
 installation and launch, and a create/save/reopen smoke check passed for this release.
 
-GitHub is the canonical download source. The [SourceForge mirror](https://sourceforge.net/projects/macpad-editor/files/latest/download)
-may offer an older release; do not assume it contains the newest GitHub artifact.
+GitHub is the canonical download source.
 
 The [legacy 1.3.1 ZIP](https://github.com/anvilfilbert/MacPad/releases/tag/v1.3.1)
 is retained but is ad-hoc-signed, not Apple-notarized. Its matching `.sha256`
@@ -66,14 +65,9 @@ release history.
 
 MacPad for macOS is distributed directly through GitHub Releases and linked from
 macpad.net, not through the Mac App Store. MacPad Mobile remains independently
-available through the App Store. Public Mac TestFlight testing is closed.
+available through the App Store.
 
-Version 1.4.0 passed the signed-DMG release checks. Local development builds and
-legacy ZIPs do not inherit that signing or notarization status. Future releases
-must pass their own verification; version tags do not automatically publish ZIPs.
-
-See [App Store preparation](docs/app-store-preparation.md) for historical Store
-and TestFlight evidence, not an active Mac App Store submission plan.
+Version 1.4.0 passed the signed-DMG release checks.
 
 ## Features
 
