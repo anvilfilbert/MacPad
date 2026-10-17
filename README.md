@@ -29,23 +29,26 @@ can be opened explicitly from either app.
 
 ## Download
 
-Download the latest ready-to-use universal app:
+Download the latest ready-to-use universal app for Apple silicon and Intel Macs
+running macOS 14 or later:
 
-[Download the latest MacPad universal app](https://github.com/anvilfilbert/MacPad/releases/latest/download/MacPad-macOS-universal.zip)
+[Download the latest MacPad release](https://github.com/anvilfilbert/MacPad/releases/latest)
 
-Unzip it and drag `MacPad.app` into Applications. The [latest release page](https://github.com/anvilfilbert/MacPad/releases/latest) also provides release notes.
+For a DMG, open the disk image and drag `MacPad.app` to Applications. For a legacy
+ZIP, unzip it and drag `MacPad.app` to Applications. Quit an existing copy before
+replacing it. The release page provides the matching checksum and release notes.
 
-GitHub is the canonical download source. A synchronized mirror is available on [SourceForge](https://sourceforge.net/projects/macpad-editor/files/latest/download).
+GitHub is the canonical download source. The [SourceForge mirror](https://sourceforge.net/projects/macpad-editor/files/latest/download)
+may offer an older release; do not assume it contains the newest GitHub artifact.
 
-The existing ZIP release includes a matching `.sha256` checksum and GitHub build-provenance attestation.
-
-If macOS warns that the app is from an unidentified developer, right-click `MacPad.app`, choose **Open**, then confirm **Open**. The app is locally signed but not Apple-notarized.
+The legacy 1.3.1 ZIP is ad-hoc-signed, not Apple-notarized. Its matching `.sha256`
+and GitHub build-provenance attestation do not change that signing status.
 
 ## Latest Changes
 
-`1.3.1` restores Dock reopening when menu-bar mode keeps MacPad running after the last editor window closes.
-
-See [CHANGELOG.md](CHANGELOG.md) for full release history.
+See the [latest release notes](https://github.com/anvilfilbert/MacPad/releases/latest)
+for the published version and [CHANGELOG.md](CHANGELOG.md) for development and
+release history.
 
 ## Distribution status
 
@@ -53,10 +56,10 @@ MacPad for macOS will continue as a direct download, following an unsuccessful
 Mac App Store appeal. MacPad Mobile remains independently available through the
 App Store. Public Mac testing is closed.
 
-A branded Developer ID-signed, notarized DMG is being prepared. It is not yet
-published; the ZIP linked above remains the existing ad-hoc-signed release.
-New DMGs must pass signing, notarization, Gatekeeper, installation, and launch
-checks before publication. Version tags no longer automatically publish ZIPs.
+Branded direct-distribution DMGs must pass Developer ID signing, notarization,
+stapling, Gatekeeper, installation, and launch checks before publication. Only
+files listed on the release page are available to download; preparation in this
+repository is not a published release. Version tags do not automatically publish ZIPs.
 
 See [App Store preparation](docs/app-store-preparation.md) for the dated
 distribution evidence, English/German metadata drafts, and remaining gates.
